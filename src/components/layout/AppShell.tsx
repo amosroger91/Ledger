@@ -98,8 +98,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
         {!compact && <PresenceList />}
       </Box>
 
-      {/* main column */}
-      <Box sx={{ display: "flex", flexDirection: "column", minWidth: 0, bgcolor: "var(--bl-face)" }}>
+      {/* main column — minHeight:0 lets the scrollable content child actually
+          shrink-to-fit and scroll instead of overflowing the clipped grid. */}
+      <Box sx={{ display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, overflow: "hidden", bgcolor: "var(--bl-face)" }}>
         {/* Luna title bar */}
         <Stack direction="row" alignItems="center" spacing={1.5} sx={{ px: 2, py: 1, position: "sticky", top: 0, zIndex: 5, color: "#fff", borderBottom: "1px solid var(--bl-title-edge)", background: "var(--bl-gloss-title), linear-gradient(180deg, var(--bl-title-hi), var(--bl-title-low))", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)" }}>
           <Typography variant="h6" sx={{ flex: 1, color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.4)" }}>{NAV.find((n) => n.to === pathname)?.label ?? "ZuccBook"}</Typography>
@@ -112,7 +113,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </Tooltip>
         </Stack>
 
-        <Box sx={{ flex: 1, overflowY: "auto", p: { xs: 1.5, md: 3 }, pb: 12 }}>{children}</Box>
+        <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", p: { xs: 1.5, md: 3 }, pb: 12 }}>{children}</Box>
       </Box>
     </Box>
     </Box>
