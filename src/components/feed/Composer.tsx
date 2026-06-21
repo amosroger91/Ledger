@@ -16,7 +16,7 @@ import UserAvatar from "@/components/common/UserAvatar";
 import { toast } from "@/lib/events";
 import type { MediaRef } from "@/types";
 
-export default function Composer() {
+export default function Composer({ community }: { community?: string }) {
   const me = useStore((s) => s.me);
   const moderation = useStore((s) => s.settings.moderationProfile);
   const [text, setText] = useState("");
@@ -47,10 +47,10 @@ export default function Composer() {
     if (!body && !media.length) return;
     const verdict = moderationService.classify(body, moderation);
     if (verdict.action === "flag" || verdict.action === "hide") { toast(`This would be flagged: ${verdict.reasoning} — edit and retry`, "warn"); return; }
-    const p = await feedService.createPost({ text: body, media: media.length ? media : undefined });
+    const p = await feedService.createPost({ text: body, media: media.length ? media : undefined, community });
     peerService.publishPost(p);
     setText(""); setMedia([]);
-    toast("Posted & signed ✦", "success");
+    toast(community ? "Posted to the group ✦" : "Posted & signed ✦", "success");
   }
 
   return (

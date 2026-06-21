@@ -10,6 +10,7 @@ import AddReactionRoundedIcon from "@mui/icons-material/AddReactionRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import GlassCard from "@/components/common/GlassCard";
 import UserAvatar from "@/components/common/UserAvatar";
+import { useSearchParams } from "react-router-dom";
 import { joinChatroom, type RoomMember } from "@/services/chatroomService";
 import * as chatMedia from "@/services/chatMedia";
 import { storage } from "@/services/storage";
@@ -24,6 +25,8 @@ const REACTIONS = ["⭐", "🔥", "😂", "❤️", "👀", "🎉"];
 
 export default function ChatroomView() {
   const me = useStore((s) => s.me);
+  const [params] = useSearchParams();
+  const autoJoined = useRef(false);
   const [roomId, setRoomId] = useState<string | null>(null);
   const [custom, setCustom] = useState("");
 
@@ -71,6 +74,8 @@ export default function ChatroomView() {
     setRoomId(null);
   }
   useEffect(() => () => leave(), []); // cleanup on unmount
+  // Deep-link: /chatroom?room=<id> (e.g. a group's chat) auto-enters that room.
+  useEffect(() => { const r = params.get("room"); if (r && me && !autoJoined.current) { autoJoined.current = true; enter(r); } }, [params, me]);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 

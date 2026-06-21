@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { Box, ToggleButtonGroup, ToggleButton, Stack, Typography, Button, useMediaQuery, LinearProgress, Chip, CircularProgress, TextField, InputAdornment, IconButton } from "@mui/material";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import ClearRoundedIcon from "@mui/icons-material/ClearRounded";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import Composer from "./Composer";
 import PostCard from "./PostCard";
 import GlassCard from "@/components/common/GlassCard";
@@ -44,13 +45,23 @@ export default function FeedView() {
   const [verdicts, setVerdicts] = useState<Map<string, import("@/types").ModerationVerdict>>(new Map());
   const [filter, setFilter] = useState<ContentFilter>("all");
   const [query, setQuery] = useState("");
+  const [params] = useSearchParams();
+  const nav = useNavigate();
+  const community = params.get("community");
+  const [communityName, setCommunityName] = useState<string | null>(null);
 
   const algo = settings.feedAlgorithm;
 
-  // Client-side content-type + keyword filtering over the ranked feed.
+  // Group feed: ?community=<id> restricts the feed to that group's posts.
+  useEffect(() => {
+    if (!community) { setCommunityName(null); return; }
+    storage.communities().then((cs) => setCommunityName(cs.find((c) => c.id === community)?.name ?? "this group"));
+  }, [community]);
+
+  // Client-side content-type + keyword (+ group) filtering over the ranked feed.
   const shown = useMemo(
-    () => posts.filter((p) => matchesFilter(p, filter) && matchesQuery(p, query)),
-    [posts, filter, query],
+    () => posts.filter((p) => (!community || p.community === community) && matchesFilter(p, filter) && matchesQuery(p, query)),
+    [posts, filter, query, community],
   );
 
   const refresh = useCallback(async () => {
@@ -87,6 +98,12 @@ export default function FeedView() {
   return (
     <Box sx={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "minmax(0,1fr) 300px", gap: 2, maxWidth: 1100, mx: "auto" }}>
       <Box sx={{ minWidth: 0 }}>
+        {community && (
+          <GlassCard sx={{ mb: 1.5, display: "flex", alignItems: "center", gap: 1, background: "linear-gradient(135deg, rgba(58,155,240,0.12), rgba(54,224,196,0.1))" }}>
+            <Typography variant="body2" sx={{ flex: 1 }}>Viewing posts from <b>{communityName ?? "this group"}</b> only.</Typography>
+            <Button size="small" startIcon={<ClearRoundedIcon />} onClick={() => nav("/")}>Clear</Button>
+          </GlassCard>
+        )}
         <ToggleButtonGroup
           exclusive size="small" value={algo}
           onChange={(_, v) => v && setSettings({ feedAlgorithm: v })}
@@ -95,7 +112,7 @@ export default function FeedView() {
           {ALGOS.map((a) => <ToggleButton key={a.id} value={a.id}>{a.label}</ToggleButton>)}
         </ToggleButtonGroup>
 
-        <Composer />
+        <Composer community={community ?? undefined} />
 
         {/* Content-type filter + keyword search over the feed */}
         <Stack spacing={1} sx={{ mb: 2 }}>

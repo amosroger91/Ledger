@@ -6,8 +6,12 @@ import EventRoundedIcon from "@mui/icons-material/EventRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
+import ForumRoundedIcon from "@mui/icons-material/ForumRounded";
+import DynamicFeedRoundedIcon from "@mui/icons-material/DynamicFeedRounded";
+import { useNavigate } from "react-router-dom";
 import GlassCard from "@/components/common/GlassCard";
 import { communityService } from "@/services/communityService";
+import { watchRoomService } from "@/services/watchRoomService";
 import { useStore } from "@/store/useStore";
 import { toast } from "@/lib/events";
 import type { Community, CommunityPhilosophy } from "@/types";
@@ -23,6 +27,7 @@ const CHAN_ICON: Record<string, JSX.Element> = {
 export default function CommunitiesView() {
   const me = useStore((s) => s.me);
   const mePk = me?.publicKey ?? "";
+  const nav = useNavigate();
   const [communities, setCommunities] = useState<Community[]>([]);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
@@ -65,6 +70,10 @@ export default function CommunitiesView() {
   async function leave(id: string) { await communityService.leave(id); load(); toast("Left the group", "info"); }
   async function remove(c: Community) { if (confirm(`Delete the group “${c.name}”? This can't be undone.`)) { await communityService.remove(c.id); load(); toast("Group deleted", "info"); } }
   async function setPhilosophy(id: string, p: CommunityPhilosophy) { await communityService.setPhilosophy(id, p); load(); toast(`Moderation set to “${p}”`, "success"); }
+  // Each group links to its own chatroom, filtered feed, and watch room.
+  const openChat = (c: Community) => nav(`/chatroom?room=group-${c.id}`);
+  const openFeed = (c: Community) => nav(`/?community=${c.id}`);
+  const openWatch = (c: Community) => { watchRoomService.set(`group-${c.id}`); nav("/listen"); };
 
   return (
     <Box sx={{ maxWidth: 1100, mx: "auto" }}>
@@ -118,11 +127,16 @@ export default function CommunitiesView() {
                   ) : <Chip size="small" label={c.values?.philosophy ?? "open"} variant="outlined" sx={{ height: 18, fontSize: 10 }} />}
                 </Stack>
                 <Box sx={{ flex: 1 }} />
+                <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
+                  <Button size="small" fullWidth variant="outlined" startIcon={<DynamicFeedRoundedIcon />} onClick={() => openFeed(c)} sx={{ minWidth: 0, px: 1 }}>Feed</Button>
+                  <Button size="small" fullWidth variant="outlined" startIcon={<ForumRoundedIcon />} onClick={() => openChat(c)} sx={{ minWidth: 0, px: 1 }}>Chat</Button>
+                  <Button size="small" fullWidth variant="outlined" startIcon={<span style={{ fontSize: 14 }}>🍿</span>} onClick={() => openWatch(c)} sx={{ minWidth: 0, px: 1 }}>Watch</Button>
+                </Stack>
                 {member
-                  ? <Button fullWidth size="small" variant="outlined" color="inherit" sx={{ mt: 1.5 }} onClick={() => leave(c.id)} disabled={owner}>
+                  ? <Button fullWidth size="small" variant="outlined" color="inherit" sx={{ mt: 1 }} onClick={() => leave(c.id)} disabled={owner}>
                       {owner ? "You own this group" : "Leave"}
                     </Button>
-                  : <Button fullWidth size="small" variant="contained" sx={{ mt: 1.5 }} onClick={() => join(c.id)}>Join</Button>}
+                  : <Button fullWidth size="small" variant="contained" sx={{ mt: 1 }} onClick={() => join(c.id)}>Join</Button>}
               </GlassCard>
             </Grid>
           );
