@@ -25,6 +25,7 @@ export interface ZuccBookEvents {
   "listen:now": { station: { name: string; genre: string; url: string } | null; playing: boolean };
   "stage:in": WatchPartyState;   // a watch-party update arrived from a peer
   "stage:out": WatchPartyState;  // local watch-party change to broadcast
+  "watch:start": { videoId: string };  // start/replace the watch-party video
   "companion:thinking": boolean;
   "rss:refreshing": boolean;
   "companion:model": { state: "loading" | "ready" | "error"; id: string; progress?: number; text?: string };

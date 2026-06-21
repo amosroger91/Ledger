@@ -20,6 +20,7 @@ import ProfileView from "@/components/profile/ProfileView";
 import SettingsView from "@/components/settings/SettingsView";
 import TopicsView from "@/components/topics/TopicsView";
 import MiniPlayer from "@/components/layout/MiniPlayer";
+import GlobalWatchPlayer from "@/components/layout/GlobalWatchPlayer";
 
 export default function App() {
   const { ready, onboarded, setReady, setPresence, setOnlineCount } = useStore();
@@ -64,6 +65,7 @@ export default function App() {
           </Routes>
         </AppShell>
       )}
+      {ready && onboarded && <GlobalWatchPlayer />}
       {ready && onboarded && <MiniPlayer />}
       <Snackbar
         open={!!notify}

@@ -1,0 +1,156 @@
+import { useEffect, useRef, useState } from "react";
+import { Box, IconButton, Typography, Stack, Tooltip } from "@mui/material";
+import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
+import PauseRoundedIcon from "@mui/icons-material/PauseRounded";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import OpenInFullRoundedIcon from "@mui/icons-material/OpenInFullRounded";
+import { useNavigate } from "react-router-dom";
+import { peerService } from "@/services/peerService";
+import { presenceService } from "@/services/presenceService";
+import { profileService } from "@/services/profileService";
+import { bus } from "@/lib/events";
+import { useStore } from "@/store/useStore";
+import { fingerprint } from "@/lib/crypto";
+import type { WatchPartyState } from "@/types";
+
+const posOf = (s: WatchPartyState) => (s.playing ? s.baseTime + (Date.now() - s.refEpoch) / 1000 : s.baseTime);
+
+let ytReady: Promise<any> | null = null;
+function loadYT(): Promise<any> {
+  if (ytReady) return ytReady;
+  ytReady = new Promise((res) => {
+    const w = window as any;
+    if (w.YT?.Player) return res(w.YT);
+    const prev = w.onYouTubeIframeAPIReady;
+    w.onYouTubeIframeAPIReady = () => { prev?.(); res(w.YT); };
+    const s = document.createElement("script"); s.src = "https://www.youtube.com/iframe_api"; document.head.appendChild(s);
+  });
+  return ytReady;
+}
+
+/** A single YouTube player that lives at the app root and never unmounts while a
+ *  video is active — so navigating away keeps it playing. It docks into the
+ *  Listen page's #watch-dock when present, otherwise floats as a bottom-right
+ *  mini player. The iframe is only resized/repositioned (never reparented), so
+ *  playback is uninterrupted. */
+export default function GlobalWatchPlayer() {
+  const me = useStore((s) => s.me);
+  const nav = useNavigate();
+  const host = useRef<HTMLDivElement>(null);
+  const mount = useRef<HTMLDivElement>(null);
+  const player = useRef<any>(null);
+  const vid = useRef<string | null>(null);
+  const applying = useRef(false);
+  const lastStage = useRef<WatchPartyState | null>(null);
+  const closedId = useRef<string | null>(null);
+  const [stage, setStage] = useState<WatchPartyState | null>(peerService.currentStage());
+  const [docked, setDocked] = useState(true);
+
+  const nameFor = (s: WatchPartyState) => s.byName || profileService.get(s.by)?.username || fingerprint(s.by);
+  const flash = (t: string) => bus.emit("notify", { text: t });
+
+  function broadcast(playing: boolean, baseTime: number, videoId = vid.current) {
+    if (!videoId) return;
+    const s: WatchPartyState = { videoId, playing, baseTime, refEpoch: Date.now(), by: me?.publicKey ?? "", byName: me?.username };
+    lastStage.current = s; setStage(s); bus.emit("stage:out", s);
+  }
+  function onStateChange(e: any) {
+    if (applying.current) return;
+    const YT = (window as any).YT; let t = 0; try { t = e.target.getCurrentTime(); } catch {}
+    if (e.data === YT.PlayerState.PLAYING) broadcast(true, t);
+    else if (e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED) broadcast(false, t);
+  }
+  async function ensurePlayer(videoId: string, start: number, playing: boolean) {
+    const YT = await loadYT();
+    if (!mount.current) return;
+    if (!player.current) {
+      player.current = new YT.Player(mount.current, {
+        width: "100%", height: "100%", videoId,
+        playerVars: { autoplay: playing ? 1 : 0, rel: 0, modestbranding: 1, playsinline: 1 },
+        events: { onReady: (e: any) => { try { e.target.seekTo(start, true); playing ? e.target.playVideo() : e.target.pauseVideo(); } catch {} }, onStateChange },
+      });
+      vid.current = videoId;
+    } else if (vid.current !== videoId) {
+      player.current.loadVideoById({ videoId, startSeconds: start }); vid.current = videoId;
+      if (!playing) setTimeout(() => { try { player.current.pauseVideo(); } catch {} }, 400);
+    } else {
+      try { player.current.seekTo(start, true); playing ? player.current.playVideo() : player.current.pauseVideo(); } catch {}
+    }
+  }
+  function applyRemote(s: WatchPartyState, silent = false) {
+    const prev = lastStage.current; lastStage.current = s; setStage(s);
+    if (!silent && s.by && s.by !== me?.publicKey) {
+      const who = nameFor(s);
+      if (!prev?.videoId && s.videoId) flash(`${who} started a watch party`);
+      else if (prev && prev.videoId !== s.videoId) flash(`${who} changed the video`);
+      else if (prev && prev.playing && !s.playing) flash(`${who} paused the video`);
+      else if (prev && !prev.playing && s.playing) flash(`${who} resumed the video`);
+    }
+  }
+
+  useEffect(() => {
+    const off = bus.on("stage:in", (s) => applyRemote(s));
+    const offStart = bus.on("watch:start", ({ videoId }) => {
+      closedId.current = null; applying.current = true;
+      ensurePlayer(videoId, 0, true); presenceService.setActivity("Watching", "a watch party");
+      broadcast(true, 0, videoId); setTimeout(() => { applying.current = false; }, 1200);
+    });
+    const cur = peerService.currentStage(); lastStage.current = cur;
+    if (cur?.videoId) applyRemote(cur, true);
+    return () => { off(); offStart(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const active = !!stage?.videoId && closedId.current !== stage?.videoId;
+
+  // (Re)create / sync the player whenever the active video changes.
+  useEffect(() => {
+    if (!active) { player.current = null; vid.current = null; return; }
+    applying.current = true;
+    ensurePlayer(stage!.videoId!, Math.max(0, posOf(stage!)), stage!.playing);
+    const t = setTimeout(() => { applying.current = false; }, 1600);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, stage?.videoId]);
+
+  // Position: dock into the Listen page, else float bottom-right.
+  useEffect(() => {
+    let raf = 0;
+    const tick = () => {
+      const h = host.current;
+      if (h) {
+        const dock = document.getElementById("watch-dock");
+        if (dock) {
+          const r = dock.getBoundingClientRect();
+          Object.assign(h.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, right: "auto", bottom: "auto" });
+          if (!docked) setDocked(true);
+        } else {
+          Object.assign(h.style, { left: "auto", top: "auto", right: "12px", bottom: "84px", width: "300px", height: "169px" });
+          if (docked) setDocked(false);
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    tick();
+    return () => cancelAnimationFrame(raf);
+  }, [docked, active]);
+
+  function toggle() { try { const p = player.current; if (!p) return; const YT = (window as any).YT; (p.getPlayerState?.() === YT.PlayerState.PLAYING ? p.pauseVideo : p.playVideo).call(p); } catch {} }
+  function close() { if (stage?.videoId) closedId.current = stage.videoId; presenceService.clearActivity(); setStage((s) => (s ? { ...s } : s)); }
+
+  if (!active) return null;
+
+  return (
+    <Box ref={host} sx={{ position: "fixed", zIndex: docked ? 1 : 1250, overflow: "hidden", bgcolor: "#000", borderRadius: 1, border: docked ? "1px solid var(--bl-line)" : "1px solid rgba(0,0,0,0.4)", boxShadow: docked ? "none" : "0 10px 30px rgba(0,0,0,0.45)" }}>
+      <Box ref={mount} sx={{ width: "100%", height: "100%" }} />
+      {!docked && (
+        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ position: "absolute", top: 0, left: 0, right: 0, px: 0.5, py: 0.25, background: "linear-gradient(180deg, rgba(0,0,0,0.7), transparent)" }}>
+          <Typography variant="caption" sx={{ color: "#fff", flex: 1, ml: 0.5 }}>Watch party</Typography>
+          <Tooltip title={stage?.playing ? "Pause" : "Play"}><IconButton size="small" sx={{ color: "#fff" }} onClick={toggle}>{stage?.playing ? <PauseRoundedIcon fontSize="small" /> : <PlayArrowRoundedIcon fontSize="small" />}</IconButton></Tooltip>
+          <Tooltip title="Open"><IconButton size="small" sx={{ color: "#fff" }} onClick={() => nav("/listen")}><OpenInFullRoundedIcon fontSize="small" /></IconButton></Tooltip>
+          <Tooltip title="Close"><IconButton size="small" sx={{ color: "#fff" }} onClick={close}><CloseRoundedIcon fontSize="small" /></IconButton></Tooltip>
+        </Stack>
+      )}
+    </Box>
+  );
+}
