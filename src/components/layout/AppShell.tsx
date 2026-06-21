@@ -193,7 +193,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </Tooltip>
         </Stack>
 
-        <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", p: { xs: 1.5, md: 3 }, pb: 12 }}>{children}</Box>
+        <Box id="app-scroll" sx={{ flex: 1, minHeight: 0, overflowY: "auto", p: { xs: 1.5, md: 3 }, pb: 12 }}>{children}</Box>
       </Box>
     </Box>
     </Box>

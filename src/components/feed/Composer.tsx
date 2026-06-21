@@ -3,9 +3,11 @@ import { Stack, TextField, Button, IconButton, Box, Chip, Tooltip } from "@mui/m
 import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
 import GifBoxRoundedIcon from "@mui/icons-material/GifBoxRounded";
 import AudiotrackRoundedIcon from "@mui/icons-material/AudiotrackRounded";
+import CodeRoundedIcon from "@mui/icons-material/CodeRounded";
 import AutoFixHighRoundedIcon from "@mui/icons-material/AutoFixHighRounded";
 import GlassCard from "@/components/common/GlassCard";
 import GifPicker from "@/components/common/GifPicker";
+import HtmlComposer from "./HtmlComposer";
 import { compressPostImage } from "@/lib/image";
 import { feedService } from "@/services/feedService";
 import { peerService } from "@/services/peerService";
@@ -22,6 +24,7 @@ export default function Composer({ community }: { community?: string }) {
   const [text, setText] = useState("");
   const [media, setMedia] = useState<MediaRef[]>([]);
   const [gifOpen, setGifOpen] = useState(false);
+  const [htmlOpen, setHtmlOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLInputElement>(null);
 
@@ -40,6 +43,12 @@ export default function Composer({ community }: { community?: string }) {
     if (file.size > 12 * 1024 * 1024) { toast("That mp3 is over 12 MB — pick a smaller file to share it on your timeline.", "warn"); return; }
     const url = await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(file); });
     setMedia((m) => [...m, { type: "audio", url, mime: file.type || "audio/mpeg", bytes: file.size, alt: file.name.replace(/\.[^.]+$/, "") }]);
+  }
+
+  async function postHtml(html: string) {
+    const p = await feedService.createPost({ html, community });
+    peerService.publishPost(p);
+    toast(community ? "HTML posted to the group ✦" : "HTML posted ✦", "success");
   }
 
   async function post() {
@@ -78,6 +87,7 @@ export default function Composer({ community }: { community?: string }) {
             <Tooltip title="Attach image"><IconButton size="small" onClick={() => fileRef.current?.click()}><ImageRoundedIcon fontSize="small" /></IconButton></Tooltip>
             <Tooltip title="Add a GIF"><IconButton size="small" onClick={() => setGifOpen(true)}><GifBoxRoundedIcon fontSize="small" /></IconButton></Tooltip>
             <Tooltip title="Share an mp3"><IconButton size="small" onClick={() => audioRef.current?.click()}><AudiotrackRoundedIcon fontSize="small" /></IconButton></Tooltip>
+            <Tooltip title="HTML post / embed (map, game, custom)"><IconButton size="small" onClick={() => setHtmlOpen(true)}><CodeRoundedIcon fontSize="small" /></IconButton></Tooltip>
             <Tooltip title="Companion: draft a fresh post"><IconButton size="small" onClick={async () => { const { posts } = await feedService.generate("trending", { moderation }); setText(companionService.draftPost(posts)); }}><AutoFixHighRoundedIcon fontSize="small" /></IconButton></Tooltip>
             <Box sx={{ flex: 1 }} />
             <Chip size="small" variant="outlined" label="local-only until posted" sx={{ opacity: 0.6, display: { xs: "none", sm: "inline-flex" } }} />
@@ -88,6 +98,7 @@ export default function Composer({ community }: { community?: string }) {
       <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => attach(e.target.files?.[0])} />
       <input ref={audioRef} type="file" accept="audio/*,.mp3" hidden onChange={(e) => attachAudio(e.target.files?.[0])} />
       <GifPicker open={gifOpen} onClose={() => setGifOpen(false)} onPick={(url) => setMedia((m) => [...m, { type: "image", url, mime: "image/gif" }])} />
+      <HtmlComposer open={htmlOpen} onClose={() => setHtmlOpen(false)} onPost={postHtml} />
     </GlassCard>
   );
 }

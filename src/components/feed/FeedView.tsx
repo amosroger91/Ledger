@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { Box, ToggleButtonGroup, ToggleButton, Stack, Typography, Button, useMediaQuery, LinearProgress, Chip, CircularProgress, TextField, InputAdornment, IconButton, Avatar } from "@mui/material";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
+import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import ClearRoundedIcon from "@mui/icons-material/ClearRounded";
 import { useSearchParams, useNavigate } from "react-router-dom";
@@ -46,6 +47,17 @@ export default function FeedView() {
   const [verdicts, setVerdicts] = useState<Map<string, import("@/types").ModerationVerdict>>(new Map());
   const [filter, setFilter] = useState<ContentFilter>("all");
   const [query, setQuery] = useState("");
+  const [scrolledDeep, setScrolledDeep] = useState(false);
+
+  // show "back to top" once you've scrolled past roughly one screenful
+  useEffect(() => {
+    const el = document.getElementById("app-scroll");
+    if (!el) return;
+    const onScroll = () => setScrolledDeep(el.scrollTop > el.clientHeight);
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+  const backToTop = () => document.getElementById("app-scroll")?.scrollTo({ top: 0, behavior: "smooth" });
   const [params] = useSearchParams();
   const nav = useNavigate();
   const community = params.get("community");
@@ -167,8 +179,8 @@ export default function FeedView() {
       </Box>
 
       {!compact && (
-        <Box>
-          <GlassCard sx={{ position: "sticky", top: 16, p: 0, overflow: "hidden" }}>
+        <Box sx={{ position: "sticky", top: 16, alignSelf: "start" }}>
+          <GlassCard sx={{ p: 0, overflow: "hidden" }}>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ px: 1.5, py: 1.25, color: "#fff", background: "linear-gradient(135deg,#3f97ff,#1668e0,#0a55cf)" }}>
               <Avatar sx={{ width: 30, height: 30, bgcolor: "rgba(255,255,255,0.22)" }}><AutoAwesomeRoundedIcon fontSize="small" /></Avatar>
               <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -205,6 +217,9 @@ export default function FeedView() {
                 </Box>
               )}
               <Button fullWidth variant="outlined" size="small" startIcon={<AutoAwesomeRoundedIcon />} sx={{ mt: 1.5, textTransform: "none", fontWeight: 700 }} href="#/companion">Ask your Companion</Button>
+              {scrolledDeep && (
+                <Button fullWidth size="small" startIcon={<KeyboardArrowUpRoundedIcon />} onClick={backToTop} sx={{ mt: 1, textTransform: "none", fontWeight: 700, color: "text.secondary" }}>Back to top</Button>
+              )}
             </Box>
           </GlassCard>
           <GlassCard sx={{ mt: "20px" }}>

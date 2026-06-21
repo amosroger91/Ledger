@@ -80,6 +80,7 @@ export type PostKind =
   | "video"
   | "poll"
   | "markdown"
+  | "html"
   | "ai"
   | "music-session"
   | "game-session";
@@ -93,6 +94,7 @@ export interface Post {
   authorAvatar?: string;     // denormalized profile photo (data URL)
   kind: PostKind;
   text?: string;             // text / markdown / caption
+  html?: string;             // pure-HTML post body (rendered in a sandboxed iframe)
   media?: MediaRef[];        // images/audio/video (data URLs or peer refs)
   poll?: { question: string; options: PollOption[]; closesAt?: number };
   community?: string;        // community id, if posted to one

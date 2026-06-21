@@ -32,7 +32,7 @@ class FeedService {
 
   /* ---------- authoring ---------- */
   async createPost(input: {
-    kind?: PostKind; text?: string; media?: MediaRef[]; tags?: string[];
+    kind?: PostKind; text?: string; html?: string; media?: MediaRef[]; tags?: string[];
     community?: string; replyTo?: string;
     poll?: { question: string; options: string[] };
   }): Promise<Post> {
@@ -43,8 +43,9 @@ class FeedService {
       author: me.publicKey,
       authorName: me.username,
       authorAvatar: me.avatar || undefined,
-      kind: input.kind ?? (input.poll ? "poll" : "text"),
+      kind: input.kind ?? (input.html ? "html" : input.poll ? "poll" : "text"),
       text,
+      html: input.html,
       media: input.media,
       poll: input.poll
         ? { question: input.poll.question, options: input.poll.options.map((l) => ({ id: newId("opt"), label: l, votes: [] })) }

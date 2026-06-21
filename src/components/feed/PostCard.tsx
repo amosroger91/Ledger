@@ -23,6 +23,7 @@ import FactCheckRoundedIcon from "@mui/icons-material/FactCheckRounded";
 import ReportProblemRoundedIcon from "@mui/icons-material/ReportProblemRounded";
 import { emojify } from "@/lib/emoticons";
 import { compressPostImage } from "@/lib/image";
+import { htmlPostDoc } from "./htmlPost";
 import GifPicker from "@/components/common/GifPicker";
 import { bus, toast } from "@/lib/events";
 import { newId } from "@/lib/id";
@@ -116,6 +117,24 @@ function FactCheckCard({ fc, postId, title, onChange }: { fc: FactCheck; postId:
       </Box>
       <Button size="small" startIcon={<ReportProblemRoundedIcon fontSize="small" />} disabled={checking} onClick={recheck} sx={{ mt: 0.5, color: "text.secondary" }}>
         {checking ? "Checking…" : "Is this in error?"}
+      </Button>
+    </Box>
+  );
+}
+
+// A pure-HTML post. Rendered in a sandboxed iframe with NO same-origin access,
+// so embeds (maps, games, custom markup) can run while being unable to read the
+// user's keys/data. Expandable for taller content.
+function HtmlCard({ html }: { html: string }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <Box sx={{ mt: 1, border: "1px solid var(--bl-line)", borderRadius: 2, overflow: "hidden", bgcolor: "#fff", position: "relative" }}>
+      <Box component="iframe" title="HTML post" srcDoc={htmlPostDoc(html)}
+        sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-modals allow-presentation"
+        sx={{ width: "100%", height: expanded ? 640 : 320, border: 0, display: "block" }} />
+      <Button size="small" onClick={() => setExpanded((v) => !v)}
+        sx={{ position: "absolute", bottom: 6, right: 6, minWidth: 0, px: 1, py: 0.25, fontSize: 11, textTransform: "none", bgcolor: "rgba(255,255,255,0.9)", border: "1px solid var(--bl-line)", color: "text.secondary", "&:hover": { bgcolor: "#fff" } }}>
+        {expanded ? "Collapse" : "Expand"}
       </Button>
     </Box>
   );
@@ -425,6 +444,8 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
 
           {(!restricted || revealed) && (<>
           {post.text && <Typography component="div" sx={{ mt: 1, fontSize: 15, lineHeight: 1.55, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{renderText(post.text)}</Typography>}
+
+          {post.html && <HtmlCard html={post.html} />}
 
           {(() => {
             const ytId = firstYouTube(post.text ?? "");
