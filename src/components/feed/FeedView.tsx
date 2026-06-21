@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { Box, ToggleButtonGroup, ToggleButton, Stack, Typography, Button, useMediaQuery, LinearProgress, Chip, CircularProgress, TextField, InputAdornment, IconButton, Avatar } from "@mui/material";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
+import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
+import ArrowDownwardRoundedIcon from "@mui/icons-material/ArrowDownwardRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import ClearRoundedIcon from "@mui/icons-material/ClearRounded";
 import { useSearchParams, useNavigate } from "react-router-dom";
@@ -11,6 +13,7 @@ import GlassCard from "@/components/common/GlassCard";
 import { feedService } from "@/services/feedService";
 import { companionService } from "@/services/companionService";
 import { rssService } from "@/services/rssService";
+import { changelogService } from "@/services/changelogService";
 import { storage } from "@/services/storage";
 import { useStore } from "@/store/useStore";
 import { bus } from "@/lib/events";
@@ -48,6 +51,7 @@ export default function FeedView() {
   const [filter, setFilter] = useState<ContentFilter>("all");
   const [query, setQuery] = useState("");
   const [scrolledDeep, setScrolledDeep] = useState(false);
+  const [pull, setPull] = useState(0);   // pull-to-refresh progress (0..1.6)
 
   // show "back to top" once you've scrolled past roughly one screenful
   useEffect(() => {
@@ -110,22 +114,78 @@ export default function FeedView() {
   useEffect(() => { const off = bus.on("rss:progress", setRssProg); return off; }, []);
   useEffect(() => { rssService.refresh().catch(() => {}); }, []); // top up RSS Bot stories (throttled)
 
+  // Manual + pull-to-refresh: force fresh feeds/commits and re-rank the timeline.
+  const doRefresh = useCallback(async () => {
+    setPull(0);
+    rssService.refresh(true).catch(() => {});
+    changelogService.refresh(true).catch(() => {});
+    await refresh();
+  }, [refresh]);
+
+  // Pull/scroll-to-refresh on the app scroll container (touch on mobile, wheel on desktop).
+  useEffect(() => {
+    const el = document.getElementById("app-scroll");
+    if (!el) return;
+    const THRESH = 80;
+    const st = { startY: 0, dragging: false, val: 0, accum: 0 };
+    let decay: any;
+    const set = (v: number) => { st.val = v; setPull(v); };
+    const fire = () => { if (st.val >= 1) doRefresh(); else set(0); st.accum = 0; };
+    const onTouchStart = (e: TouchEvent) => { if (el.scrollTop <= 0) { st.startY = e.touches[0].clientY; st.dragging = true; } };
+    const onTouchMove = (e: TouchEvent) => {
+      if (!st.dragging) return;
+      const dy = e.touches[0].clientY - st.startY;
+      if (dy > 0 && el.scrollTop <= 0) set(Math.min(1.6, dy / THRESH));
+      else if (dy <= 0) { st.dragging = false; set(0); }
+    };
+    const onTouchEnd = () => { if (st.dragging) { st.dragging = false; fire(); } };
+    const onWheel = (e: WheelEvent) => {
+      if (el.scrollTop <= 0 && e.deltaY < 0) {
+        st.accum += -e.deltaY;
+        set(Math.min(1.6, st.accum / 200));
+        clearTimeout(decay);
+        if (st.accum > 200) fire();
+        else decay = setTimeout(() => set(0), 700);
+      } else if (st.val) { st.accum = 0; set(0); }
+    };
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: true });
+    el.addEventListener("touchend", onTouchEnd);
+    el.addEventListener("wheel", onWheel, { passive: true });
+    return () => { el.removeEventListener("touchstart", onTouchStart); el.removeEventListener("touchmove", onTouchMove); el.removeEventListener("touchend", onTouchEnd); el.removeEventListener("wheel", onWheel); clearTimeout(decay); };
+  }, [doRefresh]);
+
   return (
     <Box sx={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "minmax(0,1fr) 300px", gap: 2, maxWidth: 1100, mx: "auto" }}>
       <Box sx={{ minWidth: 0 }}>
+        {/* pull / scroll-to-refresh indicator */}
+        {pull > 0 && (
+          <Box sx={{ overflow: "hidden", height: Math.round(pull * 36), transition: "height .05s linear", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+            <Stack direction="row" alignItems="center" spacing={0.5} sx={{ color: pull >= 1 ? "#1668e0" : "text.disabled", pb: 0.5 }}>
+              <ArrowDownwardRoundedIcon fontSize="small" sx={{ transition: "transform .2s", transform: pull >= 1 ? "rotate(180deg)" : "none" }} />
+              <Typography variant="caption" sx={{ fontWeight: 600 }}>{pull >= 1 ? "Release to refresh" : "Keep pulling to refresh…"}</Typography>
+            </Stack>
+          </Box>
+        )}
         {community && (
           <GlassCard sx={{ mb: 1.5, display: "flex", alignItems: "center", gap: 1, background: "linear-gradient(135deg, rgba(58,155,240,0.12), rgba(54,224,196,0.1))" }}>
             <Typography variant="body2" sx={{ flex: 1 }}>Viewing posts from <b>{communityName ?? "this group"}</b> only.</Typography>
             <Button size="small" startIcon={<ClearRoundedIcon />} onClick={() => nav("/")}>Clear</Button>
           </GlassCard>
         )}
-        <ToggleButtonGroup
-          exclusive size="small" value={algo}
-          onChange={(_, v) => v && setSettings({ feedAlgorithm: v })}
-          sx={{ mb: 2, flexWrap: "wrap", "& .MuiToggleButton-root": { border: "1px solid rgba(58,155,240,0.18)", color: "text.secondary", "&.Mui-selected": { background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#ffffff" } } }}
-        >
-          {ALGOS.map((a) => <ToggleButton key={a.id} value={a.id}>{a.label}</ToggleButton>)}
-        </ToggleButtonGroup>
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2, flexWrap: "wrap", gap: 1 }}>
+          <ToggleButtonGroup
+            exclusive size="small" value={algo}
+            onChange={(_, v) => v && setSettings({ feedAlgorithm: v })}
+            sx={{ flexWrap: "wrap", "& .MuiToggleButton-root": { border: "1px solid rgba(58,155,240,0.18)", color: "text.secondary", "&.Mui-selected": { background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#ffffff" } } }}
+          >
+            {ALGOS.map((a) => <ToggleButton key={a.id} value={a.id}>{a.label}</ToggleButton>)}
+          </ToggleButtonGroup>
+          <Box sx={{ flex: 1 }} />
+          <Button size="small" variant="outlined" startIcon={<RefreshRoundedIcon sx={{ animation: refreshing ? "zbspin 1s linear infinite" : "none", "@keyframes zbspin": { to: { transform: "rotate(360deg)" } } }} />} onClick={doRefresh} disabled={refreshing} sx={{ textTransform: "none", fontWeight: 600, flex: "0 0 auto" }}>
+            {refreshing ? "Refreshing…" : "Refresh feed"}
+          </Button>
+        </Stack>
 
         <Composer community={community ?? undefined} />
 

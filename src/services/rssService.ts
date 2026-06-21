@@ -307,7 +307,9 @@ class RssService {
     const localFetched = (await storage.kvGet<Record<string, number>>("rss:feedFetched")) ?? {};
     const lastOf = (key: string) => Math.max(gunService.rssLastFetch(key), localFetched[key] ?? 0);
     const startedAt = Date.now();
-    const jobs = all.filter(({ feed }) => startedAt - lastOf(hash(feed.url)) > FEED_TTL);
+    // Auto-refresh respects the shared 1-hour cache; a manual refresh (force)
+    // re-pulls all of your feeds now because you explicitly asked for it.
+    const jobs = force ? all : all.filter(({ feed }) => startedAt - lastOf(hash(feed.url)) > FEED_TTL);
     const total = jobs.length;
     if (!total) return 0;   // every feed you follow is fresh — its posts are already on the timeline
     const seen = new Set(c.seen);   // dedupe against everything we've already pulled
