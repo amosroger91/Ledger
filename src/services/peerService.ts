@@ -1,7 +1,7 @@
 // ============================================================
 //  peerService — the peer-to-peer networking layer (PeerJS).
 //
-//  GitHub-Pages-static means no server, so Nebula uses a serverless
+//  GitHub-Pages-static means no server, so ZuccBook uses a serverless
 //  hub-relay: the first peer to claim a well-known id ("nebula-hub-vN")
 //  becomes the relay HUB; everyone else connects to it as a CLIENT.
 //  The hub relays presence, new posts, and direct messages to the

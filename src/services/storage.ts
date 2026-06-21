@@ -10,7 +10,7 @@ import type {
   ReputationLedgerEntry, CompanionMessage, AppSettings,
 } from "@/types";
 
-interface NebulaDB extends DBSchema {
+interface ZuccBookDB extends DBSchema {
   identity: { key: string; value: SecretIdentity };
   posts: { key: string; value: Post; indexes: { byTime: number; byAuthor: string; byCommunity: string } };
   messages: { key: string; value: ChatMessage; indexes: { byChannel: string; byTime: number } };
@@ -22,11 +22,11 @@ interface NebulaDB extends DBSchema {
 
 const DB_NAME = "nebula";
 const DB_VERSION = 1;
-let dbp: Promise<IDBPDatabase<NebulaDB>> | null = null;
+let dbp: Promise<IDBPDatabase<ZuccBookDB>> | null = null;
 
 function db() {
   if (!dbp) {
-    dbp = openDB<NebulaDB>(DB_NAME, DB_VERSION, {
+    dbp = openDB<ZuccBookDB>(DB_NAME, DB_VERSION, {
       upgrade(d) {
         d.createObjectStore("identity", { keyPath: "publicKey" });
         const posts = d.createObjectStore("posts", { keyPath: "id" });
@@ -111,10 +111,12 @@ export function readSettingsSync(): AppSettings | undefined {
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  feedAlgorithm: "ai-curated",
+  feedAlgorithm: "chronological",
   moderationProfile: "discovery",
   companionPersona: "friend",
-  useWebLLM: false,
+  useWebLLM: true,
+  llmOptOut: false,
+  llmModel: "Qwen2.5-0.5B-Instruct-q4f16_1-MLC",
   presenceStatus: "online",
   reducedMotion: false,
 };

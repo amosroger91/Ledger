@@ -1,16 +1,14 @@
 // ============================================================
-//  companionService — the local AI companion. Inference is local.
+//  companionService — the local AI companion. The companion IS a
+//  real on-device LLM (WebLLM / WebGPU, WASM runtime). Inference is
+//  100% local: nothing leaves your device.
 //
-//  Two providers behind one interface:
-//   • "heuristic"  — a fast, deterministic, fully-offline assistant
-//                    (always available; no model download).
-//   • "webllm"     — real on-device LLM via WebGPU, lazy-loaded from
-//                    the @mlc-ai/web-llm ESM only when the user opts
-//                    in (Settings → "Use on-device LLM"). Falls back
-//                    gracefully to heuristic if WebGPU/model fails.
-//
-//  Capabilities: summarize feed, explain trends, suggest communities,
-//  draft replies, flag likely misinformation. All on the user's machine.
+//  • The model is loaded lazily and CACHED by WebLLM in the browser
+//    (Cache Storage), so it downloads once and afterwards just loads
+//    into memory on refresh — unless you clear site data.
+//  • If WebGPU isn't available, or while the model is still
+//    downloading, fast offline heuristic tools answer instead.
+//  • Pick which model to load (see MODELS) — tiny to capable.
 // ============================================================
 import type { CompanionPersona, CompanionMessage, Post, Community } from "@/types";
 import { storage } from "./storage";
@@ -18,49 +16,71 @@ import { bus } from "@/lib/events";
 import { newId } from "@/lib/id";
 import { topTerms } from "@/lib/embeddings";
 
+export interface LlmModel { id: string; label: string; size: string; }
+
+// A curated set of WebLLM models, smallest → most capable.
+export const MODELS: LlmModel[] = [
+  { id: "Qwen2.5-0.5B-Instruct-q4f16_1-MLC", label: "Qwen2.5 0.5B — tiny & fast", size: "~350 MB" },
+  { id: "Llama-3.2-1B-Instruct-q4f16_1-MLC", label: "Llama 3.2 1B — balanced", size: "~880 MB" },
+  { id: "gemma-2-2b-it-q4f16_1-MLC", label: "Gemma 2 2B", size: "~1.4 GB" },
+  { id: "Llama-3.2-3B-Instruct-q4f16_1-MLC", label: "Llama 3.2 3B — smarter", size: "~1.8 GB" },
+  { id: "Phi-3.5-mini-instruct-q4f16_1-MLC", label: "Phi-3.5 mini — capable", size: "~2.2 GB" },
+];
+
 const PERSONA_VOICE: Record<CompanionPersona, string> = {
-  coach: "encouraging, action-oriented",
-  comedian: "playful and witty",
-  critic: "sharp and analytical",
-  researcher: "precise and citation-minded",
-  friend: "warm and casual",
+  coach: "encouraging", comedian: "playful", critic: "analytical", researcher: "precise", friend: "warm and casual",
 };
 
-// Optional WebGPU LLM engine (typed loosely to avoid a hard dependency).
-let engine: any = null;
-let engineLoading: Promise<any> | null = null;
+export function isWebGPU(): boolean {
+  return typeof navigator !== "undefined" && !!(navigator as any).gpu;
+}
 
-async function loadWebLLM(): Promise<any | null> {
-  if (engine) return engine;
-  if (engineLoading) return engineLoading;
-  if (!(navigator as any).gpu) return null; // no WebGPU → caller falls back
-  engineLoading = (async () => {
+// --- WebLLM engine (lazy, cached) ---
+let engine: any = null;
+let loadedId: string | null = null;
+let loadingId: string | null = null;
+let loadingPromise: Promise<any> | null = null;
+
+export function modelReady(id: string): boolean { return !!engine && loadedId === id; }
+
+async function loadModel(id: string): Promise<any | null> {
+  if (engine && loadedId === id) return engine;
+  if (loadingPromise && loadingId === id) return loadingPromise;
+  if (!isWebGPU()) return null;
+  loadingId = id;
+  loadingPromise = (async () => {
     try {
-      // Lazy ESM import — only fetched when the user enables on-device LLM.
-      // Non-literal specifier so the type-checker doesn't try to resolve a URL.
       const spec = "https://esm.run/@mlc-ai/web-llm";
       const webllm: any = await import(/* @vite-ignore */ spec);
-      engine = await webllm.CreateMLCEngine("Llama-3.2-1B-Instruct-q4f16_1-MLC", {
-        initProgressCallback: (p: any) => bus.emit("toast", { kind: "info", message: `Loading local model… ${(p.progress * 100 | 0)}%` }),
+      bus.emit("companion:model", { state: "loading", id, progress: 0, text: "starting" });
+      const eng = await webllm.CreateMLCEngine(id, {
+        initProgressCallback: (p: any) => bus.emit("companion:model", { state: "loading", id, progress: p.progress ?? 0, text: p.text }),
       });
-      return engine;
+      engine = eng; loadedId = id;
+      bus.emit("companion:model", { state: "ready", id });
+      return eng;
     } catch (e) {
-      console.warn("[companion] WebLLM unavailable, using heuristic provider", e);
+      console.warn("[companion] model load failed", e);
+      bus.emit("companion:model", { state: "error", id });
       return null;
-    } finally { engineLoading = null; }
+    } finally { loadingPromise = null; loadingId = null; }
   })();
-  return engineLoading;
+  return loadingPromise;
 }
 
 class CompanionService {
   persona: CompanionPersona = "friend";
-  useLLM = false;
+  useLLM = true;
+  model = MODELS[0].id;
 
-  configure(persona: CompanionPersona, useLLM: boolean) {
-    this.persona = persona;
+  configure(useLLM: boolean, model?: string) {
     this.useLLM = useLLM;
-    if (useLLM) loadWebLLM(); // warm up in the background
+    if (model) this.model = model;
   }
+  isSupported() { return isWebGPU(); }
+  modelReady() { return modelReady(this.model); }
+  /** Explicitly start downloading/loading the selected model. */
+  preload() { return loadModel(this.model); }
 
   history() { return storage.companionHistory(); }
 
@@ -70,7 +90,12 @@ class CompanionService {
     bus.emit("companion:thinking", true);
     let text: string;
     try {
-      text = this.useLLM ? await this.llmAnswer(prompt, context) : this.heuristicAnswer(prompt, context);
+      if (this.useLLM && isWebGPU()) {
+        const eng = await loadModel(this.model);
+        text = eng ? await this.llmAnswer(eng, prompt, context) : this.heuristicAnswer(prompt, context);
+      } else {
+        text = this.heuristicAnswer(prompt, context);
+      }
     } catch {
       text = this.heuristicAnswer(prompt, context);
     }
@@ -80,7 +105,21 @@ class CompanionService {
     return reply;
   }
 
-  /* ---------- high-level helpers the UI calls directly ---------- */
+  private async llmAnswer(eng: any, prompt: string, ctx?: { posts?: Post[] }): Promise<string> {
+    const sys = `You are ZuccBook's on-device AI companion, running fully locally and privately in the user's browser. Be concise, friendly and helpful.`;
+    const feed = (ctx?.posts ?? []).slice(0, 8).map((p) => `- ${p.authorName}: ${p.text ?? ""}`).join("\n");
+    const reply = await eng.chat.completions.create({
+      messages: [
+        { role: "system", content: sys },
+        ...(feed ? [{ role: "user", content: `Context (recent feed):\n${feed}` } as const] : []),
+        { role: "user", content: prompt },
+      ],
+      temperature: 0.7,
+    });
+    return reply.choices?.[0]?.message?.content ?? this.heuristicAnswer(prompt, ctx);
+  }
+
+  /* ---------- fast offline tools (no model download needed) ---------- */
   summarizeFeed(posts: Post[]): string {
     if (!posts.length) return "Your feed is quiet right now — be the first to post something ✦";
     const terms = topTerms(posts.map((p) => p.text ?? "").join(" "), 6);
@@ -92,7 +131,6 @@ class CompanionService {
       top ? `Most-reacted: "${(top.text ?? "").slice(0, 80)}" by ${top.authorName}.` : "",
     ].filter(Boolean).join(" ");
   }
-
   explainTrends(posts: Post[]): string {
     const tags = new Map<string, number>();
     for (const p of posts) for (const t of p.tags) tags.set(t, (tags.get(t) || 0) + 1 + react(p));
@@ -100,30 +138,12 @@ class CompanionService {
     if (!ranked.length) return "No clear trends yet. Add some #tags to your posts to seed them.";
     return "Trending: " + ranked.map(([t, n]) => `#${t} (${n})`).join("  ·  ");
   }
-
   suggestCommunities(posts: Post[], communities: Community[]): Community[] {
     const terms = new Set(topTerms(posts.map((p) => p.text ?? "").join(" "), 12));
     return communities
       .map((c) => ({ c, hits: [...terms].filter((t) => (c.name + " " + c.description).toLowerCase().includes(t)).length }))
-      .filter((x) => x.hits > 0)
-      .sort((a, b) => b.hits - a.hits)
-      .map((x) => x.c)
-      .slice(0, 3);
+      .filter((x) => x.hits > 0).sort((a, b) => b.hits - a.hits).map((x) => x.c).slice(0, 3);
   }
-
-  draftReply(post: Post): string {
-    const v = PERSONA_VOICE[this.persona];
-    const t = (post.text ?? "").slice(0, 60);
-    const openers: Record<CompanionPersona, string> = {
-      coach: `Love this. One step you could take from "${t}"…`,
-      comedian: `Hot take on "${t}": `,
-      critic: `Strong claim in "${t}". The evidence I'd want: `,
-      researcher: `Re: "${t}" — a relevant data point is `,
-      friend: `Totally feel this — "${t}". `,
-    };
-    return openers[this.persona] + `(${v} draft — edit before sending)`;
-  }
-
   flagMisinformation(text: string): { risk: "low" | "medium" | "high"; note: string } {
     const t = text.toLowerCase();
     const redFlags = ["100% proven", "they don't want you to know", "miracle cure", "do your own research", "wake up"];
@@ -133,7 +153,22 @@ class CompanionService {
     return { risk: "low", note: "No obvious misinformation markers — still verify surprising claims." };
   }
 
-  /* ---------- providers ---------- */
+  /** A fresh, varied post draft each call (offline; no model needed). */
+  draftPost(posts: Post[] = []): string {
+    const tags = posts.flatMap((p) => p.tags);
+    const tag = tags.length ? "#" + tags[Math.floor(Math.random() * tags.length)] : "#decentralization";
+    const openers = [
+      `Hot take: your social feed should run on *your* device, not a server farm. ${tag}`,
+      `TIL the browser can run a whole AI model locally — no cloud, no tracking. wild. ${tag}`,
+      `what's everyone building today? drop it below 👇 ${tag}`,
+      `reminder: you own your identity here. it's literally a file you can carry anywhere. ${tag}`,
+      `unpopular opinion: reactions > follower counts. reputation should be earned. ${tag}`,
+      `peer-to-peer everything. no servers, ~$0 to run, still real-time. the future is weird and good. ${tag}`,
+      `just set my status to "in the zone" and put on some synthwave. who's listening together? ${tag}`,
+    ];
+    return openers[Math.floor(Math.random() * openers.length)];
+  }
+
   private heuristicAnswer(prompt: string, ctx?: { posts?: Post[]; communities?: Community[] }): string {
     const p = prompt.toLowerCase();
     const posts = ctx?.posts ?? [];
@@ -143,24 +178,11 @@ class CompanionService {
       const s = this.suggestCommunities(posts, ctx?.communities ?? []);
       return s.length ? "You might like: " + s.map((c) => c.name).join(", ") : "No matching communities yet — create one!";
     }
-    if (/misinfo|true|fake|real\?/i.test(p)) { const r = this.flagMisinformation(prompt); return `Misinformation risk: ${r.risk}. ${r.note}`; }
-    const voice = PERSONA_VOICE[this.persona];
-    return `(${this.persona} · ${voice}) I'm your on-device companion — everything I do runs locally. Try: "summarize my feed", "what's trending", or "suggest communities". You said: "${prompt}".`;
-  }
-
-  private async llmAnswer(prompt: string, ctx?: { posts?: Post[] }): Promise<string> {
-    const eng = await loadWebLLM();
-    if (!eng) return this.heuristicAnswer(prompt, ctx);
-    const sys = `You are Nebula's on-device AI companion. Persona: ${this.persona} (${PERSONA_VOICE[this.persona]}). Be concise. All processing is local and private.`;
-    const feed = (ctx?.posts ?? []).slice(0, 8).map((p) => `- ${p.authorName}: ${p.text ?? ""}`).join("\n");
-    const reply = await eng.chat.completions.create({
-      messages: [
-        { role: "system", content: sys },
-        ...(feed ? [{ role: "user", content: `Context (recent feed):\n${feed}` } as const] : []),
-        { role: "user", content: prompt },
-      ],
-    });
-    return reply.choices?.[0]?.message?.content ?? this.heuristicAnswer(prompt, ctx);
+    if (/misinfo|fake|true\?|real\?/i.test(p)) { const r = this.flagMisinformation(prompt); return `Misinformation risk: ${r.risk}. ${r.note}`; }
+    const tip = isWebGPU()
+      ? "Enable the on-device model (it's loading or off) for full conversational answers."
+      : "This browser has no WebGPU, so I'm running the fast offline engine.";
+    return `(${PERSONA_VOICE[this.persona]} · local) ${tip} Meanwhile I can "summarize my feed", show "what's trending", or "suggest communities". You said: "${prompt}".`;
   }
 }
 

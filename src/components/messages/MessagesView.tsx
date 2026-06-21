@@ -7,7 +7,7 @@ import { peerService } from "@/services/peerService";
 import { identityService } from "@/services/identityService";
 import { useStore } from "@/store/useStore";
 import { bus } from "@/lib/events";
-import { avatarGradient, initials } from "@/components/common/avatar";
+import UserAvatar from "@/components/common/UserAvatar";
 import { clockTime } from "@/lib/time";
 import { newId } from "@/lib/id";
 import type { ChatMessage } from "@/types";
@@ -34,7 +34,7 @@ export default function MessagesView() {
     const t = input.trim();
     if (!t) return;
     const msg: ChatMessage = {
-      id: newId("msg"), channel, author: identityService.pk, authorName: me?.username ?? "me",
+      id: newId("msg"), channel, author: identityService.pk, authorName: me?.username ?? "me", authorAvatar: me?.avatar,
       text: t, reactions: {}, createdAt: Date.now(),
     };
     await storage.putMessage(msg);
@@ -48,7 +48,7 @@ export default function MessagesView() {
         <Typography variant="overline" color="text.secondary">Conversations</Typography>
         <Stack spacing={0.5} sx={{ mt: 1 }}>
           {channels.map((c) => (
-            <Box key={c.id} onClick={() => setChannel(c.id)} sx={{ px: 1.2, py: 0.9, borderRadius: 1.5, cursor: "pointer", fontWeight: 600, background: channel === c.id ? "rgba(110,231,255,0.14)" : "transparent", "&:hover": { background: "rgba(110,231,255,0.07)" } }}>
+            <Box key={c.id} onClick={() => setChannel(c.id)} sx={{ px: 1.2, py: 0.9, borderRadius: 1.5, cursor: "pointer", fontWeight: 600, background: channel === c.id ? "rgba(58,155,240,0.14)" : "transparent", "&:hover": { background: "rgba(58,155,240,0.07)" } }}>
               {c.label}
             </Box>
           ))}
@@ -66,8 +66,8 @@ export default function MessagesView() {
             const mine = m.author === me?.publicKey;
             return (
               <Stack key={m.id} direction="row" spacing={1} justifyContent={mine ? "flex-end" : "flex-start"}>
-                {!mine && <Avatar sx={{ width: 28, height: 28, fontSize: 12, background: avatarGradient(m.author), color: "#04121a", fontWeight: 800 }}>{initials(m.authorName)}</Avatar>}
-                <Box sx={{ maxWidth: "70%", px: 1.5, py: 0.9, borderRadius: 2, background: mine ? "linear-gradient(135deg,#6ee7ff,#a78bfa)" : "rgba(255,255,255,0.06)", color: mine ? "#04121a" : "text.primary" }}>
+                {!mine && <UserAvatar pk={m.author} name={m.authorName} avatar={m.authorAvatar} size={28} />}
+                <Box sx={{ maxWidth: "70%", px: 1.5, py: 0.9, borderRadius: 2, background: mine ? "linear-gradient(135deg,#39c6f5,#3a7bf0)" : "rgba(255,255,255,0.06)", color: mine ? "#031426" : "text.primary" }}>
                   {!mine && <Typography variant="caption" sx={{ fontWeight: 700 }}>{m.authorName}</Typography>}
                   <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>{m.text}</Typography>
                   <Typography variant="caption" sx={{ opacity: 0.6 }}>{clockTime(m.createdAt)}</Typography>

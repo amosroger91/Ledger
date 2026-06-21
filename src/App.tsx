@@ -5,6 +5,8 @@ import { boot } from "@/services";
 import { useStore } from "@/store/useStore";
 import { bus } from "@/lib/events";
 import { presenceService } from "@/services/presenceService";
+import { identityService } from "@/services/identityService";
+import { DEFAULT_SETTINGS } from "@/services/storage";
 import Background from "@/components/common/Background";
 import Onboarding from "@/components/onboarding/Onboarding";
 import AppShell from "@/components/layout/AppShell";
@@ -21,14 +23,19 @@ export default function App() {
   const [toast, setToast] = useState<{ kind: any; message: string } | null>(null);
 
   useEffect(() => {
-    boot().then((r) => setReady(r.onboarded, r.settings));
+    let done = false;
+    boot()
+      .then((r) => { done = true; setReady(r.onboarded, r.settings); })
+      .catch((e) => { done = true; console.error("[boot] failed, showing app anyway", e); setReady(!!identityService.current, DEFAULT_SETTINGS); });
+    // Safety net: never let a slow/stalled service keep the UI on the splash.
+    const fallback = setTimeout(() => { if (!done) setReady(!!identityService.current, DEFAULT_SETTINGS); }, 2500);
     const offToast = bus.on("toast", (t) => setToast(t));
     const refresh = () => { setPresence(presenceService.list()); setOnlineCount(presenceService.list().length + 1); };
     const offPres = bus.on("presence:update", refresh);
     const offConn = bus.on("peer:connected", refresh);
     const offDis = bus.on("peer:disconnected", refresh);
     const timer = setInterval(refresh, 20000);
-    return () => { offToast(); offPres(); offConn(); offDis(); clearInterval(timer); };
+    return () => { offToast(); offPres(); offConn(); offDis(); clearInterval(timer); clearTimeout(fallback); };
   }, [setReady, setPresence, setOnlineCount]);
 
   return (

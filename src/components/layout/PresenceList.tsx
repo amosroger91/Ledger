@@ -1,8 +1,8 @@
-import { Box, Stack, Typography, Avatar, Tooltip } from "@mui/material";
+import { Box, Stack, Typography, Tooltip } from "@mui/material";
 import { useStore } from "@/store/useStore";
-import { avatarGradient, initials } from "@/components/common/avatar";
+import UserAvatar from "@/components/common/UserAvatar";
 
-const STATUS_COLOR: Record<string, string> = { online: "#5dffa0", idle: "#ffcc66", away: "#ff9a5d", dnd: "#ff5d7a", offline: "#7a85a8" };
+const STATUS_COLOR: Record<string, string> = { online: "#54c95a", idle: "#ffcc66", away: "#ff9a5d", dnd: "#ff5d7a", offline: "#7a85a8" };
 
 export default function PresenceList() {
   const presence = useStore((s) => s.presence);
@@ -20,9 +20,9 @@ export default function PresenceList() {
         )}
         {presence.slice(0, 12).map((p) => (
           <Tooltip key={p.pk} title={p.activity ? `${p.activity.kind}: ${p.activity.detail}` : p.status} placement="right">
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ px: 1, py: 0.5, borderRadius: 1.5, "&:hover": { bgcolor: "rgba(110,231,255,0.06)" } }}>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ px: 1, py: 0.5, borderRadius: 1.5, "&:hover": { bgcolor: "rgba(58,155,240,0.06)" } }}>
               <Box sx={{ position: "relative" }}>
-                <Avatar sx={{ width: 26, height: 26, fontSize: 11, fontWeight: 800, color: "#04121a", background: avatarGradient(p.pk) }}>{initials(p.username)}</Avatar>
+                <UserAvatar pk={p.pk} name={p.username} avatar={p.avatar} size={26} />
                 <Box sx={{ position: "absolute", right: -1, bottom: -1, width: 9, height: 9, borderRadius: "50%", bgcolor: STATUS_COLOR[p.status] ?? "#7a85a8", border: "2px solid #05060f" }} />
               </Box>
               <Box sx={{ minWidth: 0 }}>

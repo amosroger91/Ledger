@@ -40,7 +40,7 @@ export const useStore = create<AppState>((set, get) => ({
     const settings = { ...get().settings, ...patch };
     set({ settings });
     await storage.saveSettings(settings);
-    companionService.configure(settings.companionPersona, settings.useWebLLM);
+    companionService.configure(settings.useWebLLM, settings.llmModel);
     if (patch.presenceStatus) presenceService.setStatus(patch.presenceStatus);
   },
 

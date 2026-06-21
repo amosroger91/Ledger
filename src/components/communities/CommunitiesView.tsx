@@ -25,7 +25,7 @@ export default function CommunitiesView() {
 
   async function create() {
     if (!name.trim()) return;
-    await communityService.create({ name: name.trim(), description: desc.trim() || "A new corner of Nebula" });
+    await communityService.create({ name: name.trim(), description: desc.trim() || "A new corner of ZuccBook" });
     setOpen(false); setName(""); setDesc(""); load();
     toast("Community created", "success");
   }

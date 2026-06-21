@@ -43,8 +43,8 @@ export default function SettingsView() {
         {row("Persona", "Your companion's voice & style.",
           <Select size="small" value={settings.companionPersona} onChange={(e) => setSettings({ companionPersona: e.target.value as CompanionPersona })}>{PERSONA.map((p) => <MenuItem key={p} value={p}>{p}</MenuItem>)}</Select>)}
         <Divider />
-        {row("Use on-device LLM (WebGPU)", "Loads a real local model via WebLLM. Big download, fully private. Falls back to the fast heuristic engine if WebGPU isn't available.",
-          <Switch checked={settings.useWebLLM} onChange={(e) => { setSettings({ useWebLLM: e.target.checked }); if (e.target.checked) toast("Local model will download on next companion message", "info"); }} />)}
+        {row("On-device LLM (WebGPU)", "On by default — a real local model (WebLLM) downloads automatically on WebGPU devices, fully private. Turn off to force the fast heuristic engine.",
+          <Switch checked={settings.useWebLLM} onChange={(e) => { setSettings({ useWebLLM: e.target.checked, llmOptOut: !e.target.checked }); toast(e.target.checked ? "Local model will download now" : "Using the fast local engine", "info"); }} />)}
       </GlassCard>
 
       <GlassCard sx={{ mb: 2 }}>
@@ -60,7 +60,7 @@ export default function SettingsView() {
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           Everything lives in this browser (IndexedDB + localStorage). Clearing site data wipes your local copy — export your identity first from the Profile page.
         </Typography>
-        <Button color="error" variant="outlined" sx={{ mt: 1.5 }} onClick={() => { if (confirm("Reset Nebula on this device? This clears local data. Export your identity first!")) { indexedDB.deleteDatabase("nebula"); localStorage.clear(); location.reload(); } }}>
+        <Button color="error" variant="outlined" sx={{ mt: 1.5 }} onClick={() => { if (confirm("Reset ZuccBook on this device? This clears local data. Export your identity first!")) { indexedDB.deleteDatabase("nebula"); localStorage.clear(); location.reload(); } }}>
           Reset this device
         </Button>
       </GlassCard>

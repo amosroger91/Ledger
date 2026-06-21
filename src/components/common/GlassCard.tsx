@@ -9,7 +9,7 @@ export default function GlassCard({ sx, ...props }: PaperProps) {
         borderRadius: 3,
         p: 2,
         transition: "border-color .2s ease, transform .2s ease",
-        "&:hover": { borderColor: "rgba(110,231,255,0.28)" },
+        "&:hover": { borderColor: "rgba(58,155,240,0.4)" },
         ...sx,
       }}
       {...props}

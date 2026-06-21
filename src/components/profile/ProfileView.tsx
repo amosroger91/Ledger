@@ -5,7 +5,9 @@ import GlassCard from "@/components/common/GlassCard";
 import { identityService } from "@/services/identityService";
 import { reputationService, BADGES } from "@/services/reputationService";
 import { useStore } from "@/store/useStore";
-import { avatarGradient, initials } from "@/components/common/avatar";
+import UserAvatar from "@/components/common/UserAvatar";
+import { compressAvatar } from "@/lib/image";
+import { presenceService } from "@/services/presenceService";
 import { fingerprint } from "@/lib/crypto";
 import { toast } from "@/lib/events";
 
@@ -17,8 +19,19 @@ export default function ProfileView() {
   const [rep, setRep] = useState(0);
   const [breakdown, setBreakdown] = useState<Record<string, number>>({});
   const fileRef = useRef<HTMLInputElement>(null);
+  const avatarRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { reputationService.total().then(setRep); reputationService.breakdown().then(setBreakdown); }, []);
+
+  async function setPhoto(file?: File) {
+    if (!file) return;
+    try {
+      const dataUrl = await compressAvatar(file);
+      await identityService.update({ avatar: dataUrl });
+      refreshMe(); presenceService.announceSelf(); toast("Photo updated", "success");
+    } catch { toast("Couldn't load that image", "error"); }
+  }
+  async function removePhoto() { await identityService.update({ avatar: "" }); refreshMe(); presenceService.announceSelf(); }
 
   async function save() { await identityService.update({ username: username.trim() || me!.username, bio }); refreshMe(); toast("Profile saved", "success"); }
   async function importId(file?: File) {
@@ -35,11 +48,15 @@ export default function ProfileView() {
     <Box sx={{ maxWidth: 880, mx: "auto" }}>
       <GlassCard sx={{ mb: 2 }}>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <Avatar sx={{ width: 80, height: 80, fontSize: 30, fontWeight: 800, color: "#04121a", background: avatarGradient(me?.publicKey ?? "") }}>{initials(me?.username ?? "?")}</Avatar>
+          <Box sx={{ position: "relative", cursor: "pointer", width: 80, height: 80 }} onClick={() => avatarRef.current?.click()} title="Change photo">
+            <UserAvatar pk={me?.publicKey ?? ""} name={me?.username ?? "?"} avatar={me?.avatar} size={80} />
+            <Box sx={{ position: "absolute", inset: 0, borderRadius: "50%", display: "grid", placeItems: "center", fontSize: 12, fontWeight: 700, color: "#fff", background: "rgba(0,0,0,0.5)", opacity: 0, transition: "opacity .2s", "&:hover": { opacity: 1 } }}>Change</Box>
+          </Box>
+          <input ref={avatarRef} type="file" accept="image/*" hidden onChange={(e) => setPhoto(e.target.files?.[0])} />
           <Box sx={{ flex: 1 }}>
             <Stack direction="row" spacing={1} alignItems="center">
               <Typography variant="h5">{me?.username}</Typography>
-              <Chip size="small" label={rank} sx={{ background: "linear-gradient(135deg,#6ee7ff,#a78bfa)", color: "#04121a", fontWeight: 700 }} />
+              <Chip size="small" label={rank} sx={{ background: "linear-gradient(135deg,#39c6f5,#3a7bf0)", color: "#031426", fontWeight: 700 }} />
             </Stack>
             <Tooltip title={me?.publicKey ?? ""}>
               <Typography variant="caption" color="text.secondary" sx={{ fontFamily: "monospace" }}>id {fingerprint(me?.publicKey ?? "")}</Typography>
@@ -65,8 +82,10 @@ export default function ProfileView() {
             <Stack spacing={2} sx={{ mt: 1 }}>
               <TextField label="Display name" value={username} onChange={(e) => setUsername(e.target.value)} fullWidth />
               <TextField label="Bio" value={bio} onChange={(e) => setBio(e.target.value)} fullWidth multiline minRows={2} />
-              <Stack direction="row" spacing={1}>
+              <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 1 }}>
                 <Button variant="contained" onClick={save}>Save</Button>
+                <Button variant="outlined" onClick={() => avatarRef.current?.click()}>Upload photo</Button>
+                {me?.avatar && <Button variant="text" color="inherit" onClick={removePhoto}>Remove photo</Button>}
                 <Button variant="outlined" startIcon={<DownloadRoundedIcon />} onClick={() => identityService.exportFile()}>Export identity</Button>
                 <Button variant="text" onClick={() => fileRef.current?.click()}>Import</Button>
                 <input ref={fileRef} type="file" accept="application/json" hidden onChange={(e) => importId(e.target.files?.[0])} />

@@ -30,15 +30,15 @@ export default function Onboarding() {
       await onOnboarded();
       refreshMe();
       toast("Identity imported", "success");
-    } catch { toast("That doesn't look like a Nebula identity file", "error"); }
+    } catch { toast("That doesn't look like a ZuccBook identity file", "error"); }
     finally { setBusy(false); }
   }
 
   return (
     <Box sx={{ position: "relative", zIndex: 1, minHeight: "100vh", display: "grid", placeItems: "center", p: 2 }}>
       <GlassCard sx={{ p: 4, maxWidth: 480, width: "100%" }}>
-        <Typography variant="h3" sx={{ background: "linear-gradient(90deg,#6ee7ff,#a78bfa,#f472b6)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>
-          NEBULA
+        <Typography variant="h3" sx={{ background: "linear-gradient(90deg,#39c6f5,#3a7bf0,#36e0c4)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>
+          ZuccBook
         </Typography>
         <Typography variant="body1" color="text.secondary" sx={{ mt: 1, mb: 3 }}>
           The local-first social universe. No accounts, no email, no servers — you generate a cryptographic identity that you own. Every action you take is signed by it.

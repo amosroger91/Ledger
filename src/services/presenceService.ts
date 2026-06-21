@@ -25,6 +25,7 @@ class PresenceService {
     return {
       pk: me?.publicKey ?? "",
       username: me?.username ?? "You",
+      avatar: me?.avatar || undefined,
       status: this.status,
       activity: this.activity,
       lastSeen: Date.now(),

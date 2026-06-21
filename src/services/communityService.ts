@@ -51,7 +51,7 @@ class CommunityService {
   async seedDefaults() {
     if ((await storage.communities()).length) return;
     const defaults = [
-      { name: "Nebula HQ", description: "Announcements & meta about the platform itself", icon: "🌌" },
+      { name: "ZuccBook HQ", description: "Announcements & meta about the platform itself", icon: "🌌" },
       { name: "AI Lab", description: "On-device models, embeddings, WebGPU experiments", icon: "🧠" },
       { name: "Synthwave", description: "Music, listen-together rooms, late-night vibes", icon: "🎧" },
       { name: "Tabletop", description: "Chess, poker, trivia — peer-to-peer game nights", icon: "♟️" },

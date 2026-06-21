@@ -1,5 +1,5 @@
 // Deterministic gradient avatar from a public key (no image needed).
-const PALETTE = ["#6ee7ff", "#a78bfa", "#f472b6", "#5dffa0", "#ffcc66", "#ff9a5d", "#7aa2ff"];
+const PALETTE = ["#39c6f5", "#3a7bf0", "#36e0c4", "#54c95a", "#ffcc66", "#ff9a5d", "#7aa2ff"];
 
 function hash(s: string): number {
   let h = 0;

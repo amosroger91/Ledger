@@ -1,5 +1,5 @@
 // ============================================================
-//  Nebula — core domain types.
+//  ZuccBook — core domain types.
 //  Everything in the app is one of these shapes. Records that
 //  travel between peers are signed (see `Signed<T>`).
 // ============================================================
@@ -47,6 +47,7 @@ export interface Post {
   id: string;
   author: string;            // public key
   authorName: string;        // denormalized for offline display
+  authorAvatar?: string;     // denormalized profile photo (data URL)
   kind: PostKind;
   text?: string;             // text / markdown / caption
   media?: MediaRef[];        // images/audio/video (data URLs or peer refs)
@@ -112,6 +113,7 @@ export type PresenceStatus = "online" | "idle" | "away" | "dnd" | "offline";
 export interface RichPresence {
   pk: string;
   username: string;
+  avatar?: string;
   status: PresenceStatus;
   activity?: { kind: string; detail: string; since: number }; // "Listening to Jazz FM"
   lastSeen: number;
@@ -122,6 +124,7 @@ export interface ChatMessage {
   channel: string;          // dm:<pk> | community:<id>:<channel> | group:<id>
   author: string;
   authorName: string;
+  authorAvatar?: string;
   text?: string;
   media?: MediaRef[];
   reactions: Record<string, string[]>;
@@ -181,7 +184,9 @@ export interface AppSettings {
   feedAlgorithm: FeedAlgorithm;
   moderationProfile: ModerationProfile;
   companionPersona: CompanionPersona;
-  useWebLLM: boolean;            // opt into heavy on-device LLM
+  useWebLLM: boolean;            // on-device LLM enabled
+  llmOptOut: boolean;           // user explicitly turned the LLM off
+  llmModel: string;             // which WebLLM model to load
   presenceStatus: PresenceStatus;
   reducedMotion: boolean;
 }

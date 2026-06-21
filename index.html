@@ -3,24 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#05060f" />
-    <title>Nebula — the local-first social universe</title>
-    <meta name="description" content="Nebula is a decentralized, local-first social platform that runs in your browser. You own your identity, your feed is generated locally by on-device AI, and communication is peer-to-peer. No accounts, no servers, ~$0 to host." />
+    <meta name="theme-color" content="#05080f" />
+    <title>ZuccBook — the local-first social universe</title>
+    <meta name="description" content="ZuccBook is a decentralized, local-first social platform that runs in your browser. You own your identity, your feed is generated locally by on-device AI, and communication is peer-to-peer. No accounts, no servers, ~$0 to host." />
     <!-- Display fonts (progressively enhanced — system fonts are the fallback). -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
     <style>
       html, body, #root { height: 100%; margin: 0; }
-      body { background: #05060f; color: #e6ebff; font-family: "Rajdhani", system-ui, sans-serif; overscroll-behavior: none; }
-      /* boot splash shown until React mounts */
-      #boot { position: fixed; inset: 0; display: grid; place-items: center; background: radial-gradient(120% 120% at 50% 0%, #0a1030, #05060f 70%); z-index: 9999; transition: opacity .5s ease; }
-      #boot .mark { font-family: "Orbitron", system-ui, sans-serif; font-weight: 900; font-size: 13vw; letter-spacing: .08em; background: linear-gradient(90deg,#6ee7ff,#a78bfa,#f472b6); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 28px rgba(110,231,255,.35)); animation: pulse 2.2s ease-in-out infinite; }
-      @keyframes pulse { 0%,100%{opacity:.8} 50%{opacity:1} }
+      body { background: #05080f; color: #eef4ff; font-family: "Open Sans", "Segoe UI", system-ui, sans-serif; overscroll-behavior: none; }
+      /* boot splash shown until React mounts — Aurora glass over flowing color */
+      #boot { position: fixed; inset: 0; display: grid; place-items: center; background: radial-gradient(120% 120% at 50% 0%, #0a1830, #05080f 70%); z-index: 9999; transition: opacity .5s ease; }
+      #boot .mark { font-family: "Segoe UI", "Open Sans", system-ui, sans-serif; font-weight: 800; font-size: 12vw; letter-spacing: .04em; background: linear-gradient(90deg,#39c6f5,#3a7bf0,#36e0c4); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 34px rgba(58,155,240,.45)); animation: pulse 2.4s ease-in-out infinite; }
+      @keyframes pulse { 0%,100%{opacity:.78} 50%{opacity:1} }
     </style>
   </head>
   <body>
-    <div id="boot"><div class="mark">NEBULA</div></div>
+    <div id="boot"><div class="mark">ZuccBook</div></div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

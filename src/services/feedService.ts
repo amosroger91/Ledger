@@ -36,6 +36,7 @@ class FeedService {
       id: newId("post"),
       author: me.publicKey,
       authorName: me.username,
+      authorAvatar: me.avatar || undefined,
       kind: input.kind ?? (input.poll ? "poll" : "text"),
       text,
       media: input.media,
@@ -105,6 +106,9 @@ class FeedService {
     const scored = posts.map((p) => {
       const ageH = (now - p.createdAt) / 3.6e6;
       const recency = Math.exp(-ageH / 24);                       // 1d half-ish life
+      // Freshness: a strong, fast-fading boost so the newest posts (and your
+      // own just-published one) sit at the very top, then hands off to curation.
+      const freshness = Math.exp(-((now - p.createdAt) / 60000) / 45); // ~45-min scale
       const engagement = Object.values(p.reactions).reduce((s, a) => s + a.length, 0);
       const affinity = p.embedding ? cosine(myVec, p.embedding) : 0;
       const factors: RecommendationReason["factors"] = [];
@@ -138,15 +142,23 @@ class FeedService {
         default:
           score = affinity * 6 + recency * 2 + engagement * 0.5;
           factors.push({ label: "Matches your interests", weight: affinity * 6, detail: `${(affinity * 100).toFixed(0)}% match · terms: ${topTerms(p.text ?? "").join(", ") || "—"}` });
-          factors.push({ label: "Freshness", weight: recency * 2 });
           factors.push({ label: "Community engagement", weight: engagement * 0.5, detail: `${engagement} reactions` });
           break;
       }
+
+      // Newest-first boost across all ranked feeds (chronological is already
+      // time-ordered). Guarantees a just-published post lands at the top.
+      if (algorithm !== "chronological") {
+        score += freshness * 40;
+        factors.push({ label: "Freshness (newest first)", weight: freshness * 40, detail: "just posted" });
+      }
+
       reasons.set(p.id, { postId: p.id, algorithm, score, factors: factors.sort((a, b) => b.weight - a.weight) });
       return { p, score };
     });
 
-    scored.sort((a, b) => b.score - a.score);
+    // Sort by score, then newest-first as the tiebreaker.
+    scored.sort((a, b) => b.score - a.score || b.p.createdAt - a.p.createdAt);
     return { posts: scored.map((s) => s.p), reasons };
   }
 
