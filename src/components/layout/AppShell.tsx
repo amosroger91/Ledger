@@ -12,6 +12,7 @@ import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import ChatRoundedIcon from "@mui/icons-material/ChatRounded";
 import ForumRoundedIcon from "@mui/icons-material/ForumRounded";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
+import LiveTvRoundedIcon from "@mui/icons-material/LiveTvRounded";
 import RssFeedRoundedIcon from "@mui/icons-material/RssFeedRounded";
 import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded";
 import AccountBalanceWalletRoundedIcon from "@mui/icons-material/AccountBalanceWalletRounded";
@@ -27,7 +28,7 @@ const NAV = [
   { to: "/communities", label: "Groups", icon: <GroupsRoundedIcon /> },
   { to: "/messages", label: "Town Square", icon: <ChatRoundedIcon /> },
   { to: "/chatroom", label: "Chatroom", icon: <ForumRoundedIcon /> },
-  { to: "/listen", label: "Watch with friends", icon: <Box sx={{ fontSize: 20, lineHeight: 1 }}>🍿</Box> },
+  { to: "/listen", label: "Watch with friends", icon: <LiveTvRoundedIcon /> },
   { to: "/companion", label: "Companion", icon: <AutoAwesomeRoundedIcon /> },
   { to: "/topics", label: "Topics", icon: <RssFeedRoundedIcon /> },
   { to: "/market", label: "Market", icon: <StorefrontRoundedIcon /> },

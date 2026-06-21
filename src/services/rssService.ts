@@ -137,9 +137,13 @@ function stripHtml(s: string): string { return s.replace(/<[^>]+>/g, " ").replac
 
 export interface RssItem { title: string; link: string; summary: string; image?: string; published: number; }
 
-async function proxiedText(url: string): Promise<string> {
+async function proxiedText(url: string, timeoutMs = 8000): Promise<string> {
   for (const proxy of PROXIES) {
-    try { const r = await fetch(proxy(url), { cache: "no-store" }); if (r.ok) { const t = await r.text(); if (t) return t; } } catch {}
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);   // never hang on a slow/dead proxy
+    try { const r = await fetch(proxy(url), { cache: "no-store", signal: ctrl.signal }); if (r.ok) { const t = await r.text(); if (t) return t; } }
+    catch {}
+    finally { clearTimeout(timer); }
   }
   throw new Error("unreachable");
 }
@@ -254,42 +258,59 @@ class RssService {
     c.lastRun = Date.now();
     await this.save(c);
 
+    // Flatten to a work-list so we can show progress and process with bounded
+    // concurrency — one slow feed can't stall the whole refresh (each fetch also
+    // has its own timeout). This is what fixes the "refresh times out and never
+    // finishes" hang on mobile when you've subscribed to many topics.
+    const jobs: { topic: string; feed: Feed }[] = [];
+    for (const topic of c.topics) {
+      const feeds = (await this.feedsForTopic(topic)).slice(0, FEEDS_PER_TOPIC);
+      for (const feed of feeds) jobs.push({ topic, feed });
+    }
+    const total = jobs.length;
+    const seen = new Set(c.seen);   // dedupe against everything we've already pulled
+    let posted = 0, done = 0;
     bus.emit("rss:refreshing", true);
-    const seen = new Set(c.seen);
-    let posted = 0;
-    try {
-      for (const topic of c.topics) {
-        const feeds = (await this.feedsForTopic(topic)).slice(0, FEEDS_PER_TOPIC);
-        for (const feed of feeds) {
-          const items = await this.fetchFeed(feed);
-          for (const item of items.slice(0, PER_FEED)) {
-            if (seen.has(item.link)) continue;
-            seen.add(item.link);
-            // Keep it minimal and consistent: headline, a short clean blurb, and
-            // the link. No AI commentary/"hot takes" — the bot just surfaces the
-            // story and lets you click through.
-            const blurb = item.summary && item.summary.length > 40 ? item.summary.slice(0, 200).replace(/\s+\S*$/, "") + "…" : item.summary;
-            const post: Post = {
-              id: "rss_" + hash(item.link),
-              author: "rss-bot",
-              authorName: `RSS Bot · ${feed.name}`,
-              kind: "text",
-              text: [item.title, blurb, item.link].filter(Boolean).join("\n\n"),
-              media: item.image ? [{ type: "image", url: item.image, mime: "image/*", alt: item.title }] : undefined,
-              tags: [topic.toLowerCase().replace(/[^a-z0-9]+/g, "")],
-              createdAt: item.published || Date.now(),
-              reactions: {},
-              embedding: embed(item.title + " " + item.summary + " " + topic),
-              source: "relay",
-            };
-            await feedService.ingest(post);
-            bus.emit("post:publish", post);
-            posted++;
-          }
+    bus.emit("rss:progress", { done: 0, total, posted: 0 });
+
+    const runOne = async ({ topic, feed }: { topic: string; feed: Feed }) => {
+      try {
+        const items = await this.fetchFeed(feed);
+        for (const item of items.slice(0, PER_FEED)) {
+          if (seen.has(item.link)) continue;     // already on the timeline — don't double
+          seen.add(item.link);
+          const blurb = item.summary && item.summary.length > 40 ? item.summary.slice(0, 200).replace(/\s+\S*$/, "") + "…" : item.summary;
+          const post: Post = {
+            id: "rss_" + hash(item.link),
+            author: "rss-bot",
+            authorName: `RSS Bot · ${feed.name}`,
+            kind: "text",
+            text: [item.title, blurb, item.link].filter(Boolean).join("\n\n"),
+            media: item.image ? [{ type: "image", url: item.image, mime: "image/*", alt: item.title }] : undefined,
+            tags: [topic.toLowerCase().replace(/[^a-z0-9]+/g, "")],
+            createdAt: item.published || Date.now(),
+            reactions: {},
+            embedding: embed(item.title + " " + item.summary + " " + topic),
+            source: "relay",
+          };
+          await feedService.ingest(post);
+          bus.emit("post:publish", post);
+          posted++;
         }
+      } catch { /* skip this feed */ }
+      finally { done++; bus.emit("rss:progress", { done, total, posted }); }
+    };
+
+    try {
+      const CONC = 4;
+      for (let i = 0; i < jobs.length; i += CONC) {
+        await Promise.all(jobs.slice(i, i + CONC).map(runOne));
       }
-    } finally { bus.emit("rss:refreshing", false); }
-    c.seen = [...seen].slice(-800);
+    } finally {
+      bus.emit("rss:refreshing", false);
+      bus.emit("rss:progress", { done: total, total, posted });
+    }
+    c.seen = [...seen].slice(-1500);
     await this.save(c);
     return posted;
   }

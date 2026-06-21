@@ -43,6 +43,7 @@ export async function boot(): Promise<BootResult> {
   await feedService.init();
   audioPlayerService.init();           // shared mp3 player joins media exclusivity
   await alertsService.load();          // notification center (clickable alerts)
+  await factCheckService.loadLinks();  // restore user-linked PolitiFact fact-checks
   await trustService.load();           // load my web-of-trust edges
   await purgeSeededPosts();            // remove demo posts left by earlier builds
   const me = await identityService.load();

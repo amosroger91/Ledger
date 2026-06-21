@@ -120,6 +120,26 @@ class CompanionService {
     } catch { return null; }
   }
 
+  /** Derive search keywords from a headline using the on-device LLM (the user's
+   *  own compute). Falls back to local term extraction if no model is loaded.
+   *  Returns { keywords, usedLLM } so the UI can credit the contribution. */
+  async keywords(text: string, n = 6): Promise<{ keywords: string[]; usedLLM: boolean }> {
+    if (engine && loadedId === this.model) {
+      try {
+        const r = await engine.chat.completions.create({
+          messages: [{ role: "user", content: `From this news headline, list up to ${n} short search keywords (names, places, claims, topics). Reply ONLY with a comma-separated list, nothing else.\n\nHeadline: "${text.slice(0, 240)}"` }],
+          temperature: 0.2,
+        });
+        const out: string = r.choices?.[0]?.message?.content ?? "";
+        const kws = out.replace(/^[^a-z0-9"]*keywords?[:\-\s]*/i, "")
+          .split(/[,\n;]/).map((s: string) => s.replace(/^[\s\-*\d."']+|["']+$/g, "").trim().toLowerCase())
+          .filter((s: string) => s.length > 2 && s.length < 34 && !/^(the|and|that|this|with|from|for)$/.test(s));
+        if (kws.length) return { keywords: [...new Set(kws)].slice(0, n), usedLLM: true };
+      } catch { /* fall through to local */ }
+    }
+    return { keywords: topTerms(text, n), usedLLM: false };
+  }
+
   history() { return storage.companionHistory(); }
 
   async ask(prompt: string, context?: { posts?: Post[]; communities?: Community[] }): Promise<CompanionMessage> {

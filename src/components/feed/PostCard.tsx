@@ -14,8 +14,10 @@ import { linkPreviewService, type Preview } from "@/services/linkPreviewService"
 import { trustService } from "@/services/trustService";
 import { audioPlayerService } from "@/services/audioPlayerService";
 import { watchRoomService } from "@/services/watchRoomService";
+import { companionService } from "@/services/companionService";
 import { factCheckService, type FactCheck } from "@/services/factCheckService";
 import FactCheckRoundedIcon from "@mui/icons-material/FactCheckRounded";
+import ReportProblemRoundedIcon from "@mui/icons-material/ReportProblemRounded";
 import { emojify } from "@/lib/emoticons";
 import { compressPostImage } from "@/lib/image";
 import GifPicker from "@/components/common/GifPicker";
@@ -85,23 +87,33 @@ const RULING_COLOR: Record<string, string> = {
   "true": "#2f9e44", "mostly true": "#5cb85c", "half true": "#e8920c",
   "mostly false": "#e8590c", "barely true": "#e8590c", "false": "#d23b2f", "pants on fire": "#a8071a",
 };
-function FactCheckCard({ text }: { text: string }) {
-  const [fc, setFc] = useState<FactCheck | null>(() => factCheckService.match(text));
-  useEffect(() => {
-    if (fc) return;
-    return bus.on("factcheck:ready", () => setFc(factCheckService.match(text)));
-  }, [text, fc]);
-  if (!fc) return null;
+function FactCheckCard({ fc, postId, title, onChange }: { fc: FactCheck; postId: string; title: string; onChange: (fc: FactCheck | null) => void }) {
+  const [checking, setChecking] = useState(false);
   const color = (fc.ruling && RULING_COLOR[fc.ruling]) || "#51606e";
+  // "Is this in error?" — re-derive keywords on the user's device and re-search
+  // PolitiFact. Same article → keep; a closer one → update; nothing → remove.
+  async function recheck() {
+    setChecking(true);
+    toast("Re-checking on your device ⚡ (thanks for the compute!)", "info");
+    const { keywords } = await companionService.keywords(title);
+    const found = factCheckService.searchByKeywords(keywords);
+    setChecking(false);
+    if (found) { await factCheckService.setFor(postId, found); onChange(found); toast(found.link === fc.link ? "Confirmed — still the best match." : "Updated to a closer fact-check.", "success"); }
+    else { await factCheckService.removeFor(postId); onChange(null); toast("No current PolitiFact match — removed.", "info"); }
+  }
   return (
-    <Box component="a" href={fc.link} target="_blank" rel="noopener noreferrer"
-      sx={{ display: "block", mt: 1, p: 1, borderRadius: 1.5, textDecoration: "none", color: "inherit", border: `1px solid ${color}55`, bgcolor: `${color}10` }}>
+    <Box sx={{ mt: 1, p: 1, borderRadius: 1.5, border: `1px solid ${color}55`, bgcolor: `${color}10` }}>
       <Stack direction="row" alignItems="center" spacing={1}>
         <FactCheckRoundedIcon sx={{ color, fontSize: 18 }} />
-        <Typography variant="caption" sx={{ fontWeight: 800, color }}>Fact check · PolitiFact</Typography>
+        <Typography variant="caption" sx={{ fontWeight: 800, color, flex: 1 }}>Fact check · PolitiFact</Typography>
         {fc.ruling && <Chip size="small" label={fc.ruling} sx={{ height: 18, fontSize: 10, textTransform: "capitalize", bgcolor: color, color: "#fff", fontWeight: 700 }} />}
       </Stack>
-      <Typography variant="body2" sx={{ mt: 0.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{fc.claim}</Typography>
+      <Box component="a" href={fc.link} target="_blank" rel="noopener noreferrer" sx={{ textDecoration: "none", color: "inherit" }}>
+        <Typography variant="body2" sx={{ mt: 0.5, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{fc.claim}</Typography>
+      </Box>
+      <Button size="small" startIcon={<ReportProblemRoundedIcon fontSize="small" />} disabled={checking} onClick={recheck} sx={{ mt: 0.5, color: "text.secondary" }}>
+        {checking ? "Checking…" : "Is this in error?"}
+      </Button>
     </Box>
   );
 }
@@ -327,8 +339,22 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
   const [showReplies, setShowReplies] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [authMenu, setAuthMenu] = useState<HTMLElement | null>(null);
+  const [factCheck, setFactCheck] = useState<FactCheck | null>(() => factCheckService.getFor(post.id));
+  const [fcBusy, setFcBusy] = useState(false);
   const restricted = !!verdict && (verdict.action === "reduce" || verdict.action === "review" || verdict.action === "flag");
   const childMap = replyMap ?? new Map<string, Post[]>();
+
+  // User-triggered fact-check: derive keywords on-device (their compute), search PolitiFact.
+  async function runFactCheck() {
+    setFcBusy(true);
+    const headline = (post.text ?? "").split("\n")[0] || (post.text ?? "");
+    toast("Deriving keywords on your device & checking PolitiFact ⚡", "info");
+    const { keywords, usedLLM } = await companionService.keywords(headline);
+    const found = factCheckService.searchByKeywords(keywords);
+    setFcBusy(false);
+    if (found) { await factCheckService.setFor(post.id, found); setFactCheck(found); toast(`Fact-check linked${usedLLM ? " (AI-assisted)" : ""}. Thanks for contributing compute!`, "success"); }
+    else toast("No relevant PolitiFact fact-check found.", "info");
+  }
 
   async function trust(kind: "vouch" | "report" | "mute") {
     setAuthMenu(null);
@@ -383,7 +409,9 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
 
           {post.media?.filter((m) => m.type === "audio").map((m, i) => <AudioCard key={i} url={m.url} title={m.alt || "Audio track"} />)}
 
-          {post.author === "rss-bot" && showFactChecks && <FactCheckCard text={post.text ?? ""} />}
+          {showFactChecks && (factCheck
+            ? <FactCheckCard fc={factCheck} postId={post.id} title={(post.text ?? "").split("\n")[0]} onChange={setFactCheck} />
+            : <Button size="small" startIcon={<FactCheckRoundedIcon fontSize="small" />} disabled={fcBusy} onClick={runFactCheck} sx={{ mt: 0.5, color: "text.secondary" }}>{fcBusy ? "Checking…" : "Fact-check this"}</Button>)}
 
           {post.poll && (
             <Stack spacing={0.5} sx={{ mt: 1 }}>

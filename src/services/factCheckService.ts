@@ -37,6 +37,7 @@ async function fetchText(url: string): Promise<string | null> {
 
 let index: FactCheck[] = [];
 let loaded = false;
+let byPost = new Map<string, FactCheck>();   // user-linked fact-checks, keyed by post id
 
 class FactCheckService {
   /** Load the PolitiFact index (network, then cache fallback). Best-effort. */
@@ -70,19 +71,31 @@ class FactCheckService {
 
   get ready() { return loaded && index.length > 0; }
 
-  /** Best matching recent fact-check for `text`, or null. Conservative: needs at
-   *  least 3 shared meaningful keywords so we don't show spurious cards. */
-  match(text: string): FactCheck | null {
-    if (!index.length || !text) return null;
-    const t = tokens(text);
-    if (t.size < 3) return null;
+  // ---- user-triggered, per-post fact-check links (the LLM-driven flow) ----
+  async loadLinks() {
+    const saved = await storage.kvGet<Record<string, FactCheck>>("factcheck:byPost");
+    if (saved) byPost = new Map(Object.entries(saved));
+  }
+  private async persistLinks() { await storage.kvSet("factcheck:byPost", Object.fromEntries(byPost)); }
+  getFor(postId: string): FactCheck | null { return byPost.get(postId) ?? null; }
+  async setFor(postId: string, fc: FactCheck) { byPost.set(postId, fc); await this.persistLinks(); }
+  async removeFor(postId: string) { byPost.delete(postId); await this.persistLinks(); }
+  /** Cleanse: drop every linked fact-check (used once to clear the old auto-matched data). */
+  async clearLinks() { byPost.clear(); await this.persistLinks(); }
+
+  /** Find the best PolitiFact match for a set of (LLM-derived) keywords. Each
+   *  keyword is matched as a substring of a fact-check claim; needs ≥2 hits. */
+  searchByKeywords(keywords: string[]): FactCheck | null {
+    if (!index.length || !keywords.length) return null;
+    const kws = keywords.map((k) => k.toLowerCase().trim()).filter((k) => k.length > 2);
     let best: FactCheck | null = null, bestScore = 0;
     for (const fc of index) {
-      let shared = 0;
-      for (const w of tokens(fc.claim)) if (t.has(w)) shared++;
-      if (shared > bestScore) { bestScore = shared; best = fc; }
+      const hay = fc.claim.toLowerCase();
+      let score = 0;
+      for (const k of kws) if (hay.includes(k)) score++;
+      if (score > bestScore) { bestScore = score; best = fc; }
     }
-    return bestScore >= 3 ? best : null;
+    return bestScore >= 2 ? best : null;
   }
 }
 

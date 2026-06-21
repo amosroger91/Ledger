@@ -41,6 +41,7 @@ export default function FeedView() {
   const [reasons, setReasons] = useState<Map<string, RecommendationReason>>(new Map());
   const [summary, setSummary] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [rssProg, setRssProg] = useState<{ done: number; total: number; posted: number }>({ done: 0, total: 0, posted: 0 });
   const [replies, setReplies] = useState<Map<string, Post[]>>(new Map());
   const [verdicts, setVerdicts] = useState<Map<string, import("@/types").ModerationVerdict>>(new Map());
   const [filter, setFilter] = useState<ContentFilter>("all");
@@ -93,6 +94,7 @@ export default function FeedView() {
     tick();
   }), []);
   useEffect(() => { const off = bus.on("rss:refreshing", setRefreshing); return off; }, []);
+  useEffect(() => { const off = bus.on("rss:progress", setRssProg); return off; }, []);
   useEffect(() => { rssService.refresh().catch(() => {}); }, []); // top up RSS Bot stories (throttled)
 
   return (
@@ -139,11 +141,15 @@ export default function FeedView() {
           <GlassCard sx={{ mb: 1.5, p: 0, overflow: "hidden" }}>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ px: 2, py: 1 }}>
               <CircularProgress size={16} />
-              <Typography variant="body2" color="text.secondary">RSS Bot is fetching fresh stories…</Typography>
-              <Box sx={{ flex: 1 }} />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Populating your timeline with RSS feeds{rssProg.total ? ` · ${rssProg.done}/${rssProg.total} feeds` : "…"}{rssProg.posted ? ` · ${rssProg.posted} new` : ""}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">⚡ You're contributing your device's compute to refresh the network's feed right now.</Typography>
+              </Box>
               <Chip size="small" label="live" sx={{ height: 18, fontSize: 10, bgcolor: "rgba(84,201,90,0.16)", color: "#54c95a" }} />
             </Stack>
-            <LinearProgress sx={{ height: 3 }} />
+            <LinearProgress variant={rssProg.total ? "determinate" : "indeterminate"} value={rssProg.total ? (rssProg.done / rssProg.total) * 100 : undefined} sx={{ height: 3 }} />
           </GlassCard>
         )}
 
