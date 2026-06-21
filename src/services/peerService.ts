@@ -28,6 +28,7 @@ type Envelope =
   | { t: "dm"; d: ChatMessage }
   | { t: "react"; d: { postId: string; emoji: string; from: string; fromName: string } }
   | { t: "stage"; d: WatchPartyState }
+  | { t: "wqueue"; d: { room: string; items: { videoId: string; title?: string; by: string }[] } }
   | { t: "hello"; d: { pk: string } };
 
 class PeerService {
@@ -40,8 +41,10 @@ class PeerService {
   private started = false;
   private lastStage: WatchPartyState | null = null; // most recent (any room) — replayed to new joiners
   private stagesByRoom = new Map<string, WatchPartyState>(); // latest state per watch room
+  private queuesByRoom = new Map<string, { videoId: string; title?: string; by: string }[]>(); // up-next per room
 
   currentStage(room = "lobby") { return this.stagesByRoom.get(room) ?? null; }
+  queueFor(room = "lobby") { return this.queuesByRoom.get(room) ?? []; }
   /** Public rooms with a live video (for the lobby's "active rooms" list). */
   activeRooms(): WatchPartyState[] {
     return [...this.stagesByRoom.values()].filter((s) => s.videoId && !(s.room ?? "lobby").startsWith("priv:"));
@@ -56,6 +59,7 @@ class PeerService {
       this.send({ t: "react", d: { postId, emoji, from: identityService.pk, fromName: identityService.current?.username ?? "Someone" } }));
     // Relay local watch-party changes; remember the latest so late joiners catch up.
     bus.on("stage:out", (s) => { this.lastStage = s; this.stagesByRoom.set(s.room ?? "lobby", s); this.send({ t: "stage", d: s }); });
+    bus.on("watch:queue-out", ({ room, items }) => { this.queuesByRoom.set(room, items); this.send({ t: "wqueue", d: { room, items } }); });
     this.connect();
   }
 
@@ -111,6 +115,11 @@ class PeerService {
         this.lastStage = env.d;
         this.stagesByRoom.set(env.d.room ?? "lobby", env.d);
         bus.emit("stage:in", env.d);
+        if (this.isHub) this.broadcast(env, fromId);
+        break;
+      case "wqueue":
+        this.queuesByRoom.set(env.d.room, env.d.items);
+        bus.emit("watch:queue", env.d);
         if (this.isHub) this.broadcast(env, fromId);
         break;
       case "hello": if (this.isHub) presenceService.announceSelf(); break;

@@ -12,11 +12,25 @@ class AudioPlayerService {
   current: { url: string; title: string; postId?: string } | null = null;
   playing = false;
   volume = 0.9;
+  queue: { url: string; title: string }[] = [];   // jukebox up-next
 
   /** Pause when any other media source starts. Call once at boot. */
   init() {
     bus.on("media:play", ({ id }) => { if (id !== "music") this.pause(); });
   }
+
+  // ---- jukebox queue ----
+  enqueue(track: { url: string; title: string }) {
+    this.queue.push(track);
+    bus.emit("audio:queue", { items: [...this.queue] });
+    if (!this.current) this.next();           // nothing playing → start it
+  }
+  next() {
+    const t = this.queue.shift();
+    bus.emit("audio:queue", { items: [...this.queue] });
+    if (t) this.play(t); else this.stop();
+  }
+  clearQueue() { this.queue = []; bus.emit("audio:queue", { items: [] }); }
 
   private ensure(): HTMLAudioElement {
     if (!this.el) {
@@ -25,7 +39,7 @@ class AudioPlayerService {
       el.volume = this.volume;
       el.addEventListener("play", () => { this.playing = true; this.emit(); bus.emit("media:play", { id: "music" }); });
       el.addEventListener("pause", () => { this.playing = false; this.emit(); });
-      el.addEventListener("ended", () => { this.playing = false; this.emit(); });
+      el.addEventListener("ended", () => { this.playing = false; this.emit(); if (this.queue.length) this.next(); });
       el.addEventListener("timeupdate", () => bus.emit("audio:time", { cur: el.currentTime, dur: el.duration || 0 }));
       this.el = el;
     }

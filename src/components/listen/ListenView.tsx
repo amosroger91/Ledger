@@ -1,10 +1,16 @@
-import { useEffect, useState } from "react";
-import { Box, Stack, Typography, Button, Slider, Chip, CircularProgress, Grid, ToggleButtonGroup, ToggleButton, TextField } from "@mui/material";
+import { useEffect, useRef, useState } from "react";
+import { Box, Stack, Typography, Button, Slider, Chip, CircularProgress, Grid, ToggleButtonGroup, ToggleButton, IconButton, Tooltip } from "@mui/material";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import StopRoundedIcon from "@mui/icons-material/StopRounded";
 import MusicNoteRoundedIcon from "@mui/icons-material/MusicNoteRounded";
 import SmartDisplayRoundedIcon from "@mui/icons-material/SmartDisplayRounded";
+import QueueMusicRoundedIcon from "@mui/icons-material/QueueMusicRounded";
+import AudiotrackRoundedIcon from "@mui/icons-material/AudiotrackRounded";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import { audioPlayerService } from "@/services/audioPlayerService";
+import { bus } from "@/lib/events";
 import GlassCard from "@/components/common/GlassCard";
+import RoomChat from "@/components/common/RoomChat";
 import { listenTogetherService, type Station } from "@/services/listenTogetherService";
 import { presenceService } from "@/services/presenceService";
 import { reputationService } from "@/services/reputationService";
@@ -16,7 +22,18 @@ import WatchParty from "./WatchParty";
 export default function ListenView() {
   // Arrive in "video" if a watch room is already playing (e.g. via the feed's
   // "Watch with friends" button); otherwise default to music.
-  const [mode, setMode] = useState<"music" | "video">(() => peerService.currentStage(watchRoomService.current)?.videoId ? "video" : "music");
+  const [mode, setMode] = useState<"music" | "video" | "jukebox">(() => peerService.currentStage(watchRoomService.current)?.videoId ? "video" : "music");
+  const [jukebox, setJukebox] = useState(audioPlayerService.queue);
+  const jukeRef = useRef<HTMLInputElement>(null);
+  useEffect(() => bus.on("audio:queue", ({ items }) => setJukebox(items)), []);
+  async function addMp3(files: FileList | null) {
+    if (!files) return;
+    for (const f of Array.from(files)) {
+      if (f.size > 12 * 1024 * 1024) { toast(`${f.name} is over 12 MB — skipped`, "warn"); continue; }
+      const url = await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(f); });
+      audioPlayerService.enqueue({ url, title: f.name.replace(/\.[^.]+$/, "") });
+    }
+  }
 
   // --- music (internet radio) ---
   const [stations, setStations] = useState<Station[]>([]);
@@ -53,6 +70,7 @@ export default function ListenView() {
       >
         <ToggleButton value="music"><MusicNoteRoundedIcon fontSize="small" sx={{ mr: 0.5 }} /> Radio</ToggleButton>
         <ToggleButton value="video"><SmartDisplayRoundedIcon fontSize="small" sx={{ mr: 0.5 }} /> Watch rooms</ToggleButton>
+        <ToggleButton value="jukebox"><QueueMusicRoundedIcon fontSize="small" sx={{ mr: 0.5 }} /> Jukebox</ToggleButton>
       </ToggleButtonGroup>
 
       {mode === "music" && (
@@ -74,6 +92,9 @@ export default function ListenView() {
             </Stack>
           </GlassCard>
 
+          {/* tune into a station → join its chat and listen together */}
+          {current && <Box sx={{ mb: 2 }}><RoomChat roomId={`radio-${current.url}`} title={`📻 ${current.name} — listeners' chat`} height={300} /></Box>}
+
           {loading ? (
             <Stack direction="row" alignItems="center" spacing={1}><CircularProgress size={16} /><Typography variant="caption" color="text.secondary">Finding stations…</Typography></Stack>
           ) : (
@@ -94,6 +115,32 @@ export default function ListenView() {
               {stations.length === 0 && <Grid item xs={12}><GlassCard><Typography color="text.secondary">Station directory unreachable right now. (It's a free public API — try again later.)</Typography></GlassCard></Grid>}
             </Grid>
           )}
+        </>
+      )}
+
+      {mode === "jukebox" && (
+        <>
+          <GlassCard sx={{ mb: 2 }}>
+            <Typography variant="h6">🎵 Jukebox listening room</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 1.5 }}>
+              Drop in mp3s to build a shared up-next queue — they play through the bottom audio bar (pause/seek/volume). Everyone in the room shares the chat below; your queue plays on your device.
+            </Typography>
+            <Button variant="contained" startIcon={<AudiotrackRoundedIcon />} onClick={() => jukeRef.current?.click()}>Add mp3s to the queue</Button>
+            <input ref={jukeRef} type="file" accept="audio/*,.mp3" multiple hidden onChange={(e) => { addMp3(e.target.files); e.currentTarget.value = ""; }} />
+            {jukebox.length > 0 && (
+              <Stack spacing={0.5} sx={{ mt: 1.5 }}>
+                <Typography variant="overline" color="text.secondary">Up next ({jukebox.length})</Typography>
+                {jukebox.map((t, i) => (
+                  <Stack key={i} direction="row" spacing={1} alignItems="center" sx={{ p: 0.5, borderRadius: 1, bgcolor: "rgba(124,92,255,0.06)" }}>
+                    <AudiotrackRoundedIcon fontSize="small" sx={{ color: "#7c5cff" }} />
+                    <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>{t.title}</Typography>
+                  </Stack>
+                ))}
+                <Button size="small" startIcon={<CloseRoundedIcon />} onClick={() => audioPlayerService.clearQueue()} sx={{ alignSelf: "flex-start" }}>Clear queue</Button>
+              </Stack>
+            )}
+          </GlassCard>
+          <RoomChat roomId="jukebox-lobby" title="🎶 Jukebox room — chat" height={320} />
         </>
       )}
 

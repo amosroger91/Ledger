@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { Box, Stack, TextField, Button, Chip, Typography, Tooltip, FormControlLabel, Checkbox } from "@mui/material";
+import { Box, Stack, TextField, Button, Chip, Typography, Tooltip, FormControlLabel, Checkbox, IconButton } from "@mui/material";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import GlassCard from "@/components/common/GlassCard";
+import RoomChat from "@/components/common/RoomChat";
 import { peerService } from "@/services/peerService";
 import { profileService } from "@/services/profileService";
 import { watchRoomService, LOBBY, roomLabel, isPrivate } from "@/services/watchRoomService";
@@ -32,16 +34,30 @@ export default function WatchParty() {
   const [active, setActive] = useState<WatchPartyState[]>(peerService.activeRooms());
   const [joinName, setJoinName] = useState("");
   const [priv, setPriv] = useState(false);
+  const [queue, setQueue] = useState(peerService.queueFor(watchRoomService.current));
+  const [qInput, setQInput] = useState("");
 
   useEffect(() => {
-    const sync = () => { setStage(peerService.currentStage(watchRoomService.current)); setActive(peerService.activeRooms()); };
+    const sync = () => { setStage(peerService.currentStage(watchRoomService.current)); setActive(peerService.activeRooms()); setQueue(peerService.queueFor(watchRoomService.current)); };
     const off1 = bus.on("stage:in", sync);
     const off2 = bus.on("watchroom:change", (r) => { setRoom(r); sync(); });
     // Your own start broadcasts via stage:out; re-read after it's stored.
     const off3 = bus.on("watch:start", () => setTimeout(sync, 60));
+    const off4 = bus.on("watch:queue", ({ room: r }) => { if (r === watchRoomService.current) setQueue(peerService.queueFor(r)); });
     const t = setInterval(() => setActive(peerService.activeRooms()), 4000);
-    return () => { off1(); off2(); off3(); clearInterval(t); };
+    return () => { off1(); off2(); off3(); off4(); clearInterval(t); };
   }, []);
+
+  function pushQueue(items: typeof queue) { setQueue(items); bus.emit("watch:queue-out", { room: watchRoomService.current, items }); }
+  function addToQueue() {
+    const id = youtubeId(qInput); if (!id) { toast("Paste a valid YouTube link to queue", "warn"); return; }
+    setQInput(""); pushQueue([...queue, { videoId: id, by: me?.publicKey ?? "" }]);
+    toast("Added to the up-next queue 🍿", "success");
+  }
+  function playNext() {
+    if (!queue.length) return;
+    const [next, ...rest] = queue; pushQueue(rest); bus.emit("watch:start", { videoId: next.videoId });
+  }
 
   function switchRoom(r: string) { watchRoomService.set(r); setRoom(r); setStage(peerService.currentStage(r)); }
   function joinByName() {
@@ -114,6 +130,34 @@ export default function WatchParty() {
           ? <Box id="watch-dock" sx={{ position: "relative", pt: "56.25%", width: "100%" }} />
           : <Typography color="text.secondary">Nothing playing in <b>{roomLabel(room)}</b> yet. Paste a YouTube link above and everyone in this room watches in sync — people who join mid-video jump to the current moment, and it keeps playing in a mini player as you move around the app.</Typography>}
       </GlassCard>
+
+      {/* shared up-next queue — anyone in the room can add; auto-advances on end */}
+      <GlassCard sx={{ mt: 2 }}>
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+          <Typography variant="overline" color="text.secondary" sx={{ flex: 1 }}>Up next ({queue.length})</Typography>
+          {queue.length > 0 && <Button size="small" startIcon={<PlayArrowRoundedIcon />} onClick={playNext}>Play next</Button>}
+        </Stack>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ sm: "center" }}>
+          <TextField fullWidth size="small" value={qInput} placeholder="Paste a YouTube link to queue for everyone…" onChange={(e) => setQInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addToQueue()} />
+          <Button variant="outlined" onClick={addToQueue}>Queue</Button>
+        </Stack>
+        {queue.length > 0 && (
+          <Stack spacing={0.5} sx={{ mt: 1 }}>
+            {queue.map((q, i) => (
+              <Stack key={i} direction="row" spacing={1} alignItems="center" sx={{ p: 0.5, borderRadius: 1, "&:hover": { bgcolor: "rgba(58,155,240,0.06)" } }}>
+                <Box component="img" src={`https://i.ytimg.com/vi/${q.videoId}/default.jpg`} sx={{ width: 56, height: 32, objectFit: "cover", borderRadius: 0.5 }} />
+                <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>{q.videoId}</Typography>
+                <Tooltip title="Remove"><IconButton size="small" onClick={() => pushQueue(queue.filter((_, j) => j !== i))}><CloseRoundedIcon fontSize="small" /></IconButton></Tooltip>
+              </Stack>
+            ))}
+          </Stack>
+        )}
+      </GlassCard>
+
+      {/* live chat (+ optional voice/cam) for everyone in this watch room */}
+      <Box sx={{ mt: 2 }}>
+        <RoomChat roomId={`watch-${room}`} title={`💬 ${roomLabel(room)} — room chat`} height={320} />
+      </Box>
     </>
   );
 }

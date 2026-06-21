@@ -55,13 +55,25 @@ export default function GlobalWatchPlayer() {
     const s: WatchPartyState = { videoId, playing, baseTime, refEpoch: Date.now(), by: me?.publicKey ?? "", byName: me?.username, room: watchRoomService.current };
     lastStage.current = s; setStage(s); bus.emit("stage:out", s);
   }
+  // When the current video ends, the person who started it advances the shared
+  // "up next" queue (only the controller, so we don't double-skip).
+  function advanceQueue() {
+    if (lastStage.current && lastStage.current.by !== me?.publicKey) return;
+    const room = watchRoomService.current;
+    const q = peerService.queueFor(room);
+    if (!q.length) return;
+    const [next, ...rest] = q;
+    bus.emit("watch:queue-out", { room, items: rest });
+    bus.emit("watch:start", { videoId: next.videoId });
+  }
   function onStateChange(e: any) {
     const YT = (window as any).YT;
     if (e.data === YT.PlayerState.PLAYING) bus.emit("media:play", { id: "watch" }); // others pause
     if (applying.current) return;
     let t = 0; try { t = e.target.getCurrentTime(); } catch {}
     if (e.data === YT.PlayerState.PLAYING) broadcast(true, t);
-    else if (e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED) broadcast(false, t);
+    else if (e.data === YT.PlayerState.PAUSED) broadcast(false, t);
+    else if (e.data === YT.PlayerState.ENDED) { broadcast(false, t); advanceQueue(); }
   }
   async function ensurePlayer(videoId: string, start: number, playing: boolean) {
     const YT = await loadYT();
