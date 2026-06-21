@@ -5,6 +5,7 @@ import VerifiedRoundedIcon from "@mui/icons-material/VerifiedRounded";
 import ReplyRoundedIcon from "@mui/icons-material/ReplyRounded";
 import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineRounded";
 import AddReactionOutlinedIcon from "@mui/icons-material/AddReactionOutlined";
+import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import PauseRoundedIcon from "@mui/icons-material/PauseRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
@@ -358,6 +359,23 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
     else toast("No relevant PolitiFact fact-check found.", "info");
   }
 
+  // Hand the post (with its reactions + comments) to the on-device Companion.
+  function askCompanion() {
+    const reactions = Object.entries(post.reactions).filter(([, v]) => v.length).map(([e, v]) => `${e}×${v.length}`).join(", ");
+    const comments = replies.slice(0, 6).map((r) => `- ${r.authorName}: ${(r.text ?? "").slice(0, 200)}`).join("\n");
+    const prompt = [
+      "Give me your honest, brief take on this post.",
+      "",
+      `${post.authorName} posted: "${(post.text ?? "").slice(0, 700)}"`,
+      reactions ? `Reactions so far: ${reactions}` : "",
+      comments ? `Comments:\n${comments}` : "",
+      "",
+      "What do you make of it — and what do the reactions/comments say about how it's landing?",
+    ].filter(Boolean).join("\n");
+    bus.emit("companion:prompt", { text: prompt });
+    toast("Asked your Companion to weigh in 🤖", "info");
+  }
+
   async function trust(kind: "vouch" | "report" | "mute") {
     setAuthMenu(null);
     await trustService[kind](post.author);
@@ -458,6 +476,11 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
               startIcon={<ChatBubbleOutlineRoundedIcon sx={{ fontSize: 18 }} />}
               sx={{ flex: 1, color: showReplies ? "#1668e0" : "text.secondary", fontWeight: 600, fontSize: 13.5, textTransform: "none", py: 0.7, borderRadius: 2, "&:hover": { bgcolor: "rgba(58,155,240,0.09)", color: "#1668e0" } }}>
               {replies.length ? `${replies.length} ${replies.length === 1 ? "Comment" : "Comments"}` : "Comment"}
+            </Button>
+            <Button fullWidth disableRipple onClick={askCompanion}
+              startIcon={<AutoAwesomeRoundedIcon sx={{ fontSize: 17 }} />}
+              sx={{ flex: 1, color: "text.secondary", fontWeight: 600, fontSize: 13.5, textTransform: "none", py: 0.7, borderRadius: 2, "&:hover": { bgcolor: "rgba(124,92,255,0.1)", color: "#6a43d8" } }}>
+              Ask AI
             </Button>
           </Stack>
 

@@ -177,6 +177,19 @@ class CompanionService {
     return reply.choices?.[0]?.message?.content ?? this.heuristicAnswer(prompt, ctx);
   }
 
+  /** Structured, on-device snapshot of the current feed for the digest widget. */
+  feedDigest(posts: Post[]): { count: number; people: number; reactions: number; themes: string[]; top: Post | null } {
+    const real = posts.filter((p) => p.author !== "rss-bot" && p.author !== "system");
+    const reactions = posts.reduce((s, p) => s + Object.values(p.reactions).reduce((a, v) => a + v.length, 0), 0);
+    return {
+      count: posts.length,
+      people: new Set(real.map((p) => p.authorName)).size,
+      reactions,
+      themes: topTerms(posts.map((p) => p.text ?? "").join(" "), 5),
+      top: posts.length ? [...posts].sort((a, b) => react(b) - react(a))[0] : null,
+    };
+  }
+
   /* ---------- fast offline tools (no model download needed) ---------- */
   summarizeFeed(posts: Post[]): string {
     if (!posts.length) return "Your feed is quiet right now — be the first to post something ✦";

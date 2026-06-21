@@ -38,7 +38,7 @@ function Header({ icon, title, subtitle, onExpand, onMin, onClose }: { icon: Rea
 }
 
 // --- Companion: inline chat against the on-device model ---
-function CompanionPanel({ intro, onMin, onClose }: { intro: boolean; onMin: () => void; onClose: () => void }) {
+function CompanionPanel({ intro, autoPrompt, onConsumed, onMin, onClose }: { intro: boolean; autoPrompt?: string | null; onConsumed?: () => void; onMin: () => void; onClose: () => void }) {
   const nav = useNavigate();
   const me = useStore((s) => s.me);
   const [history, setHistory] = useState<CompanionMessage[]>([]);
@@ -51,12 +51,14 @@ function CompanionPanel({ intro, onMin, onClose }: { intro: boolean; onMin: () =
   useEffect(() => { companionService.history().then(setHistory); return bus.on("companion:thinking", setThinking); }, []);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [history, thinking]);
 
-  async function send() {
-    const t = input.trim(); if (!t) return;
-    setInput("");
+  async function deliver(text: string) {
+    const t = text.trim(); if (!t) return;
     await companionService.ask(t);
     setHistory(await companionService.history());
   }
+  function send() { const t = input.trim(); if (!t) return; setInput(""); deliver(t); }
+  // A "chat with companion about this" request from a post.
+  useEffect(() => { if (autoPrompt) { deliver(autoPrompt); onConsumed?.(); } /* eslint-disable-next-line */ }, [autoPrompt]);
 
   return (
     <Box sx={PANEL_SX}>
@@ -149,6 +151,10 @@ export default function FloatingDocks() {
   const [chatActive, setChatActive] = useState(false); // mounted + connected
   const [chatOpen, setChatOpen] = useState(false);      // panel expanded
   const [intro, setIntro] = useState(false);
+  const [pending, setPending] = useState<string | null>(null); // a post asked the companion to comment
+
+  // "Chat with companion about this post" → open the dock and send the prompt.
+  useEffect(() => bus.on("companion:prompt", ({ text }) => { setIntro(false); setChatOpen(false); setCompanionOpen(true); setPending(text); }), []);
 
   // Auto-greet once per session when the on-device AI is ready (or shortly after).
   useEffect(() => {
@@ -166,7 +172,7 @@ export default function FloatingDocks() {
 
   return (
     <>
-      {companionOpen && <CompanionPanel intro={intro} onMin={() => setCompanionOpen(false)} onClose={() => setCompanionOpen(false)} />}
+      {companionOpen && <CompanionPanel intro={intro} autoPrompt={pending} onConsumed={() => setPending(null)} onMin={() => setCompanionOpen(false)} onClose={() => setCompanionOpen(false)} />}
       {chatActive && <ChatroomPanel visible={chatOpen} onMin={() => setChatOpen(false)} onClose={() => { setChatActive(false); setChatOpen(false); }} />}
 
       <Stack spacing={1.25} sx={{ position: "fixed", right: 16, bottom: 84, zIndex: 1290, alignItems: "flex-end" }}>

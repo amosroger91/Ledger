@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { Box, ToggleButtonGroup, ToggleButton, Stack, Typography, Button, useMediaQuery, LinearProgress, Chip, CircularProgress, TextField, InputAdornment, IconButton } from "@mui/material";
+import { Box, ToggleButtonGroup, ToggleButton, Stack, Typography, Button, useMediaQuery, LinearProgress, Chip, CircularProgress, TextField, InputAdornment, IconButton, Avatar } from "@mui/material";
+import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import ClearRoundedIcon from "@mui/icons-material/ClearRounded";
 import { useSearchParams, useNavigate } from "react-router-dom";
@@ -39,7 +40,6 @@ export default function FeedView() {
   const compact = useMediaQuery("(max-width:1100px)");
   const [posts, setPosts] = useState<Post[]>([]);
   const [reasons, setReasons] = useState<Map<string, RecommendationReason>>(new Map());
-  const [summary, setSummary] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [rssProg, setRssProg] = useState<{ done: number; total: number; posted: number }>({ done: 0, total: 0, posted: 0 });
   const [replies, setReplies] = useState<Map<string, Post[]>>(new Map());
@@ -59,6 +59,8 @@ export default function FeedView() {
     storage.communities().then((cs) => setCommunityName(cs.find((c) => c.id === community)?.name ?? "this group"));
   }, [community]);
 
+  const digest = useMemo(() => companionService.feedDigest(posts), [posts]);
+
   // Client-side content-type + keyword (+ group) filtering over the ranked feed.
   const shown = useMemo(
     () => posts.filter((p) => (!community || p.community === community) && matchesFilter(p, filter) && matchesQuery(p, query)),
@@ -71,7 +73,6 @@ export default function FeedView() {
     setPosts(posts);
     setReasons(reasons);
     setVerdicts(verdicts);
-    setSummary(companionService.summarizeFeed(posts));
     // group replies under their parent post
     const map = new Map<string, Post[]>();
     for (const p of await storage.allPosts()) if (p.replyTo) { const a = map.get(p.replyTo) ?? []; a.push(p); map.set(p.replyTo, a); }
@@ -167,10 +168,44 @@ export default function FeedView() {
 
       {!compact && (
         <Box>
-          <GlassCard sx={{ position: "sticky", top: 16 }}>
-            <Typography variant="overline" color="text.secondary">Companion digest</Typography>
-            <Typography variant="body2" sx={{ mt: 0.5 }}>{summary}</Typography>
-            <Button size="small" sx={{ mt: 1 }} href="#/companion">Ask your companion →</Button>
+          <GlassCard sx={{ position: "sticky", top: 16, p: 0, overflow: "hidden" }}>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ px: 1.5, py: 1.25, color: "#fff", background: "linear-gradient(135deg,#3f97ff,#1668e0,#0a55cf)" }}>
+              <Avatar sx={{ width: 30, height: 30, bgcolor: "rgba(255,255,255,0.22)" }}><AutoAwesomeRoundedIcon fontSize="small" /></Avatar>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography sx={{ fontWeight: 800, fontSize: 14, lineHeight: 1.1 }}>Companion digest</Typography>
+                <Stack direction="row" alignItems="center" spacing={0.5}>
+                  <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "#54ff7a" }} />
+                  <Typography variant="caption" sx={{ opacity: 0.9 }}>on-device · live</Typography>
+                </Stack>
+              </Box>
+            </Stack>
+            <Box sx={{ p: 1.5 }}>
+              <Stack direction="row" spacing={1}>
+                {[["Posts", digest.count], ["People", digest.people], ["Reactions", digest.reactions]].map(([label, value]) => (
+                  <Box key={label as string} sx={{ flex: 1, textAlign: "center", py: 0.85, borderRadius: 1.5, bgcolor: "rgba(58,155,240,0.07)" }}>
+                    <Typography sx={{ fontWeight: 800, fontSize: 18, lineHeight: 1, color: "#1668e0" }}>{value as number}</Typography>
+                    <Typography variant="caption" color="text.secondary">{label as string}</Typography>
+                  </Box>
+                ))}
+              </Stack>
+              {digest.themes.length > 0 && (
+                <Box sx={{ mt: 1.5 }}>
+                  <Typography variant="overline" color="text.secondary">Themes</Typography>
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mt: 0.25 }}>
+                    {digest.themes.map((t) => <Chip key={t} size="small" label={`#${t}`} sx={{ height: 22, bgcolor: "rgba(58,123,240,0.1)", color: "#1668e0", fontWeight: 600 }} />)}
+                  </Box>
+                </Box>
+              )}
+              {digest.top && (Object.values(digest.top.reactions).some((v) => v.length)) && (
+                <Box sx={{ mt: 1.5, p: 1, borderRadius: 1.5, bgcolor: "rgba(0,0,0,0.03)" }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>🔥 Most-reacted</Typography>
+                  <Typography variant="body2" sx={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", mt: 0.25 }}>
+                    "{(digest.top.text ?? "").split("\n")[0].slice(0, 110)}" — {digest.top.authorName}
+                  </Typography>
+                </Box>
+              )}
+              <Button fullWidth variant="outlined" size="small" startIcon={<AutoAwesomeRoundedIcon />} sx={{ mt: 1.5, textTransform: "none", fontWeight: 700 }} href="#/companion">Ask your Companion</Button>
+            </Box>
           </GlassCard>
           <GlassCard sx={{ mt: 2 }}>
             <Typography variant="overline" color="text.secondary">How this feed works</Typography>
