@@ -14,6 +14,8 @@ import { Menu, MenuItem, LinearProgress } from "@mui/material";
 import { linkPreviewService, type Preview } from "@/services/linkPreviewService";
 import { trustService } from "@/services/trustService";
 import { audioPlayerService } from "@/services/audioPlayerService";
+import { factCheckService, type FactCheck } from "@/services/factCheckService";
+import FactCheckRoundedIcon from "@mui/icons-material/FactCheckRounded";
 import { emojify } from "@/lib/emoticons";
 import GifPicker from "@/components/common/GifPicker";
 import { bus, toast } from "@/lib/events";
@@ -71,6 +73,33 @@ function SpotifyCard({ kind, id }: { kind: string; id: string }) {
           </Box>
         </Box>
       )}
+    </Box>
+  );
+}
+
+// Optional PolitiFact fact-check context for RSS-Bot stories. Matched locally
+// against PolitiFact's recent ratings; only shown on a confident keyword hit.
+const RULING_COLOR: Record<string, string> = {
+  "true": "#2f9e44", "mostly true": "#5cb85c", "half true": "#e8920c",
+  "mostly false": "#e8590c", "barely true": "#e8590c", "false": "#d23b2f", "pants on fire": "#a8071a",
+};
+function FactCheckCard({ text }: { text: string }) {
+  const [fc, setFc] = useState<FactCheck | null>(() => factCheckService.match(text));
+  useEffect(() => {
+    if (fc) return;
+    return bus.on("factcheck:ready", () => setFc(factCheckService.match(text)));
+  }, [text, fc]);
+  if (!fc) return null;
+  const color = (fc.ruling && RULING_COLOR[fc.ruling]) || "#51606e";
+  return (
+    <Box component="a" href={fc.link} target="_blank" rel="noopener noreferrer"
+      sx={{ display: "block", mt: 1, p: 1, borderRadius: 1.5, textDecoration: "none", color: "inherit", border: `1px solid ${color}55`, bgcolor: `${color}10` }}>
+      <Stack direction="row" alignItems="center" spacing={1}>
+        <FactCheckRoundedIcon sx={{ color, fontSize: 18 }} />
+        <Typography variant="caption" sx={{ fontWeight: 800, color }}>Fact check · PolitiFact</Typography>
+        {fc.ruling && <Chip size="small" label={fc.ruling} sx={{ height: 18, fontSize: 10, textTransform: "capitalize", bgcolor: color, color: "#fff", fontWeight: 700 }} />}
+      </Stack>
+      <Typography variant="body2" sx={{ mt: 0.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{fc.claim}</Typography>
     </Box>
   );
 }
@@ -287,6 +316,7 @@ function ModInfo({ verdict }: { verdict: ModerationVerdict }) {
 export default function PostCard({ post, reason, replies = [], replyMap, verdict }: { post: Post; reason?: RecommendationReason; replies?: Post[]; replyMap?: Map<string, Post[]>; verdict?: ModerationVerdict }) {
   const me = useStore((s) => s.me);
   const mePk = me?.publicKey ?? "";
+  const showFactChecks = useStore((s) => s.settings.showFactChecks);
   const nav = useNavigate();
   const canVisit = !!post.author && post.author !== "rss-bot" && post.author !== "system" && !post.author.startsWith("demo_");
   const visit = () => canVisit && nav(`/u/${post.author}`);
@@ -349,6 +379,8 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
           })()}
 
           {post.media?.filter((m) => m.type === "audio").map((m, i) => <AudioCard key={i} url={m.url} title={m.alt || "Audio track"} />)}
+
+          {post.author === "rss-bot" && showFactChecks && <FactCheckCard text={post.text ?? ""} />}
 
           {post.poll && (
             <Stack spacing={0.5} sx={{ mt: 1 }}>

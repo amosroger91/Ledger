@@ -1,6 +1,7 @@
 import { Box, Stack, Typography, Select, MenuItem, Switch, FormControlLabel, Divider, Button } from "@mui/material";
 import GlassCard from "@/components/common/GlassCard";
 import { useStore } from "@/store/useStore";
+import { factCheckService } from "@/services/factCheckService";
 import type { FeedAlgorithm, ModerationProfile, CompanionPersona, PresenceStatus } from "@/types";
 import { toast } from "@/lib/events";
 
@@ -53,6 +54,9 @@ export default function SettingsView() {
           <Select size="small" value={settings.presenceStatus} onChange={(e) => setSettings({ presenceStatus: e.target.value as PresenceStatus })}>{STATUS.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}</Select>)}
         <Divider />
         <FormControlLabel control={<Switch checked={settings.reducedMotion} onChange={(e) => setSettings({ reducedMotion: e.target.checked })} />} label="Reduce motion (calms the animated background)" sx={{ mt: 1 }} />
+        <Divider />
+        {row("PolitiFact fact-checks", "Show a fact-check card under RSS-Bot stories when a relevant PolitiFact rating is found (matched locally on this device).",
+          <Switch checked={settings.showFactChecks} onChange={(e) => { setSettings({ showFactChecks: e.target.checked }); if (e.target.checked) factCheckService.refresh().catch(() => {}); }} />)}
       </GlassCard>
 
       <GlassCard>

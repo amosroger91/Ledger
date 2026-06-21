@@ -17,6 +17,7 @@ import { profileService } from "./profileService";
 import { trustService } from "./trustService";
 import { bestModelForHardware, isWebGPU } from "./companionService";
 import { audioPlayerService } from "./audioPlayerService";
+import { factCheckService } from "./factCheckService";
 import type { AppSettings } from "@/types";
 
 export interface BootResult { onboarded: boolean; settings: AppSettings }
@@ -55,6 +56,7 @@ export async function boot(): Promise<BootResult> {
     peerService.start();
     profileService.publishSelf().catch(() => {}); // share my public profile
     rssService.refresh().catch(() => {}); // fire-and-forget; throttled internally
+    if (settings.showFactChecks) factCheckService.refresh().catch(() => {}); // PolitiFact index
     // Keep topping up while the app is open so new stories arrive during a
     // session; the service throttles actual fetches.
     setInterval(() => rssService.refresh().catch(() => {}), 6 * 60 * 1000);

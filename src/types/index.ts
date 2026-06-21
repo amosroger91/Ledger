@@ -270,4 +270,5 @@ export interface AppSettings {
   llmAuto: boolean;             // auto-pick the best model for this hardware (until the user chooses one)
   presenceStatus: PresenceStatus;
   reducedMotion: boolean;
+  showFactChecks: boolean;      // surface PolitiFact fact-check cards under RSS posts
 }

@@ -37,6 +37,7 @@ export interface ZuccBookEvents {
   "media:play": { id: string };         // some media started — others should pause
   "companion:thinking": boolean;
   "rss:refreshing": boolean;
+  "factcheck:ready": void;       // PolitiFact index loaded — re-check posts
   "companion:model": { state: "loading" | "ready" | "error"; id: string; progress?: number; text?: string };
   "toast": { kind: "info" | "success" | "warn" | "error"; message: string };
 }

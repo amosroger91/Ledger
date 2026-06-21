@@ -120,4 +120,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   llmAuto: true,
   presenceStatus: "online",
   reducedMotion: false,
+  showFactChecks: true,
 };
