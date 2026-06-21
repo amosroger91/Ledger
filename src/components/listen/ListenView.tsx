@@ -40,7 +40,7 @@ export default function ListenView() {
   }, []);
 
   async function playStation(s: Station) {
-    const ok = await listenTogetherService.play(s.url);
+    const ok = await listenTogetherService.play(s);
     if (ok) {
       setCurrent(s);
       presenceService.setActivity("Listening", s.name);

@@ -5,6 +5,7 @@ import PostCard from "./PostCard";
 import GlassCard from "@/components/common/GlassCard";
 import { feedService } from "@/services/feedService";
 import { companionService } from "@/services/companionService";
+import { rssService } from "@/services/rssService";
 import { useStore } from "@/store/useStore";
 import { bus } from "@/lib/events";
 import type { Post, RecommendationReason, FeedAlgorithm } from "@/types";
@@ -35,6 +36,7 @@ export default function FeedView() {
   }, [algo, settings.moderationProfile]);
 
   useEffect(() => { refresh(); const off = bus.on("feed:updated", refresh); return off; }, [refresh]);
+  useEffect(() => { rssService.refresh().catch(() => {}); }, []); // top up RSS Bot stories (throttled)
 
   return (
     <Box sx={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "minmax(0,1fr) 300px", gap: 2, maxWidth: 1100, mx: "auto" }}>

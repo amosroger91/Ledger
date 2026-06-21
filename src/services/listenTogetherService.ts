@@ -15,9 +15,20 @@ const GENRES = ["lofi", "jazz", "synthwave", "classical", "rock", "country", "el
 
 export interface Station { name: string; url: string; genre: string; bitrate: number; }
 
+import { bus } from "@/lib/events";
+
 let base: string | null = null;
 let audio: HTMLAudioElement | null = null;
 let volume = 0.6;
+let current: Station | null = null;
+let paused = false;
+
+function announce() {
+  bus.emit("listen:now", {
+    station: current ? { name: current.name, genre: current.genre, url: current.url } : null,
+    playing: !!audio && !paused,
+  });
+}
 
 async function apiGet(path: string): Promise<any> {
   const order = base ? [base, ...MIRRORS.filter((m) => m !== base)] : MIRRORS;
@@ -42,15 +53,30 @@ class ListenTogetherService {
     return lists.flat().filter((s) => (seen.has(s.url) ? false : (seen.add(s.url), true)));
   }
 
-  async play(url: string): Promise<boolean> {
-    this.stop();
-    audio = new Audio(url); audio.volume = volume;
-    try { await audio.play(); return true; } catch { return false; }
+  async play(station: Station): Promise<boolean> {
+    this.stop(true);
+    current = station; paused = false;
+    audio = new Audio(station.url); audio.volume = volume;
+    audio.onended = () => announce();
+    try { await audio.play(); announce(); return true; }
+    catch { announce(); return false; }
   }
-  stop() { if (audio) { try { audio.pause(); } catch {} audio.src = ""; audio = null; } }
+  pause() { if (audio) { try { audio.pause(); } catch {} paused = true; announce(); } }
+  async resume(): Promise<boolean> {
+    if (!audio && current) return this.play(current);
+    if (audio) { try { await audio.play(); paused = false; announce(); return true; } catch { return false; } }
+    return false;
+  }
+  toggle() { if (!audio || paused) return this.resume(); this.pause(); return Promise.resolve(true); }
+  stop(silent = false) {
+    if (audio) { try { audio.pause(); } catch {} audio.src = ""; audio = null; }
+    paused = false;
+    if (!silent) { current = null; announce(); }
+  }
   setVolume(v: number) { volume = Math.max(0, Math.min(1, v)); if (audio) audio.volume = volume; }
   get volume() { return volume; }
-  get playing() { return !!audio && !audio.paused; }
+  get current() { return current; }
+  get playing() { return !!audio && !paused; }
 }
 
 export const listenTogetherService = new ListenTogetherService();

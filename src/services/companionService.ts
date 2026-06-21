@@ -82,6 +82,16 @@ class CompanionService {
   /** Explicitly start downloading/loading the selected model. */
   preload() { return loadModel(this.model); }
 
+  /** Run the LLM only if a model is already loaded (never triggers a download).
+   *  Returns null if no model is in memory — callers fall back to heuristics. */
+  async quickLLM(prompt: string): Promise<string | null> {
+    if (!engine || loadedId !== this.model) return null;
+    try {
+      const r = await engine.chat.completions.create({ messages: [{ role: "user", content: prompt }], temperature: 0.8 });
+      return r.choices?.[0]?.message?.content ?? null;
+    } catch { return null; }
+  }
+
   history() { return storage.companionHistory(); }
 
   async ask(prompt: string, context?: { posts?: Post[]; communities?: Community[] }): Promise<CompanionMessage> {

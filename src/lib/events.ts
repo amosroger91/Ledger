@@ -16,6 +16,7 @@ export interface ZuccBookEvents {
   "peer:connected": { pk: string };
   "peer:disconnected": { pk: string };
   "listen:state": ListenRoom;
+  "listen:now": { station: { name: string; genre: string; url: string } | null; playing: boolean };
   "companion:thinking": boolean;
   "companion:model": { state: "loading" | "ready" | "error"; id: string; progress?: number; text?: string };
   "toast": { kind: "info" | "success" | "warn" | "error"; message: string };

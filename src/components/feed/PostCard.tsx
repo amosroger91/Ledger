@@ -12,6 +12,16 @@ import type { Post, RecommendationReason } from "@/types";
 
 const REACTIONS = ["⭐", "🔥", "🚀", "💜", "😂", "👀"];
 
+// Render text with clickable links (used for RSS Bot story links, etc.).
+function renderText(text: string) {
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+  return parts.map((p, i) =>
+    /^https?:\/\//.test(p)
+      ? <a key={i} href={p} target="_blank" rel="noopener noreferrer" style={{ color: "#9fd0ff", wordBreak: "break-all" }}>{p}</a>
+      : <span key={i}>{p}</span>,
+  );
+}
+
 export default function PostCard({ post, reason }: { post: Post; reason?: RecommendationReason }) {
   const me = useStore((s) => s.me);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
@@ -24,15 +34,17 @@ export default function PostCard({ post, reason }: { post: Post; reason?: Recomm
         <UserAvatar pk={post.author} name={post.authorName} avatar={post.authorAvatar} />
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Stack direction="row" alignItems="center" spacing={1}>
-            <Typography sx={{ fontWeight: 700 }}>{post.authorName}</Typography>
-            <Tooltip title="Cryptographically signed by author"><VerifiedRoundedIcon sx={{ fontSize: 15, color: "#39c6f5" }} /></Tooltip>
+            <Typography sx={{ fontWeight: 700 }} noWrap>{post.authorName}</Typography>
+            {post.author === "rss-bot"
+              ? <Chip size="small" label="BOT" sx={{ height: 16, fontSize: 9, bgcolor: "rgba(58,123,240,0.2)", color: "#9fd0ff" }} />
+              : <Tooltip title="Cryptographically signed by author"><VerifiedRoundedIcon sx={{ fontSize: 15, color: "#39c6f5" }} /></Tooltip>}
             <Typography variant="caption" color="text.secondary">· {relativeTime(post.createdAt)}</Typography>
             <Box sx={{ flex: 1 }} />
             <Chip size="small" label={post.source} sx={{ height: 18, fontSize: 10, color: sourceColor, borderColor: sourceColor }} variant="outlined" />
             <WhyRecommended reason={reason} />
           </Stack>
 
-          {post.text && <Typography sx={{ mt: 0.5, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{post.text}</Typography>}
+          {post.text && <Typography component="div" sx={{ mt: 0.5, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{renderText(post.text)}</Typography>}
 
           {post.media?.map((m, i) => (
             m.type === "image" ? <Box key={i} component="img" src={m.url} sx={{ mt: 1, maxWidth: "100%", maxHeight: 360, borderRadius: 2, border: "1px solid rgba(58,155,240,0.15)" }} /> : null

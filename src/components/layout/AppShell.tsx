@@ -6,6 +6,7 @@ import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import ChatRoundedIcon from "@mui/icons-material/ChatRounded";
 import HeadphonesRoundedIcon from "@mui/icons-material/HeadphonesRounded";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
+import RssFeedRoundedIcon from "@mui/icons-material/RssFeedRounded";
 import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import { useStore } from "@/store/useStore";
@@ -18,6 +19,7 @@ const NAV = [
   { to: "/messages", label: "Messages", icon: <ChatRoundedIcon /> },
   { to: "/listen", label: "Watch & Listen", icon: <HeadphonesRoundedIcon /> },
   { to: "/companion", label: "Companion", icon: <AutoAwesomeRoundedIcon /> },
+  { to: "/topics", label: "Topics", icon: <RssFeedRoundedIcon /> },
   { to: "/profile", label: "Profile", icon: <PersonRoundedIcon /> },
   { to: "/settings", label: "Settings", icon: <SettingsRoundedIcon /> },
 ];
@@ -82,7 +84,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </Tooltip>
         </Stack>
 
-        <Box sx={{ flex: 1, overflowY: "auto", p: { xs: 1.5, md: 3 } }}>{children}</Box>
+        <Box sx={{ flex: 1, overflowY: "auto", p: { xs: 1.5, md: 3 }, pb: 12 }}>{children}</Box>
       </Box>
     </Box>
   );

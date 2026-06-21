@@ -17,6 +17,8 @@ import ListenView from "@/components/listen/ListenView";
 import CompanionView from "@/components/companion/CompanionView";
 import ProfileView from "@/components/profile/ProfileView";
 import SettingsView from "@/components/settings/SettingsView";
+import TopicsView from "@/components/topics/TopicsView";
+import MiniPlayer from "@/components/layout/MiniPlayer";
 
 export default function App() {
   const { ready, onboarded, setReady, setPresence, setOnlineCount } = useStore();
@@ -50,12 +52,14 @@ export default function App() {
             <Route path="/messages" element={<MessagesView />} />
             <Route path="/listen" element={<ListenView />} />
             <Route path="/companion" element={<CompanionView />} />
+            <Route path="/topics" element={<TopicsView />} />
             <Route path="/profile" element={<ProfileView />} />
             <Route path="/settings" element={<SettingsView />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AppShell>
       )}
+      {ready && onboarded && <MiniPlayer />}
       <Snackbar
         open={!!toast}
         autoHideDuration={3200}

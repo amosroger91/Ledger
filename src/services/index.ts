@@ -11,6 +11,7 @@ import { companionService } from "./companionService";
 import { communityService } from "./communityService";
 import { presenceService } from "./presenceService";
 import { peerService } from "./peerService";
+import { rssService } from "./rssService";
 import type { AppSettings } from "@/types";
 
 export interface BootResult { onboarded: boolean; settings: AppSettings }
@@ -33,6 +34,7 @@ export async function boot(): Promise<BootResult> {
     presenceService.setStatus(settings.presenceStatus);
     await communityService.seedDefaults();
     peerService.start();
+    rssService.refresh().catch(() => {}); // fire-and-forget; throttled internally
   }
   return { onboarded: !!me, settings };
 }
