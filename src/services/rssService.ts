@@ -15,6 +15,7 @@ import { storage } from "./storage";
 import { feedService } from "./feedService";
 import { embed } from "@/lib/embeddings";
 import { decodeEntities } from "@/lib/htmlEntities";
+import { gunService } from "./gunService";
 import { bus } from "@/lib/events";
 
 export type FeedKind = "rss" | "youtube" | "podcast" | "cve";
@@ -139,6 +140,7 @@ const PROXIES = [
   (u: string) => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
 ];
 const THROTTLE_MS = 10 * 60 * 1000;
+const FEED_TTL = 60 * 60 * 1000;   // a feed is only re-fetched if nobody has pulled it in the last hour
 const PER_FEED = 4;
 const FEEDS_PER_TOPIC = 5;
 // Topics enabled out of the box (and merged into existing users once, via the
@@ -290,16 +292,24 @@ class RssService {
     c.lastRun = Date.now();
     await this.save(c);
 
-    // Flatten to a work-list so we can show progress and process with bounded
-    // concurrency — one slow feed can't stall the whole refresh (each fetch also
-    // has its own timeout). This is what fixes the "refresh times out and never
-    // finishes" hang on mobile when you've subscribed to many topics.
-    const jobs: { topic: string; feed: Feed }[] = [];
+    // Build the work-list from MY subscribed feeds only…
+    const all: { topic: string; feed: Feed }[] = [];
     for (const topic of c.topics) {
       const feeds = (await this.feedsForTopic(topic)).slice(0, FEEDS_PER_TOPIC);
-      for (const feed of feeds) jobs.push({ topic, feed });
+      for (const feed of feeds) all.push({ topic, feed });
     }
+    // …then keep only the feeds nobody has fetched in the last hour. This is the
+    // distributed bit: the shared Gun ledger (rssLastFetch) means each feed is
+    // pulled once per hour by whoever refreshes first; everyone else just
+    // receives those posts over the timeline. We only ever do work for feeds WE
+    // subscribe to, and only when they're actually stale — so the "you're
+    // contributing compute" line is literally true. Local fallback when Gun is down.
+    const localFetched = (await storage.kvGet<Record<string, number>>("rss:feedFetched")) ?? {};
+    const lastOf = (key: string) => Math.max(gunService.rssLastFetch(key), localFetched[key] ?? 0);
+    const startedAt = Date.now();
+    const jobs = all.filter(({ feed }) => startedAt - lastOf(hash(feed.url)) > FEED_TTL);
     const total = jobs.length;
+    if (!total) return 0;   // every feed you follow is fresh — its posts are already on the timeline
     const seen = new Set(c.seen);   // dedupe against everything we've already pulled
     let posted = 0, done = 0;
     bus.emit("rss:refreshing", true);
@@ -330,7 +340,12 @@ class RssService {
           posted++;
         }
       } catch { /* skip this feed */ }
-      finally { done++; bus.emit("rss:progress", { done, total, posted }); }
+      finally {
+        // record that this feed was just pulled (shared + local) so nobody
+        // re-fetches it for the next hour
+        const key = hash(feed.url); localFetched[key] = Date.now(); gunService.markRssFetched(key);
+        done++; bus.emit("rss:progress", { done, total, posted });
+      }
     };
 
     try {
@@ -344,6 +359,7 @@ class RssService {
     }
     c.seen = [...seen].slice(-1500);
     await this.save(c);
+    await storage.kvSet("rss:feedFetched", localFetched);   // local fallback cache (when Gun is down)
     return posted;
   }
 }

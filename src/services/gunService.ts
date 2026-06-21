@@ -33,8 +33,18 @@ const ROOT = "zuccbook-v1";
 let gun: any = null;
 let started = false;
 const seenSwarm = new Set<string>();
+const rssLedger = new Map<string, number>(); // feedKey → last-fetched epoch (shared across everyone)
 
 class GunService {
+  /** When was this feed last fetched by ANYONE (per the shared ledger)? */
+  rssLastFetch(key: string): number { return rssLedger.get(key) ?? 0; }
+  /** Claim that we just fetched this feed, so others skip it for the next hour. */
+  markRssFetched(key: string) {
+    const at = Date.now();
+    rssLedger.set(key, at);
+    try { gun?.get(ROOT).get("rssfetch").get(key).put({ at }); } catch {}
+  }
+
   start() {
     if (started) return;
     started = true;
@@ -69,6 +79,11 @@ class GunService {
       // Incoming web-of-trust edges.
       gun.get(ROOT).get("trust").map().on((d: any) => {
         if (d?.json) { try { trustService.ingest(JSON.parse(d.json) as TrustEdge); } catch {} }
+      });
+      // Shared RSS fetch ledger — who fetched which feed, and when, so the work
+      // is distributed: each feed is pulled once an hour by whoever refreshes first.
+      gun.get(ROOT).get("rssfetch").map().on((d: any, key: string) => {
+        if (d && typeof d.at === "number" && d.at > (rssLedger.get(key) ?? 0)) rssLedger.set(key, d.at);
       });
 
       // Outgoing: publish whatever the app marks for persistence.

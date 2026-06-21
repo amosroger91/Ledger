@@ -156,9 +156,9 @@ export default function FeedView() {
               <CircularProgress size={16} />
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography variant="body2" color="text.secondary">
-                  Populating your timeline with RSS feeds{rssProg.total ? ` · ${rssProg.done}/${rssProg.total} feeds` : "…"}{rssProg.posted ? ` · ${rssProg.posted} new` : ""}
+                  Fetching feeds the network needs{rssProg.total ? ` · ${rssProg.done}/${rssProg.total}` : "…"}{rssProg.posted ? ` · ${rssProg.posted} new` : ""}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">⚡ You're contributing your device's compute to refresh the network's feed right now.</Typography>
+                <Typography variant="caption" color="text.secondary">⚡ Sharing your device's compute — pulling only the feeds you follow that nobody's refreshed in the last hour.</Typography>
               </Box>
               <Chip size="small" label="live" sx={{ height: 18, fontSize: 10, bgcolor: "rgba(84,201,90,0.16)", color: "#54c95a" }} />
             </Stack>
