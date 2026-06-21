@@ -3,26 +3,46 @@ import { Box, Stack, Typography, Switch, Button, TextField, Chip, FormControlLab
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import GlassCard from "@/components/common/GlassCard";
-import { rssService, TOPIC_FEEDS, type RssConfig } from "@/services/rssService";
+import { rssService, TOPIC_FEEDS, type RssConfig, type FeedKind } from "@/services/rssService";
 import { toast } from "@/lib/events";
+
+// The kinds of custom feeds a user can add (all keyless).
+const KINDS: { id: string; label: string; placeholder: string }[] = [
+  { id: "rss", label: "Website RSS URL", placeholder: "https://example.com/rss.xml" },
+  { id: "youtube", label: "YouTube channel", placeholder: "@handle or channel URL" },
+  { id: "podcast", label: "Podcast (search by name)", placeholder: "e.g. The Joe Rogan Experience" },
+  { id: "reddit", label: "Subreddit", placeholder: "e.g. overlanding (or r/overlanding)" },
+  { id: "github", label: "GitHub repo releases", placeholder: "owner/repo (e.g. ollama/ollama)" },
+  { id: "cve", label: "App CVEs (security)", placeholder: "app name, e.g. openssl" },
+];
 
 export default function TopicsView() {
   const [cfg, setCfg] = useState<RssConfig | null>(null);
   const [busy, setBusy] = useState(false);
-  const [custom, setCustom] = useState({ topic: Object.keys(TOPIC_FEEDS)[0], url: "", name: "" });
+  const [custom, setCustom] = useState({ topic: Object.keys(TOPIC_FEEDS)[0], url: "", name: "", ckind: "rss" });
 
   const load = () => rssService.config().then(setCfg);
   useEffect(() => { load(); }, []);
   if (!cfg) return null;
 
   const topics = [...new Set([...Object.keys(TOPIC_FEEDS), ...cfg.custom.map((c) => c.topic)])];
+  const kindMeta = KINDS.find((k) => k.id === custom.ckind)!;
 
   async function sub(topic: string, on: boolean) { await rssService.subscribe(topic, on); load(); }
   async function toggleFeed(url: string, on: boolean) { await rssService.toggleFeed(url, on); load(); }
   async function addCustom() {
-    if (!custom.url.trim()) return;
-    await rssService.addCustomFeed(custom.topic, custom.url.trim(), custom.name.trim());
+    const raw = custom.url.trim();
+    if (!raw) return;
+    // Translate the chosen kind into a feed url + resolver kind.
+    let url = raw, kind: FeedKind = "rss", name = custom.name.trim() || raw;
+    if (custom.ckind === "youtube") { kind = "youtube"; }
+    else if (custom.ckind === "podcast") { kind = "podcast"; }
+    else if (custom.ckind === "cve") { kind = "cve"; name = custom.name.trim() || `CVEs · ${raw}`; }
+    else if (custom.ckind === "reddit") { const sub = raw.replace(/^\/?(r\/)?/i, ""); url = `https://www.reddit.com/r/${sub}/.rss`; name = custom.name.trim() || `r/${sub}`; }
+    else if (custom.ckind === "github") { url = `https://github.com/${raw.replace(/^https?:\/\/github\.com\//, "")}/releases.atom`; name = custom.name.trim() || raw; }
+    await rssService.addCustomFeed(custom.topic, url, name, kind);
     setCustom({ ...custom, url: "", name: "" }); load();
+    toast("Feed added — RSS Bot will start posting from it", "success");
   }
   async function refresh() {
     setBusy(true);
@@ -72,17 +92,26 @@ export default function TopicsView() {
       </Stack>
 
       <GlassCard sx={{ mt: 2 }}>
-        <Typography variant="overline" color="text.secondary">Add a custom RSS feed</Typography>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ mt: 1 }}>
-          <Select size="small" value={custom.topic} onChange={(e) => setCustom({ ...custom, topic: e.target.value })} sx={{ minWidth: 140 }}>
-            {topics.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
-          </Select>
-          <TextField size="small" placeholder="Feed name" value={custom.name} onChange={(e) => setCustom({ ...custom, name: e.target.value })} />
-          <TextField size="small" fullWidth placeholder="https://example.com/rss.xml" value={custom.url} onChange={(e) => setCustom({ ...custom, url: e.target.value })} />
-          <Button variant="outlined" onClick={addCustom}>Add</Button>
+        <Typography variant="overline" color="text.secondary">Add a custom feed</Typography>
+        <Stack spacing={1} sx={{ mt: 1 }}>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+            <Select size="small" value={custom.ckind} onChange={(e) => setCustom({ ...custom, ckind: e.target.value })} sx={{ minWidth: 170 }}>
+              {KINDS.map((k) => <MenuItem key={k.id} value={k.id}>{k.label}</MenuItem>)}
+            </Select>
+            <TextField size="small" fullWidth placeholder={kindMeta.placeholder} value={custom.url} onChange={(e) => setCustom({ ...custom, url: e.target.value })} onKeyDown={(e) => e.key === "Enter" && addCustom()} />
+          </Stack>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+            <Select size="small" value={topics.includes(custom.topic) ? custom.topic : "__new"} onChange={(e) => setCustom({ ...custom, topic: e.target.value === "__new" ? "" : e.target.value })} sx={{ minWidth: 170 }}>
+              {topics.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
+              <MenuItem value="__new">+ New topic…</MenuItem>
+            </Select>
+            {!topics.includes(custom.topic) && <TextField size="small" placeholder="New topic name" value={custom.topic} onChange={(e) => setCustom({ ...custom, topic: e.target.value })} />}
+            <TextField size="small" placeholder="Label (optional)" value={custom.name} onChange={(e) => setCustom({ ...custom, name: e.target.value })} />
+            <Button variant="contained" onClick={addCustom} disabled={!custom.url.trim() || !custom.topic.trim()}>Add</Button>
+          </Stack>
         </Stack>
         <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
-          Feeds are fetched through public CORS proxies. RSS Bot posts appear in your Feed tagged with the topic.
+          YouTube channels & podcasts are resolved with no API key (podcasts via Apple's search). Feeds are fetched through public CORS proxies; RSS Bot posts appear in your Feed tagged with the topic.
         </Typography>
       </GlassCard>
     </Box>
