@@ -130,9 +130,16 @@ financial advice.** Only use small amounts you can afford to lose.
   feed backfills "missed" stories on return and tops up while open.
 - The on-device LLM needs WebGPU and a one-time model download (then it's cached).
 
+## Full feature atlas
+
+See **[FEATURES.md](FEATURES.md)** for the complete catalog of everything the
+platform does — and, for each feature, the backend‑less / peer‑to‑peer trick that
+makes it possible. Architecture deep‑dive in **[ARCHITECTURE.md](ARCHITECTURE.md)**;
+moderation philosophy in **[MODERATION.md](MODERATION.md)**.
+
 ## Tech
 
-React · TypeScript · Vite · Material UI (Aurora theme) · Zustand · IndexedDB (`idb`)
-· PeerJS (WebRTC) · Web Crypto · WebLLM (WebGPU).
+React · TypeScript · Vite · Material UI (Bliss/Luna theme) · Zustand · IndexedDB (`idb`)
+· Gun.js · PeerJS (WebRTC) · Web Crypto · WebLLM (WebGPU) · ethers.js (Polygon).
 
 MIT. *Not affiliated with Facebook/Meta — the name is affectionate satire.*
