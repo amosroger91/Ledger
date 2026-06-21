@@ -159,6 +159,9 @@ export default function FloatingDocks() {
   // Auto-greet once per session when the on-device AI is ready (or shortly after).
   useEffect(() => {
     if (sessionStorage.getItem("companionIntroSeen")) return;
+    // On phones a full-width auto-opening panel would cover the whole screen, so
+    // we don't auto-open there — the bubble is right there to tap. Desktop greets.
+    if (window.innerWidth < 600) { sessionStorage.setItem("companionIntroSeen", "1"); return; }
     let shown = false;
     const show = () => { if (shown) return; shown = true; sessionStorage.setItem("companionIntroSeen", "1"); setIntro(true); setCompanionOpen(true); };
     if (companionService.modelReady()) setTimeout(show, 800);
