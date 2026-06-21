@@ -6,13 +6,17 @@ import ReplyRoundedIcon from "@mui/icons-material/ReplyRounded";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import GavelRoundedIcon from "@mui/icons-material/GavelRounded";
+import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
+import GifBoxRoundedIcon from "@mui/icons-material/GifBoxRounded";
+import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import { Menu, MenuItem, LinearProgress } from "@mui/material";
 import { linkPreviewService, type Preview } from "@/services/linkPreviewService";
 import { trustService } from "@/services/trustService";
 import { emojify } from "@/lib/emoticons";
+import GifPicker from "@/components/common/GifPicker";
 import { bus, toast } from "@/lib/events";
 import { newId } from "@/lib/id";
-import type { ModerationVerdict } from "@/types";
+import type { ModerationVerdict, MediaRef } from "@/types";
 import GlassCard from "@/components/common/GlassCard";
 import WhyRecommended from "./WhyRecommended";
 import UserAvatar from "@/components/common/UserAvatar";
@@ -23,7 +27,7 @@ import { useNavigate } from "react-router-dom";
 import { useStore } from "@/store/useStore";
 import type { Post, RecommendationReason } from "@/types";
 
-const REACTIONS = ["⭐", "🔥", "🚀", "💜", "😂", "👀"];
+const REACTIONS = ["⭐", "🔥", "🚀", "💜", "😂", "👀", "👎", "😠"];
 
 const YT_RE = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{11})/i;
 const IMG_RE = /\.(png|jpe?g|gif|webp|avif|bmp|svg)(\?[^\s]*)?$/i;
@@ -57,25 +61,43 @@ function SpotifyCard({ kind, id }: { kind: string; id: string }) {
 // (always valid) with an <img> + onError fallback, rather than trusting the
 // RSS feed's media URL which is sometimes not an image.
 function YouTubeCard({ id }: { id: string }) {
-  const [play, setPlay] = useState(false);
-  const cid = useRef(newId());
-  // play exclusivity: stop if some other media starts
-  useEffect(() => bus.on("media:play", ({ id }) => { if (id !== cid.current) setPlay(false); }), []);
-  const start = () => { setPlay(true); bus.emit("media:play", { id: cid.current }); };
+  // When playing, the global feed-video player docks into #dockId; on scroll
+  // away it floats as a bottom-right mini player and keeps playing.
+  const dockId = useRef("ytd-" + newId());
+  const [active, setActive] = useState(false);
+  useEffect(() => {
+    const off = bus.on("feedvideo:play", ({ dockId: d }) => { if (d !== dockId.current) setActive(false); });
+    const offMedia = bus.on("media:play", ({ id }) => { if (id !== "feedvideo") setActive(false); });
+    return () => { off(); offMedia(); };
+  }, []);
+  const start = () => { setActive(true); bus.emit("feedvideo:play", { videoId: id, dockId: dockId.current }); };
+  const watchTogether = () => {
+    bus.emit("watch:start", { videoId: id });
+    bus.emit("media:play", { id: "watch" });       // pause the feed player
+    setActive(false);
+    window.location.hash = "#/listen";             // open the Watch & Listen room
+    toast("Started a watch party — friends in the room are watching with you", "success");
+  };
   return (
-    <Box sx={{ position: "relative", pt: "56.25%", mt: 1, borderRadius: 1, overflow: "hidden", border: "1px solid var(--bl-line)", bgcolor: "#000" }}>
-      {play ? (
-        <Box component="iframe" src={`https://www.youtube.com/embed/${id}?autoplay=1&rel=0`} title="YouTube" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen sx={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }} />
-      ) : (
-        <Box onClick={start} sx={{ position: "absolute", inset: 0, cursor: "pointer" }}>
-          <Box component="img" src={`https://i.ytimg.com/vi/${id}/hqdefault.jpg`} alt="" loading="lazy"
-            onError={(e) => { const t = e.currentTarget as HTMLImageElement; if (!t.dataset.fb) { t.dataset.fb = "1"; t.src = `https://i.ytimg.com/vi/${id}/mqdefault.jpg`; } }}
-            sx={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-          <Box sx={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
-            <Box sx={{ width: 64, height: 46, borderRadius: 2, bgcolor: "rgba(0,0,0,0.72)", display: "grid", placeItems: "center" }}><PlayArrowRoundedIcon sx={{ color: "#fff", fontSize: 36 }} /></Box>
+    <Box sx={{ mt: 1 }}>
+      <Box sx={{ position: "relative", pt: "56.25%", borderRadius: 1, overflow: "hidden", border: "1px solid var(--bl-line)", bgcolor: "#000" }}>
+        {active ? (
+          // The global player positions itself over this slot.
+          <Box id={dockId.current} sx={{ position: "absolute", inset: 0 }} />
+        ) : (
+          <Box onClick={start} sx={{ position: "absolute", inset: 0, cursor: "pointer" }}>
+            <Box component="img" src={`https://i.ytimg.com/vi/${id}/hqdefault.jpg`} alt="" loading="lazy"
+              onError={(e) => { const t = e.currentTarget as HTMLImageElement; if (!t.dataset.fb) { t.dataset.fb = "1"; t.src = `https://i.ytimg.com/vi/${id}/mqdefault.jpg`; } }}
+              sx={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+            <Box sx={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
+              <Box sx={{ width: 64, height: 46, borderRadius: 2, bgcolor: "rgba(0,0,0,0.72)", display: "grid", placeItems: "center" }}><PlayArrowRoundedIcon sx={{ color: "#fff", fontSize: 36 }} /></Box>
+            </Box>
           </Box>
-        </Box>
-      )}
+        )}
+      </Box>
+      <Button size="small" startIcon={<GroupsRoundedIcon fontSize="small" />} onClick={watchTogether} sx={{ mt: 0.5, color: "text.secondary" }}>
+        Watch with friends
+      </Button>
     </Box>
   );
 }
@@ -97,14 +119,92 @@ function LinkCard({ url }: { url: string }) {
   );
 }
 
-// Render text with clickable links (used for RSS Bot story links, etc.).
-// Non-link spans get ASCII emoticons translated to real emoji.
+// Render text with clickable links. Direct image links (incl. Tenor GIFs) are
+// rendered inline as images; non-link spans get emoticons translated to emoji.
 function renderText(text: string) {
   const parts = text.split(/(https?:\/\/[^\s]+)/g);
-  return parts.map((p, i) =>
-    /^https?:\/\//.test(p)
-      ? <a key={i} href={p} target="_blank" rel="noopener noreferrer" style={{ color: "#0a55cf", wordBreak: "break-all" }}>{p}</a>
-      : <span key={i}>{emojify(p)}</span>,
+  return parts.map((p, i) => {
+    if (/^https?:\/\//.test(p)) {
+      if (IMG_RE.test(p)) {
+        return <Box key={i} component="a" href={p} target="_blank" rel="noopener noreferrer" sx={{ display: "block" }}>
+          <Box component="img" src={p} loading="lazy" sx={{ display: "block", mt: 0.5, maxWidth: "100%", maxHeight: 320, borderRadius: 1.5, border: "1px solid var(--bl-line)" }} />
+        </Box>;
+      }
+      return <a key={i} href={p} target="_blank" rel="noopener noreferrer" style={{ color: "#0a55cf", wordBreak: "break-all" }}>{p}</a>;
+    }
+    return <span key={i}>{emojify(p)}</span>;
+  });
+}
+
+// A reply composer (text + image + GIF) reused at every nesting level.
+function ReplyComposer({ parentId, placeholder, autoFocus, onPosted }: { parentId: string; placeholder: string; autoFocus?: boolean; onPosted?: () => void }) {
+  const [text, setText] = useState("");
+  const [media, setMedia] = useState<MediaRef[]>([]);
+  const [gifOpen, setGifOpen] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  async function attach(file?: File) {
+    if (!file) return;
+    const url = await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(file); });
+    setMedia((m) => [...m, { type: "image", url, mime: file.type, bytes: file.size }]);
+  }
+  async function send() {
+    const t = text.trim();
+    if (!t && !media.length) return;
+    const p = await feedService.createPost({ text: t, replyTo: parentId, media: media.length ? media : undefined });
+    peerService.publishPost(p);
+    setText(""); setMedia([]);
+    onPosted?.();
+  }
+  return (
+    <Box sx={{ mt: 1 }}>
+      {media.length > 0 && (
+        <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: "wrap" }}>
+          {media.map((m, i) => <Box key={i} component="img" src={m.url} onClick={() => setMedia((x) => x.filter((_, j) => j !== i))} sx={{ width: 64, height: 64, objectFit: "cover", borderRadius: 1.5, cursor: "pointer", border: "1px solid var(--bl-line)" }} />)}
+        </Stack>
+      )}
+      <Stack direction="row" spacing={0.5} alignItems="center">
+        <Tooltip title="Attach image"><IconButton size="small" onClick={() => fileRef.current?.click()}><ImageRoundedIcon fontSize="small" /></IconButton></Tooltip>
+        <Tooltip title="Add a GIF"><IconButton size="small" onClick={() => setGifOpen(true)}><GifBoxRoundedIcon fontSize="small" /></IconButton></Tooltip>
+        <TextField fullWidth size="small" autoFocus={autoFocus} placeholder={placeholder} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") send(); }} />
+        <Button variant="contained" size="small" onClick={send} disabled={!text.trim() && !media.length}>Reply</Button>
+      </Stack>
+      <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => attach(e.target.files?.[0])} />
+      <GifPicker open={gifOpen} onClose={() => setGifOpen(false)} onPick={(url) => setMedia((m) => [...m, { type: "image", url, mime: "image/gif" }])} />
+    </Box>
+  );
+}
+
+// A single reply, recursively rendering its own sub-replies. Supports likes
+// (reactions) and replying at any depth.
+function ReplyNode({ reply, replyMap, mePk, onReact, depth }: { reply: Post; replyMap: Map<string, Post[]>; mePk: string; onReact: (el: HTMLElement, id: string) => void; depth: number }) {
+  const [showBox, setShowBox] = useState(false);
+  const children = replyMap.get(reply.id) ?? [];
+  return (
+    <Box sx={{ mb: 1 }}>
+      <Stack direction="row" spacing={1}>
+        <UserAvatar pk={reply.author} name={reply.authorName} avatar={reply.authorAvatar} size={26} />
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Stack direction="row" spacing={0.5} alignItems="center">
+            <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>{reply.authorName}</Typography>
+            <Typography variant="caption" color="text.secondary">· {relativeTime(reply.createdAt)}</Typography>
+          </Stack>
+          {reply.text && <Typography component="div" variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{renderText(reply.text)}</Typography>}
+          {reply.media?.map((m, i) => m.type === "image" ? <Box key={i} component="img" src={m.url} loading="lazy" sx={{ mt: 0.5, maxWidth: "100%", maxHeight: 240, borderRadius: 1.5, border: "1px solid var(--bl-line)" }} /> : null)}
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Box sx={{ flex: 1 }}><ReactRow post={reply} me={mePk} onAdd={onReact} /></Box>
+            <Button size="small" startIcon={<ReplyRoundedIcon fontSize="small" />} onClick={() => setShowBox((v) => !v)} sx={{ color: "text.secondary", flex: "0 0 auto" }}>
+              {children.length ? `${children.length} ` : ""}Reply
+            </Button>
+          </Stack>
+          {showBox && <ReplyComposer parentId={reply.id} autoFocus placeholder={`Reply to ${reply.authorName}…`} onPosted={() => setShowBox(false)} />}
+          {children.length > 0 && (
+            <Box sx={{ mt: 1, pl: depth < 4 ? 1.5 : 0, borderLeft: depth < 4 ? "2px solid rgba(58,155,240,0.2)" : "none" }}>
+              {children.map((c) => <ReplyNode key={c.id} reply={c} replyMap={replyMap} mePk={mePk} onReact={onReact} depth={depth + 1} />)}
+            </Box>
+          )}
+        </Box>
+      </Stack>
+    </Box>
   );
 }
 
@@ -145,7 +245,7 @@ function ModInfo({ verdict }: { verdict: ModerationVerdict }) {
   );
 }
 
-export default function PostCard({ post, reason, replies = [], verdict }: { post: Post; reason?: RecommendationReason; replies?: Post[]; verdict?: ModerationVerdict }) {
+export default function PostCard({ post, reason, replies = [], replyMap, verdict }: { post: Post; reason?: RecommendationReason; replies?: Post[]; replyMap?: Map<string, Post[]>; verdict?: ModerationVerdict }) {
   const me = useStore((s) => s.me);
   const mePk = me?.publicKey ?? "";
   const nav = useNavigate();
@@ -153,10 +253,10 @@ export default function PostCard({ post, reason, replies = [], verdict }: { post
   const visit = () => canVisit && nav(`/u/${post.author}`);
   const [react, setReact] = useState<{ el: HTMLElement; id: string } | null>(null);
   const [showReplies, setShowReplies] = useState(false);
-  const [replyText, setReplyText] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [authMenu, setAuthMenu] = useState<HTMLElement | null>(null);
   const restricted = !!verdict && (verdict.action === "reduce" || verdict.action === "review" || verdict.action === "flag");
+  const childMap = replyMap ?? new Map<string, Post[]>();
 
   async function trust(kind: "vouch" | "report" | "mute") {
     setAuthMenu(null);
@@ -166,14 +266,6 @@ export default function PostCard({ post, reason, replies = [], verdict }: { post
   }
 
   const sourceColor = post.source === "self" ? "#54c95a" : post.source === "relay" || post.source === "peer" ? "#3f97ff" : "#7a85a8";
-
-  async function sendReply() {
-    const t = replyText.trim();
-    if (!t) return;
-    const p = await feedService.createPost({ text: t, replyTo: post.id });
-    peerService.publishPost(p);
-    setReplyText(""); setShowReplies(true);
-  }
 
   return (
     <GlassCard sx={{ mb: 1.5 }}>
@@ -244,23 +336,9 @@ export default function PostCard({ post, reason, replies = [], verdict }: { post
           {showReplies && (
             <Box sx={{ mt: 1, pl: 2, borderLeft: "2px solid rgba(58,155,240,0.25)" }}>
               {replies.map((r) => (
-                <Stack key={r.id} direction="row" spacing={1} sx={{ mb: 1 }}>
-                  <UserAvatar pk={r.author} name={r.authorName} avatar={r.authorAvatar} size={26} />
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Stack direction="row" spacing={0.5} alignItems="center">
-                      <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>{r.authorName}</Typography>
-                      <Typography variant="caption" color="text.secondary">· {relativeTime(r.createdAt)}</Typography>
-                    </Stack>
-                    {r.text && <Typography component="div" variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{renderText(r.text)}</Typography>}
-                    {r.media?.map((m, i) => m.type === "image" ? <Box key={i} component="img" src={m.url} sx={{ mt: 0.5, maxWidth: "100%", maxHeight: 240, borderRadius: 1.5 }} /> : null)}
-                    <ReactRow post={r} me={mePk} onAdd={(el, id) => setReact({ el, id })} />
-                  </Box>
-                </Stack>
+                <ReplyNode key={r.id} reply={r} replyMap={childMap} mePk={mePk} onReact={(el, id) => setReact({ el, id })} depth={0} />
               ))}
-              <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                <TextField fullWidth size="small" placeholder={`Reply to ${post.authorName}…`} value={replyText} onChange={(e) => setReplyText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendReply()} />
-                <Button variant="contained" onClick={sendReply} disabled={!replyText.trim()}>Reply</Button>
-              </Stack>
+              <ReplyComposer parentId={post.id} placeholder={`Reply to ${post.authorName}…`} />
             </Box>
           )}
           </>)}

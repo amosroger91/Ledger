@@ -30,6 +30,7 @@ export interface ZuccBookEvents {
   "stage:in": WatchPartyState;   // a watch-party update arrived from a peer
   "stage:out": WatchPartyState;  // local watch-party change to broadcast
   "watch:start": { videoId: string };  // start/replace the watch-party video
+  "feedvideo:play": { videoId: string; dockId: string };  // play a feed video in the global player
   "media:play": { id: string };         // some media started — others should pause
   "companion:thinking": boolean;
   "rss:refreshing": boolean;

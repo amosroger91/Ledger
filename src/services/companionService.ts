@@ -35,6 +35,29 @@ export function isWebGPU(): boolean {
   return typeof navigator !== "undefined" && !!(navigator as any).gpu;
 }
 
+// Inspect the actual hardware (RAM + the WebGPU adapter's buffer limits) and
+// pick the most capable model this device can comfortably run. deviceMemory is
+// capped at 8 by browsers, so 8 means "8 GB or more"; we stay one tier below the
+// theoretical max so the model + browser + page all fit in memory.
+export async function bestModelForHardware(): Promise<{ id: string; reason: string }> {
+  if (!isWebGPU()) return { id: MODELS[0].id, reason: "No WebGPU — smallest model for the offline fallback." };
+  const gb: number = (navigator as any).deviceMemory || 4;        // GB, capped at 8
+  let maxBuffer = 0;
+  try {
+    const adapter = await (navigator as any).gpu.requestAdapter();
+    if (adapter) maxBuffer = adapter.limits?.maxBufferSize || adapter.limits?.maxStorageBufferBindingSize || 0;
+  } catch { /* adapter probe failed — fall back to RAM heuristic */ }
+  const bigGpu = maxBuffer >= 1_000_000_000;                       // ≥1 GB single-buffer limit
+  let pick: LlmModel, why: string;
+  if (gb >= 8 && bigGpu) { pick = byId("Phi-3.5-mini-instruct-q4f16_1-MLC"); why = `${gb}GB RAM + capable GPU`; }
+  else if (gb >= 8)      { pick = byId("Llama-3.2-3B-Instruct-q4f16_1-MLC");  why = `${gb}GB RAM`; }
+  else if (gb >= 6)      { pick = byId("gemma-2-2b-it-q4f16_1-MLC");          why = `${gb}GB RAM`; }
+  else if (gb >= 4)      { pick = byId("Llama-3.2-1B-Instruct-q4f16_1-MLC");  why = `${gb}GB RAM`; }
+  else                   { pick = MODELS[0];                                  why = `${gb}GB RAM — keeping it light`; }
+  return { id: pick.id, reason: `Auto-selected ${pick.label} (${pick.size}) for your hardware: ${why}.` };
+}
+function byId(id: string): LlmModel { return MODELS.find((m) => m.id === id) ?? MODELS[0]; }
+
 // --- WebLLM engine (lazy, cached) ---
 let engine: any = null;
 let loadedId: string | null = null;

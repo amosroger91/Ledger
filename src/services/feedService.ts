@@ -12,10 +12,15 @@ import { identityService } from "./identityService";
 import { moderationService } from "./moderationService";
 import { reputationService } from "./reputationService";
 import { profileService } from "./profileService";
+import { trustService } from "./trustService";
 import { embed, cosine, topTerms, InterestProfile } from "@/lib/embeddings";
 import { bus } from "@/lib/events";
 import { newId } from "@/lib/id";
 import type { ModerationProfile } from "@/types";
+
+// Positive reactions double as a soft "vouch" for the author (web of trust),
+// so genuine positive interactions raise contextual trust. 👀 is neutral.
+const POSITIVE_REACTIONS = new Set(["⭐", "🔥", "🚀", "💜", "😂", "❤️", "👍", "🙂", "😄", "🙌", "💯"]);
 
 class FeedService {
   private profile = new InterestProfile();
@@ -102,6 +107,13 @@ class FeedService {
     await storage.putPost(post);
     // your own reactions teach the local interest profile
     if (i < 0 && fromPk === identityService.pk && post.embedding) { this.profile.learn(post.embedding, 1.5); this.persistProfile(); }
+    // a positive reaction from you = a soft vouch for the author (web of trust)
+    if (i < 0 && fromPk === identityService.pk && POSITIVE_REACTIONS.has(emoji)) {
+      const a = post.author;
+      if (a && a !== identityService.pk && a !== "rss-bot" && a !== "system" && !a.startsWith("demo_")) {
+        trustService.vouch(a, post.community).catch?.(() => {});
+      }
+    }
     bus.emit("feed:updated", undefined);
   }
 
@@ -130,6 +142,21 @@ class FeedService {
   ): Promise<{ posts: Post[]; reasons: Map<string, RecommendationReason>; verdicts: Map<string, ModerationVerdict> }> {
     let posts = (await storage.allPosts()).filter((p) => !p.replyTo); // top-level only
     const meId = identityService.pk;
+
+    // Dedup RSS-Bot posts that point to the same link — the same story often
+    // arrives from multiple feeds/refreshes, and bots are basically just a URL.
+    // Keep the earliest, prune later duplicates.
+    {
+      const seenLinks = new Set<string>();
+      const dropIds = new Set<string>();
+      for (const p of [...posts].sort((a, b) => a.createdAt - b.createdAt)) {
+        if (p.author !== "rss-bot") continue;
+        const link = (p.text?.match(/https?:\/\/[^\s]+/)?.[0] ?? "").replace(/[)\].,]+$/, "").toLowerCase();
+        if (!link) continue;
+        if (seenLinks.has(link)) dropIds.add(p.id); else seenLinks.add(link);
+      }
+      if (dropIds.size) posts = posts.filter((p) => !dropIds.has(p.id));
+    }
 
     // Layered moderation → graded verdicts. We only drop "hide" (you muted them);
     // everything else stays, with the verdict surfaced in the UI.

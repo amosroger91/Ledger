@@ -1,8 +1,10 @@
 import { useRef, useState } from "react";
-import { Stack, TextField, Button, IconButton, Box, Avatar, Chip, Tooltip } from "@mui/material";
+import { Stack, TextField, Button, IconButton, Box, Chip, Tooltip } from "@mui/material";
 import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
+import GifBoxRoundedIcon from "@mui/icons-material/GifBoxRounded";
 import AutoFixHighRoundedIcon from "@mui/icons-material/AutoFixHighRounded";
 import GlassCard from "@/components/common/GlassCard";
+import GifPicker from "@/components/common/GifPicker";
 import { feedService } from "@/services/feedService";
 import { peerService } from "@/services/peerService";
 import { companionService } from "@/services/companionService";
@@ -17,6 +19,7 @@ export default function Composer() {
   const moderation = useStore((s) => s.settings.moderationProfile);
   const [text, setText] = useState("");
   const [media, setMedia] = useState<MediaRef[]>([]);
+  const [gifOpen, setGifOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function attach(file?: File) {
@@ -57,6 +60,7 @@ export default function Composer() {
           )}
           <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1 }}>
             <Tooltip title="Attach image"><IconButton size="small" onClick={() => fileRef.current?.click()}><ImageRoundedIcon fontSize="small" /></IconButton></Tooltip>
+            <Tooltip title="Add a GIF"><IconButton size="small" onClick={() => setGifOpen(true)}><GifBoxRoundedIcon fontSize="small" /></IconButton></Tooltip>
             <Tooltip title="Companion: draft a fresh post"><IconButton size="small" onClick={async () => { const { posts } = await feedService.generate("trending", { moderation }); setText(companionService.draftPost(posts)); }}><AutoFixHighRoundedIcon fontSize="small" /></IconButton></Tooltip>
             <Box sx={{ flex: 1 }} />
             <Chip size="small" variant="outlined" label="local-only until posted" sx={{ opacity: 0.6, display: { xs: "none", sm: "inline-flex" } }} />
@@ -65,6 +69,7 @@ export default function Composer() {
         </Box>
       </Stack>
       <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => attach(e.target.files?.[0])} />
+      <GifPicker open={gifOpen} onClose={() => setGifOpen(false)} onPick={(url) => setMedia((m) => [...m, { type: "image", url, mime: "image/gif" }])} />
     </GlassCard>
   );
 }

@@ -130,7 +130,6 @@ const PROXIES = [
 const THROTTLE_MS = 10 * 60 * 1000;
 const PER_FEED = 4;
 const FEEDS_PER_TOPIC = 5;
-const GENERIC = ["Check this out 👀", "This may be interesting", "Worth a look", "Saw this come through", "Thought I'd share this", "ICYMI"];
 const DEFAULT: RssConfig = { topics: [], custom: [], disabled: [], seen: [], lastRun: 0 };
 
 function hash(s: string): string { let h = 0; for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0; return Math.abs(h).toString(36); }
@@ -266,13 +265,16 @@ class RssService {
           for (const item of items.slice(0, PER_FEED)) {
             if (seen.has(item.link)) continue;
             seen.add(item.link);
-            const line = GENERIC[Math.floor(Math.random() * GENERIC.length)];
+            // Keep it minimal and consistent: headline, a short clean blurb, and
+            // the link. No AI commentary/"hot takes" — the bot just surfaces the
+            // story and lets you click through.
+            const blurb = item.summary && item.summary.length > 40 ? item.summary.slice(0, 200).replace(/\s+\S*$/, "") + "…" : item.summary;
             const post: Post = {
               id: "rss_" + hash(item.link),
               author: "rss-bot",
               authorName: `RSS Bot · ${feed.name}`,
               kind: "text",
-              text: `${line}\n\n${item.title}\n\n${item.summary}\n\n${item.link}`,
+              text: [item.title, blurb, item.link].filter(Boolean).join("\n\n"),
               media: item.image ? [{ type: "image", url: item.image, mime: "image/*", alt: item.title }] : undefined,
               tags: [topic.toLowerCase().replace(/[^a-z0-9]+/g, "")],
               createdAt: item.published || Date.now(),

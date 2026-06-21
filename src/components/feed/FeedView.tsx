@@ -79,7 +79,7 @@ export default function FeedView() {
         {posts.length === 0 && (
           <GlassCard><Typography color="text.secondary">No posts match this view yet. Switch algorithms or post something — your feed is generated locally.</Typography></GlassCard>
         )}
-        {posts.map((p) => <PostCard key={p.id} post={p} reason={reasons.get(p.id)} replies={replies.get(p.id) ?? []} verdict={verdicts.get(p.id)} />)}
+        {posts.map((p) => <PostCard key={p.id} post={p} reason={reasons.get(p.id)} replies={replies.get(p.id) ?? []} replyMap={replies} verdict={verdicts.get(p.id)} />)}
       </Box>
 
       {!compact && (
@@ -92,7 +92,7 @@ export default function FeedView() {
           <GlassCard sx={{ mt: 2 }}>
             <Typography variant="overline" color="text.secondary">How this feed works</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              Posts are ranked by an embedding model running <b>on this device</b>. Tap the <b>insights</b> icon on any post to see exactly why it surfaced. Nothing is sent to a server.
+              Ranking runs <b>on this device</b> with a lightweight text-embedding (hashed word vectors) — instant and needs no download. It's <b>not</b> the chat LLM: your <b>Companion</b> is a separate full language model that auto-downloads and also runs locally. Tap the <b>insights</b> icon on any post to see exactly why it surfaced. Nothing is sent to a server.
             </Typography>
           </GlassCard>
 

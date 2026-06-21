@@ -1,6 +1,8 @@
-import type { ReactNode } from "react";
-import { Box, Stack, Typography, Tooltip, IconButton, Chip, Avatar, Divider, useMediaQuery } from "@mui/material";
+import { useEffect, useState, type ReactNode } from "react";
+import { Box, Stack, Typography, Tooltip, IconButton, Chip, Avatar, Divider, CircularProgress, useMediaQuery } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
+import { bus } from "@/lib/events";
+import { companionService } from "@/services/companionService";
 import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
 import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import ChatRoundedIcon from "@mui/icons-material/ChatRounded";
@@ -32,6 +34,28 @@ const NAV = [
 ];
 
 const STATUS_COLOR: Record<string, string> = { online: "#54c95a", idle: "#ffcc66", away: "#ff9a5d", dnd: "#ff5d7a", offline: "#7a85a8" };
+
+// Live indicator for the on-device LLM as it auto-downloads on first load.
+// Shows a progress ring while loading, a brief "AI ready" once in memory, then
+// fades out so it doesn't clutter the bar.
+function ModelStatusChip() {
+  const [st, setSt] = useState<{ state?: string; progress?: number }>(companionService.modelReady() ? { state: "ready" } : {});
+  const [hideReady, setHideReady] = useState(false);
+  useEffect(() => bus.on("companion:model", (m) => { setSt(m); if (m.state === "ready") { setHideReady(false); setTimeout(() => setHideReady(true), 6000); } }), []);
+  if (st.state === "loading") {
+    const pct = Math.round((st.progress ?? 0) * 100);
+    return (
+      <Tooltip title="Your private on-device AI is downloading — it's cached after the first time">
+        <Chip size="small" icon={<CircularProgress size={12} sx={{ color: "#1668e0 !important", ml: 0.5 }} variant={st.progress ? "determinate" : "indeterminate"} value={pct} />}
+          label={`AI ${pct}%`} sx={{ bgcolor: "rgba(255,255,255,0.92)", color: "#1668e0", "& .MuiChip-label": { fontWeight: 700 } }} />
+      </Tooltip>
+    );
+  }
+  if (st.state === "ready" && !hideReady) {
+    return <Tooltip title="On-device AI loaded — runs privately in your browser"><Chip size="small" label="AI ready" sx={{ bgcolor: "rgba(84,201,90,0.92)", color: "#fff", "& .MuiChip-label": { fontWeight: 700 } }} /></Tooltip>;
+  }
+  return null;
+}
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const nav = useNavigate();
@@ -104,6 +128,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         {/* Luna title bar */}
         <Stack direction="row" alignItems="center" spacing={1.5} sx={{ px: 2, py: 1, position: "sticky", top: 0, zIndex: 5, color: "#fff", borderBottom: "1px solid var(--bl-title-edge)", background: "var(--bl-gloss-title), linear-gradient(180deg, var(--bl-title-hi), var(--bl-title-low))", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)" }}>
           <Typography variant="h6" sx={{ flex: 1, color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.4)" }}>{NAV.find((n) => n.to === pathname)?.label ?? "ZuccBook"}</Typography>
+          <ModelStatusChip />
           <Chip size="small" label={`${onlineCount} online`} sx={{ bgcolor: "rgba(255,255,255,0.92)", color: "var(--bl-green-600)", border: "none", "& .MuiChip-label": { fontWeight: 700 } }} icon={<Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#4ca325", ml: 1 }} />} />
           <Tooltip title={me?.username ?? ""}>
             <Box sx={{ position: "relative", cursor: "pointer" }} onClick={() => nav("/profile")}>

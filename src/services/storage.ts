@@ -117,6 +117,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   useWebLLM: true,
   llmOptOut: false,
   llmModel: "Qwen2.5-0.5B-Instruct-q4f16_1-MLC",
+  llmAuto: true,
   presenceStatus: "online",
   reducedMotion: false,
 };

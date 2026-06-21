@@ -23,6 +23,7 @@ import MarketView from "@/components/market/MarketView";
 import WalletView from "@/components/wallet/WalletView";
 import MiniPlayer from "@/components/layout/MiniPlayer";
 import GlobalWatchPlayer from "@/components/layout/GlobalWatchPlayer";
+import GlobalFeedVideo from "@/components/layout/GlobalFeedVideo";
 
 export default function App() {
   const { ready, onboarded, setReady, setPresence, setOnlineCount } = useStore();
@@ -70,6 +71,7 @@ export default function App() {
         </AppShell>
       )}
       {ready && onboarded && <GlobalWatchPlayer />}
+      {ready && onboarded && <GlobalFeedVideo />}
       {ready && onboarded && <MiniPlayer />}
       <Snackbar
         open={!!notify}

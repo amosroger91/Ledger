@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Box, Stack, Typography, TextField, IconButton, Chip, Avatar, Select, MenuItem,
-  CircularProgress, LinearProgress, Dialog, DialogTitle, DialogContent, DialogActions, Button,
+  CircularProgress, LinearProgress,
 } from "@mui/material";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
-import LockRoundedIcon from "@mui/icons-material/LockRounded";
+import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import GlassCard from "@/components/common/GlassCard";
 import { companionService, MODELS } from "@/services/companionService";
 import { feedService } from "@/services/feedService";
@@ -28,14 +28,15 @@ export default function CompanionView() {
   const [history, setHistory] = useState<CompanionMessage[]>([]);
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
-  const [model, setModelStatus] = useState<{ state?: string; progress?: number; text?: string }>({});
-  const [pending, setPending] = useState<string | null>(null); // prompt awaiting download consent
-  const acked = useRef(false);
+  const [model, setModelStatus] = useState<{ state?: string; progress?: number; text?: string }>(
+    companionService.modelReady() ? { state: "ready" } : {},
+  );
   const endRef = useRef<HTMLDivElement>(null);
 
   const supported = companionService.isSupported();
   const modelInfo = MODELS.find((m) => m.id === settings.llmModel) ?? MODELS[0];
   const loading = model.state === "loading";
+  const ready = model.state === "ready" || companionService.modelReady();
 
   useEffect(() => {
     companionService.history().then(setHistory);
@@ -44,6 +45,13 @@ export default function CompanionView() {
     return () => { a(); b(); };
   }, []);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [history, thinking, model]);
+
+  // Switch model on demand → mark as a manual choice and start downloading it.
+  function pickModel(id: string) {
+    setSettings({ llmModel: id, useWebLLM: true, llmOptOut: false, llmAuto: false });
+    companionService.configure(true, id);
+    if (supported) companionService.preload().catch(() => {});
+  }
 
   async function context() {
     const { posts } = await feedService.generate(settings.feedAlgorithm, { moderation: settings.moderationProfile });
@@ -61,25 +69,9 @@ export default function CompanionView() {
     const t = text.trim();
     if (!t) return;
     setInput("");
-    // Gate the first LLM call behind a clear privacy/download explainer.
-    if (settings.useWebLLM && supported && !companionService.modelReady() && !acked.current) {
-      setPending(t);
-      return;
-    }
+    // The model auto-downloads on load; ask() will use it once ready and fall
+    // back to the instant offline tools while it's still downloading.
     doSend(t);
-  }
-
-  function confirmDownload() {
-    acked.current = true;
-    const t = pending; setPending(null);
-    if (t) doSend(t);
-  }
-  function useFastEngine() {
-    acked.current = true;
-    companionService.configure(false, settings.llmModel);
-    setSettings({ useWebLLM: false, llmOptOut: true });
-    const t = pending; setPending(null);
-    if (t) doSend(t);
   }
 
   // Quick tools are instant + offline (no model download).
@@ -101,16 +93,18 @@ export default function CompanionView() {
           <Avatar sx={{ background: "linear-gradient(135deg,#3f97ff,#1668e0,#0a55cf)", color: "#ffffff" }}><AutoAwesomeRoundedIcon /></Avatar>
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography variant="h6">Your Companion</Typography>
-            <Typography variant="caption" color="text.secondary">
-              {supported ? "Real on-device LLM (WebGPU) · private & offline" : "WebGPU unavailable — fast offline engine"}
-              {companionService.modelReady() ? " · model in memory" : ""}
+            <Typography variant="caption" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              {!supported ? "WebGPU unavailable — fast offline engine"
+                : ready ? <><CheckCircleRoundedIcon sx={{ fontSize: 14, color: "#54c95a" }} /> {modelInfo.label} loaded · runs on your device, private & offline</>
+                : loading ? `Downloading ${modelInfo.label}…`
+                : "On-device LLM · downloads automatically"}
             </Typography>
           </Box>
           <Box sx={{ minWidth: 0 }}>
-            <Typography variant="caption" color="text.secondary">Model</Typography>
+            <Typography variant="caption" color="text.secondary">Model{settings.llmAuto ? " · auto" : ""}</Typography>
             <Select
               size="small" fullWidth value={settings.llmModel}
-              onChange={(e) => setSettings({ llmModel: e.target.value, useWebLLM: true, llmOptOut: false })}
+              onChange={(e) => pickModel(e.target.value)}
               sx={{ minWidth: 200 }}
             >
               {MODELS.map((m) => <MenuItem key={m.id} value={m.id}>{m.label} · {m.size}</MenuItem>)}
@@ -119,14 +113,14 @@ export default function CompanionView() {
         </Stack>
         {loading && (
           <Box sx={{ mt: 1.5 }}>
-            <Typography variant="caption" color="text.secondary">Downloading / loading {modelInfo.label}… {Math.round((model.progress ?? 0) * 100)}%</Typography>
+            <Typography variant="caption" color="text.secondary">Downloading / loading {modelInfo.label}… {Math.round((model.progress ?? 0) * 100)}% (cached after the first time)</Typography>
             <LinearProgress variant={model.progress ? "determinate" : "indeterminate"} value={(model.progress ?? 0) * 100} sx={{ height: 6, borderRadius: 3, mt: 0.5 }} />
           </Box>
         )}
       </GlassCard>
 
       <GlassCard sx={{ flex: 1, overflowY: "auto", mb: 2, display: "flex", flexDirection: "column", gap: 1.5 }}>
-        {history.length === 0 && <Typography color="text.secondary">Ask me anything — I run as a real LLM on your own device. Or use a quick tool below (those are instant and need no download).</Typography>}
+        {history.length === 0 && <Typography color="text.secondary">Ask me anything — I'm a real language model running on your own device (it downloads automatically; progress shows above). While it loads, the quick tools below answer instantly.</Typography>}
         {history.map((m) => (
           <Stack key={m.id} direction="row" justifyContent={m.role === "user" ? "flex-end" : "flex-start"}>
             <Box sx={{ maxWidth: "78%", px: 1.5, py: 1, borderRadius: 2, background: m.role === "user" ? "linear-gradient(135deg,#3f97ff,#1668e0)" : "#ffffff", color: m.role === "user" ? "#ffffff" : "text.primary" }}>
@@ -145,24 +139,6 @@ export default function CompanionView() {
         <TextField fullWidth size="small" value={input} placeholder="Message your on-device AI…" onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") trySend(input); }} />
         <IconButton color="primary" onClick={() => trySend(input)}><SendRoundedIcon /></IconButton>
       </Stack>
-
-      {/* Privacy + download explainer, shown before the first model load */}
-      <Dialog open={!!pending} onClose={() => setPending(null)} maxWidth="xs" PaperProps={{ sx: { backgroundImage: "none" } }}>
-        <DialogTitle><Stack direction="row" alignItems="center" spacing={1}><LockRoundedIcon color="primary" /> On-device AI — private &amp; offline</Stack></DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" sx={{ mb: 1.5 }}>
-            Your companion is a real language model that runs <b>entirely in your browser</b> (WebGPU/WASM). Your messages never leave this device — there's no server.
-          </Typography>
-          <Typography variant="body2" sx={{ mb: 1.5 }}>
-            The first time, <b>{modelInfo.label}</b> downloads (<b>{modelInfo.size}</b>). After that it's <b>cached in your browser</b> and just loads into memory on later visits — it won't re-download unless you clear site data.
-          </Typography>
-          <Typography variant="caption" color="text.secondary">Tip: pick a smaller model above for a faster first download.</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={useFastEngine} color="inherit">Use fast engine</Button>
-          <Button onClick={confirmDownload} variant="contained">Download &amp; run</Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 }

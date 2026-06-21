@@ -267,6 +267,7 @@ export interface AppSettings {
   useWebLLM: boolean;            // on-device LLM enabled
   llmOptOut: boolean;           // user explicitly turned the LLM off
   llmModel: string;             // which WebLLM model to load
+  llmAuto: boolean;             // auto-pick the best model for this hardware (until the user chooses one)
   presenceStatus: PresenceStatus;
   reducedMotion: boolean;
 }

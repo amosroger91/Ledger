@@ -15,6 +15,7 @@ import { rssService } from "./rssService";
 import { gunService } from "./gunService";
 import { profileService } from "./profileService";
 import { trustService } from "./trustService";
+import { bestModelForHardware, isWebGPU } from "./companionService";
 import type { AppSettings } from "@/types";
 
 export interface BootResult { onboarded: boolean; settings: AppSettings }
@@ -26,6 +27,14 @@ export async function boot(): Promise<BootResult> {
   if (typeof navigator !== "undefined" && (navigator as any).gpu && !settings.llmOptOut) {
     settings.useWebLLM = true;
   }
+  // Hardware-aware auto-selection: until the user explicitly picks a model,
+  // choose the best one this device can run, then download it on load.
+  if (isWebGPU() && !settings.llmOptOut && settings.llmAuto !== false) {
+    try {
+      const best = await bestModelForHardware();
+      if (best.id !== settings.llmModel) settings.llmModel = best.id;
+    } catch { /* keep current model */ }
+  }
   await storage.saveSettings(settings);
 
   await feedService.init();
@@ -33,6 +42,9 @@ export async function boot(): Promise<BootResult> {
   await purgeSeededPosts();            // remove demo posts left by earlier builds
   const me = await identityService.load();
   companionService.configure(settings.useWebLLM, settings.llmModel);
+  // "Just download it" — start fetching the model immediately (best-effort,
+  // cached by WebLLM after the first time). Progress shows in the UI.
+  if (isWebGPU() && !settings.llmOptOut) companionService.preload().catch(() => {});
 
   if (me) {
     presenceService.setStatus(settings.presenceStatus);
