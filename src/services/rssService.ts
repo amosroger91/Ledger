@@ -32,6 +32,7 @@ const github = (repo: string): Feed => ({ url: `https://github.com/${repo}/relea
 const yt = (handle: string, name: string): Feed => ({ kind: "youtube", url: handle, name });
 const pod = (term: string, name: string): Feed => ({ kind: "podcast", url: term, name });
 const cve = (app: string, name: string): Feed => ({ kind: "cve", url: app, name });
+const tiktok = (id: string, name: string): Feed => ({ url: `https://rss.app/feeds/${id}.xml`, name, kind: "rss" });
 
 // Curated feeds grouped by topic.
 export const TOPIC_FEEDS: Record<string, Feed[]> = {
@@ -75,11 +76,20 @@ export const TOPIC_FEEDS: Record<string, Feed[]> = {
   // ---- YouTube channels (resolved to each channel's videos.xml feed) ----
   "YouTube · Finance": [yt("@CalebHammer", "Caleb Hammer")],
   "YouTube · News": [yt("@PhilipDeFranco", "Philip DeFranco")],
-  "YouTube · History": [yt("@TheHistoryGuyChannel", "The History Guy"), yt("@DarkDocs", "Dark Docs")],
+  "YouTube · History": [yt("@TheHistoryGuyChannel", "The History Guy"), yt("@DarkDocs", "Dark Docs"), yt("@TheArmchairHistorian", "The Armchair Historian")],
   "YouTube · Guns & Freedom": [yt("@TheAKGuy", "Brandon Herrera"), yt("@DonutOperator", "Donut Operator"), yt("@themodernrogue", "The Modern Rogue")],
-  "YouTube · Comedy": [yt("@TheoVon", "Theo Von"), yt("@SamMorril", "Sam Morril")],
+  "YouTube · Comedy": [yt("@TheoVon", "Theo Von"), yt("@SamMorril", "Sam Morril"), yt("@jpsearsreacts", "JP Sears"), yt("@YMHStudios", "YMH Studios")],
   "YouTube · Gaming": [yt("@ZackRawrr", "Asmongold TV"), yt("@SomeOrdinaryGamers", "SomeOrdinaryGamers")],
-  "YouTube · Tech": [yt("@TechnologyConnections", "Technology Connections"), yt("@NetworkChuck", "NetworkChuck"), yt("@ThePrimeTimeagen", "ThePrimeTime")],
+  "YouTube · Tech": [yt("@TechnologyConnections", "Technology Connections"), yt("@NetworkChuck", "NetworkChuck"), yt("@ThePrimeTimeagen", "ThePrimeTime"), yt("https://www.youtube.com/coldfusion", "ColdFusion")],
+  "YouTube · Faith & Kindness": [yt("@voiceofkindness-p7t", "Voice of Kindness"), yt("@jaramillocynthia906", "Cynthia Jaramillo")],
+  "YouTube · AI": [yt("@HouseofEl-AI", "House of El (AI)")],
+  "YouTube · More": [yt("@GEN", "GEN"), yt("@Moon-Real", "Moon-Real"), yt("https://www.youtube.com/watch?v=iWuFBZw9Olk", "Featured Channel")],
+
+  // ---- TikTok (via rss.app feeds) ----
+  "TikTok · News & Politics": [tiktok("8ij5l1XVCISffJkW", "Candace (TikTok)"), tiktok("btLstflN27YpkwS2", "Tucker Carlson Network (TikTok)")],
+  "TikTok · Guns & Coffee": [tiktok("FSMRlQoT7fMqNWDl", "UNDERDAWG (TikTok)"), tiktok("RcAehastMj38bbrg", "Black Rifle Coffee (TikTok)")],
+  "TikTok · Faith": [tiktok("KpaeeqmPiB6EKPAa", "houstondprays (TikTok)")],
+  "TikTok · Creators": [tiktok("WN7Xtyd0YymjU9RO", "ericplaytwomuch (TikTok)"), tiktok("ci7fY49yIDeqpdZq", "readchoi (TikTok)"), tiktok("FPgsr8i3PgZLs1wm", "Ci James (TikTok)"), tiktok("y8yCRjsEZMvuSSDO", "Joe Rauth (TikTok)")],
 
   // ---- Podcasts (resolved by name via iTunes Search) ----
   Podcasts: [
@@ -130,7 +140,18 @@ const PROXIES = [
 const THROTTLE_MS = 10 * 60 * 1000;
 const PER_FEED = 4;
 const FEEDS_PER_TOPIC = 5;
-const DEFAULT: RssConfig = { topics: [], custom: [], disabled: [], seen: [], lastRun: 0 };
+// Topics enabled out of the box (and merged into existing users once, via the
+// seed migration below) — the channels/creators/subreddits requested as defaults.
+export const DEFAULT_TOPICS = [
+  "Gaming",
+  "YouTube · Finance", "YouTube · News", "YouTube · History", "YouTube · Guns & Freedom",
+  "YouTube · Comedy", "YouTube · Tech", "YouTube · Faith & Kindness", "YouTube · AI", "YouTube · More",
+  "Podcasts",
+  "Reddit · Gun Bros", "Reddit · Outdoor Bros",
+  "Daily Verse",
+  "TikTok · News & Politics", "TikTok · Guns & Coffee", "TikTok · Faith", "TikTok · Creators",
+];
+const DEFAULT: RssConfig = { topics: [...DEFAULT_TOPICS], custom: [], disabled: [], seen: [], lastRun: 0 };
 
 function hash(s: string): string { let h = 0; for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0; return Math.abs(h).toString(36); }
 function stripHtml(s: string): string { return s.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(); }
@@ -187,6 +208,16 @@ async function fetchCVE(app: string): Promise<RssItem[]> {
 class RssService {
   async config(): Promise<RssConfig> { return { ...DEFAULT, ...(await storage.kvGet<RssConfig>("rss")) }; }
   private async save(c: RssConfig) { await storage.kvSet("rss", c); }
+
+  /** One-time: merge the default topics into an existing user's subscriptions so
+   *  the requested channels light up by default without clobbering their picks. */
+  async seedDefaults() {
+    if (await storage.kvGet<boolean>("rss:seeded-v2")) return;
+    const c = await this.config();
+    c.topics = [...new Set([...c.topics, ...DEFAULT_TOPICS])];
+    await this.save(c);
+    await storage.kvSet("rss:seeded-v2", true);
+  }
 
   async subscribe(topic: string, on: boolean) {
     const c = await this.config();

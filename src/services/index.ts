@@ -58,7 +58,7 @@ export async function boot(): Promise<BootResult> {
     gunService.start();   // durable cross-user persistence + sync (posts, swarm, profiles)
     peerService.start();
     profileService.publishSelf().catch(() => {}); // share my public profile
-    rssService.refresh().catch(() => {}); // fire-and-forget; throttled internally
+    rssService.seedDefaults().then(() => rssService.refresh()).catch(() => {}); // default subs + top-up
     if (settings.showFactChecks) factCheckService.refresh().catch(() => {}); // PolitiFact index
     // Keep topping up while the app is open so new stories arrive during a
     // session; the service throttles actual fetches.
