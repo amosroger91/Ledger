@@ -16,9 +16,12 @@ export default function Onboarding() {
     setBusy(true);
     try {
       await identityService.create(username);
-      await onOnboarded();
-      refreshMe();
+      refreshMe();   // enter the app immediately
       toast("Identity generated — it lives only on this device", "success");
+      onOnboarded().catch((e) => console.warn("[onboard] background init failed", e)); // best-effort
+    } catch (e) {
+      console.error(e);
+      toast("Couldn't generate identity — check your browser supports Web Crypto", "error");
     } finally { setBusy(false); }
   }
 
@@ -27,9 +30,9 @@ export default function Onboarding() {
     setBusy(true);
     try {
       await identityService.importFile(file);
-      await onOnboarded();
       refreshMe();
       toast("Identity imported", "success");
+      onOnboarded().catch((e) => console.warn("[onboard] background init failed", e));
     } catch { toast("That doesn't look like a ZuccBook identity file", "error"); }
     finally { setBusy(false); }
   }

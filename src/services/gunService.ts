@@ -35,28 +35,33 @@ class GunService {
   start() {
     if (started) return;
     started = true;
-    try { gun = (Gun as any)({ peers: PEERS, localStorage: false }); }
-    catch (e) { console.warn("[gun] init failed", e); return; }
+    // Everything here is best-effort: Gun must never be able to block the app.
+    try {
+      gun = (Gun as any)({ peers: PEERS, localStorage: false });
 
-    // Incoming feed posts (human + bot) → absorb (dedupe + merge reactions).
-    gun.get(ROOT).get("posts").map().on((d: any) => {
-      if (d?.json) { try { feedService.absorb(JSON.parse(d.json)); } catch {} }
-    });
-    // Incoming Swarm Lounge messages → store + surface.
-    gun.get(ROOT).get("swarm").map().on((d: any) => {
-      if (!d?.json) return;
-      try {
-        const m: ChatMessage = JSON.parse(d.json);
-        if (!m.id || seenSwarm.has(m.id)) return;
-        seenSwarm.add(m.id);
-        storage.putMessage(m);
-        bus.emit("chat:message", m);
-      } catch {}
-    });
+      // Incoming feed posts (human + bot) → absorb (dedupe + merge reactions).
+      gun.get(ROOT).get("posts").map().on((d: any) => {
+        if (d?.json) { try { feedService.absorb(JSON.parse(d.json)); } catch {} }
+      });
+      // Incoming Swarm Lounge messages → store + surface.
+      gun.get(ROOT).get("swarm").map().on((d: any) => {
+        if (!d?.json) return;
+        try {
+          const m: ChatMessage = JSON.parse(d.json);
+          if (!m.id || seenSwarm.has(m.id)) return;
+          seenSwarm.add(m.id);
+          storage.putMessage(m);
+          bus.emit("chat:message", m);
+        } catch {}
+      });
 
-    // Outgoing: publish whatever the app marks for persistence.
-    bus.on("post:publish", (p) => this.putPost(p));
-    bus.on("swarm:publish", (m) => { seenSwarm.add(m.id); this.putSwarm(m); });
+      // Outgoing: publish whatever the app marks for persistence.
+      bus.on("post:publish", (p) => this.putPost(p));
+      bus.on("swarm:publish", (m) => { seenSwarm.add(m.id); this.putSwarm(m); });
+    } catch (e) {
+      console.warn("[gun] disabled (init failed)", e);
+      gun = null;
+    }
   }
 
   putPost(p: Post) { try { gun?.get(ROOT).get("posts").get(p.id).put({ json: JSON.stringify(p) }); } catch {} }
