@@ -3,7 +3,7 @@
 //  driven: services emit, the UI and other services subscribe.
 //  Decouples the service layer from React entirely.
 // ============================================================
-import type { Post, ChatMessage, RichPresence, ListenRoom } from "@/types";
+import type { Post, ChatMessage, RichPresence, ListenRoom, WatchPartyState } from "@/types";
 
 export interface ZuccBookEvents {
   "identity:ready": { pk: string };
@@ -19,6 +19,8 @@ export interface ZuccBookEvents {
   "peer:disconnected": { pk: string };
   "listen:state": ListenRoom;
   "listen:now": { station: { name: string; genre: string; url: string } | null; playing: boolean };
+  "stage:in": WatchPartyState;   // a watch-party update arrived from a peer
+  "stage:out": WatchPartyState;  // local watch-party change to broadcast
   "companion:thinking": boolean;
   "rss:refreshing": boolean;
   "companion:model": { state: "loading" | "ready" | "error"; id: string; progress?: number; text?: string };

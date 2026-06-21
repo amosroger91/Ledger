@@ -145,6 +145,17 @@ export interface ListenRoom {
   members: string[];
 }
 
+/** Shared YouTube watch-party state. Position is derived: when `playing`,
+ *  currentTime = baseTime + (now - refEpoch)/1000; otherwise it's baseTime. */
+export interface WatchPartyState {
+  videoId: string | null;
+  playing: boolean;
+  baseTime: number;   // video seconds at the reference moment
+  refEpoch: number;   // epoch ms when the video was at baseTime
+  by: string;         // who set it (pk)
+  title?: string;
+}
+
 export type ModerationProfile =
   | "family-friendly"
   | "unfiltered"

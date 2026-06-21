@@ -9,17 +9,7 @@ import { listenTogetherService, type Station } from "@/services/listenTogetherSe
 import { presenceService } from "@/services/presenceService";
 import { reputationService } from "@/services/reputationService";
 import { toast } from "@/lib/events";
-
-/** Parse a YouTube video id from a URL or raw id. */
-function youtubeId(input: string): string | null {
-  const s = input.trim();
-  if (/^[\w-]{11}$/.test(s)) return s;
-  const m =
-    s.match(/[?&]v=([\w-]{11})/) ||
-    s.match(/youtu\.be\/([\w-]{11})/) ||
-    s.match(/youtube\.com\/(?:embed|shorts|live)\/([\w-]{11})/);
-  return m ? m[1] : null;
-}
+import WatchParty from "./WatchParty";
 
 export default function ListenView() {
   const [mode, setMode] = useState<"music" | "video">("music");
@@ -29,10 +19,6 @@ export default function ListenView() {
   const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState<Station | null>(null);
   const [vol, setVol] = useState(60);
-
-  // --- video (youtube) ---
-  const [urlInput, setUrlInput] = useState("");
-  const [videoId, setVideoId] = useState<string | null>(null);
 
   useEffect(() => {
     listenTogetherService.stations().then((s) => { setStations(s); setLoading(false); }).catch(() => setLoading(false));
@@ -49,17 +35,6 @@ export default function ListenView() {
     } else toast("Couldn't play this station — try another", "warn");
   }
   function stopStation() { listenTogetherService.stop(); setCurrent(null); presenceService.clearActivity(); }
-
-  function playVideo() {
-    const id = youtubeId(urlInput);
-    if (!id) { toast("Paste a valid YouTube link", "warn"); return; }
-    // stop audio so they don't overlap; video carries its own sound
-    listenTogetherService.stop(); setCurrent(null);
-    setVideoId(id);
-    presenceService.setActivity("Watching", "a YouTube video");
-    reputationService.award("participation", 1, "started a watch-together session");
-  }
-  function stopVideo() { setVideoId(null); presenceService.clearActivity(); }
 
   return (
     <Box sx={{ maxWidth: 1000, mx: "auto" }}>
@@ -118,37 +93,7 @@ export default function ListenView() {
         </>
       )}
 
-      {mode === "video" && (
-        <>
-          <GlassCard sx={{ mb: 2 }}>
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-              <TextField
-                fullWidth size="small" value={urlInput} placeholder="Paste a YouTube link (or video id)…"
-                onChange={(e) => setUrlInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && playVideo()}
-              />
-              <Button variant="contained" startIcon={<PlayArrowRoundedIcon />} onClick={playVideo}>Watch</Button>
-              {videoId && <Button variant="outlined" startIcon={<StopRoundedIcon />} onClick={stopVideo}>Stop</Button>}
-            </Stack>
-          </GlassCard>
-
-          <GlassCard sx={{ p: videoId ? 0 : 2, overflow: "hidden" }}>
-            {videoId ? (
-              <Box sx={{ position: "relative", pt: "56.25%" }}>
-                <Box
-                  component="iframe"
-                  src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`}
-                  title="YouTube watch-together"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  sx={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
-                />
-              </Box>
-            ) : (
-              <Typography color="text.secondary">Paste a YouTube link above to start a watch party. Everyone in the room sees the same video; chat and reactions happen alongside it. (Playback-position sync lands in Phase 2.)</Typography>
-            )}
-          </GlassCard>
-        </>
-      )}
+      {mode === "video" && <WatchParty />}
     </Box>
   );
 }

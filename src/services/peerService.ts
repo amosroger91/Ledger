@@ -18,7 +18,7 @@ import { identityService } from "./identityService";
 import { presenceService } from "./presenceService";
 import { feedService } from "./feedService";
 import { storage } from "./storage";
-import type { ChatMessage, Post, RichPresence } from "@/types";
+import type { ChatMessage, Post, RichPresence, WatchPartyState } from "@/types";
 
 const HUB_ID = "nebula-hub-v1";
 
@@ -27,6 +27,7 @@ type Envelope =
   | { t: "post"; d: Post }
   | { t: "dm"; d: ChatMessage }
   | { t: "react"; d: { postId: string; emoji: string; from: string; fromName: string } }
+  | { t: "stage"; d: WatchPartyState }
   | { t: "hello"; d: { pk: string } };
 
 class PeerService {
@@ -37,6 +38,9 @@ class PeerService {
   private leaving = false;
   private reelectTimer: any = null;
   private started = false;
+  private lastStage: WatchPartyState | null = null; // current watch-party, replayed to new joiners
+
+  currentStage() { return this.lastStage; }
 
   start() {
     if (this.started) return;
@@ -45,6 +49,8 @@ class PeerService {
     // Relay local reactions to the swarm (bus avoids a feed↔peer import cycle).
     bus.on("feed:react-out", ({ postId, emoji }) =>
       this.send({ t: "react", d: { postId, emoji, from: identityService.pk, fromName: identityService.current?.username ?? "Someone" } }));
+    // Relay local watch-party changes; remember the latest so late joiners catch up.
+    bus.on("stage:out", (s) => { this.lastStage = s; this.send({ t: "stage", d: s }); });
     this.connect();
   }
 
@@ -90,6 +96,11 @@ class PeerService {
         }
         if (this.isHub) this.broadcast(env, fromId);
         break;
+      case "stage":
+        this.lastStage = env.d;
+        bus.emit("stage:in", env.d);
+        if (this.isHub) this.broadcast(env, fromId);
+        break;
       case "hello": if (this.isHub) presenceService.announceSelf(); break;
     }
   }
@@ -114,7 +125,12 @@ class PeerService {
     bus.emit("peer:open", { id: this.peer!.id });
     presenceService.announceSelf();
     this.peer!.on("connection", (c) => {
-      c.on("open", () => { this.clients.set(c.peer, c); bus.emit("peer:connected", { pk: c.peer }); });
+      c.on("open", () => {
+        this.clients.set(c.peer, c);
+        bus.emit("peer:connected", { pk: c.peer });
+        // Catch the newcomer up on the in-progress watch party.
+        if (this.lastStage && this.lastStage.videoId) { try { c.send({ t: "stage", d: this.lastStage }); } catch {} }
+      });
       c.on("data", (d) => this.handle(d as Envelope, c.peer));
       c.on("close", () => { this.clients.delete(c.peer); bus.emit("peer:disconnected", { pk: c.peer }); });
       c.on("error", () => {});
