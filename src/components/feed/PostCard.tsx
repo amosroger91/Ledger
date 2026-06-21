@@ -4,9 +4,15 @@ import AddReactionRoundedIcon from "@mui/icons-material/AddReactionRounded";
 import VerifiedRoundedIcon from "@mui/icons-material/VerifiedRounded";
 import ReplyRoundedIcon from "@mui/icons-material/ReplyRounded";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
+import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
+import GavelRoundedIcon from "@mui/icons-material/GavelRounded";
+import { Menu, MenuItem, LinearProgress } from "@mui/material";
 import { linkPreviewService, type Preview } from "@/services/linkPreviewService";
-import { bus } from "@/lib/events";
+import { trustService } from "@/services/trustService";
+import { emojify } from "@/lib/emoticons";
+import { bus, toast } from "@/lib/events";
 import { newId } from "@/lib/id";
+import type { ModerationVerdict } from "@/types";
 import GlassCard from "@/components/common/GlassCard";
 import WhyRecommended from "./WhyRecommended";
 import UserAvatar from "@/components/common/UserAvatar";
@@ -21,10 +27,30 @@ const REACTIONS = ["⭐", "🔥", "🚀", "💜", "😂", "👀"];
 
 const YT_RE = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{11})/i;
 const IMG_RE = /\.(png|jpe?g|gif|webp|avif|bmp|svg)(\?[^\s]*)?$/i;
+// Spotify share links: track / album / playlist / episode / show.
+const SPOTIFY_RE = /open\.spotify\.com\/(?:intl-[a-z]+\/)?(track|album|playlist|episode|show|artist)\/([A-Za-z0-9]+)/i;
 function firstYouTube(text: string): string | null { return text.match(YT_RE)?.[1] ?? null; }
+function firstSpotify(text: string): { kind: string; id: string } | null {
+  const m = text.match(SPOTIFY_RE);
+  return m ? { kind: m[1].toLowerCase(), id: m[2] } : null;
+}
 function firstLink(text: string): string | null {
   const urls = text.match(/https?:\/\/[^\s]+/g) ?? [];
-  return urls.find((u) => !IMG_RE.test(u) && !YT_RE.test(u)) ?? null;
+  return urls.find((u) => !IMG_RE.test(u) && !YT_RE.test(u) && !SPOTIFY_RE.test(u)) ?? null;
+}
+
+// Spotify embed — an official inline player. The compact 80px height is used
+// for a single track; collections get the taller 380px playlist player.
+function SpotifyCard({ kind, id }: { kind: string; id: string }) {
+  const tall = kind === "playlist" || kind === "album" || kind === "show";
+  return (
+    <Box sx={{ mt: 1, borderRadius: 1.5, overflow: "hidden", border: "1px solid var(--bl-line)" }}>
+      <Box component="iframe" title="Spotify" loading="lazy"
+        src={`https://open.spotify.com/embed/${kind}/${id}?utm_source=zuccbook`}
+        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+        sx={{ width: "100%", height: tall ? 380 : 80, border: 0, display: "block" }} />
+    </Box>
+  );
 }
 
 // Click-to-play YouTube card. The thumbnail is derived from the video id
@@ -72,12 +98,13 @@ function LinkCard({ url }: { url: string }) {
 }
 
 // Render text with clickable links (used for RSS Bot story links, etc.).
+// Non-link spans get ASCII emoticons translated to real emoji.
 function renderText(text: string) {
   const parts = text.split(/(https?:\/\/[^\s]+)/g);
   return parts.map((p, i) =>
     /^https?:\/\//.test(p)
       ? <a key={i} href={p} target="_blank" rel="noopener noreferrer" style={{ color: "#0a55cf", wordBreak: "break-all" }}>{p}</a>
-      : <span key={i}>{p}</span>,
+      : <span key={i}>{emojify(p)}</span>,
   );
 }
 
@@ -93,7 +120,32 @@ function ReactRow({ post, me, onAdd }: { post: Post; me: string; onAdd: (el: HTM
   );
 }
 
-export default function PostCard({ post, reason, replies = [] }: { post: Post; reason?: RecommendationReason; replies?: Post[] }) {
+// Transparency popover — the moderation verdict, its signals and confidence.
+function ModInfo({ verdict }: { verdict: ModerationVerdict }) {
+  const [a, setA] = useState<HTMLElement | null>(null);
+  const color = verdict.action === "flag" ? "#d23b2f" : verdict.action === "reduce" || verdict.action === "review" ? "#e8920c" : "#51606e";
+  return (
+    <>
+      <Chip size="small" variant="outlined" icon={<GavelRoundedIcon />} label={verdict.action} onClick={(e) => setA(e.currentTarget)} sx={{ height: 20, fontSize: 10, color, borderColor: color, cursor: "pointer" }} />
+      <Popover open={!!a} anchorEl={a} onClose={() => setA(null)} anchorOrigin={{ vertical: "bottom", horizontal: "right" }} transformOrigin={{ vertical: "top", horizontal: "right" }}>
+        <Box sx={{ p: 1.5, width: 300 }}>
+          <Typography variant="subtitle2">Moderation · {verdict.action}</Typography>
+          <Typography variant="caption" color="text.secondary">{verdict.reasoning} — {Math.round(verdict.confidence * 100)}% confidence · advisory, you decide.</Typography>
+          <Stack spacing={0.75} sx={{ mt: 1 }}>
+            {verdict.signals.slice(0, 6).map((s, i) => (
+              <Box key={i}>
+                <Stack direction="row" justifyContent="space-between"><Typography variant="caption">{s.label}{s.detail ? ` — ${s.detail}` : ""}</Typography><Typography variant="caption" sx={{ color: s.weight < 0 ? "success.main" : "text.secondary" }}>{s.weight >= 0 ? "+" : ""}{s.weight.toFixed(2)}</Typography></Stack>
+                <LinearProgress variant="determinate" value={Math.min(100, Math.abs(s.weight) * 80)} sx={{ height: 4, borderRadius: 2, opacity: s.weight < 0 ? 0.5 : 1 }} />
+              </Box>
+            ))}
+          </Stack>
+        </Box>
+      </Popover>
+    </>
+  );
+}
+
+export default function PostCard({ post, reason, replies = [], verdict }: { post: Post; reason?: RecommendationReason; replies?: Post[]; verdict?: ModerationVerdict }) {
   const me = useStore((s) => s.me);
   const mePk = me?.publicKey ?? "";
   const nav = useNavigate();
@@ -102,6 +154,16 @@ export default function PostCard({ post, reason, replies = [] }: { post: Post; r
   const [react, setReact] = useState<{ el: HTMLElement; id: string } | null>(null);
   const [showReplies, setShowReplies] = useState(false);
   const [replyText, setReplyText] = useState("");
+  const [revealed, setRevealed] = useState(false);
+  const [authMenu, setAuthMenu] = useState<HTMLElement | null>(null);
+  const restricted = !!verdict && (verdict.action === "reduce" || verdict.action === "review" || verdict.action === "flag");
+
+  async function trust(kind: "vouch" | "report" | "mute") {
+    setAuthMenu(null);
+    await trustService[kind](post.author);
+    toast(kind === "vouch" ? `Vouched for ${post.authorName}` : kind === "mute" ? `Muted ${post.authorName}` : `Reported ${post.authorName}`, kind === "vouch" ? "success" : "info");
+    bus.emit("feed:updated", undefined); // re-evaluate the feed with the new trust signal
+  }
 
   const sourceColor = post.source === "self" ? "#54c95a" : post.source === "relay" || post.source === "peer" ? "#3f97ff" : "#7a85a8";
 
@@ -128,15 +190,28 @@ export default function PostCard({ post, reason, replies = [] }: { post: Post; r
             <Typography variant="caption" color="text.secondary">· {relativeTime(post.createdAt)}</Typography>
             <Box sx={{ flex: 1 }} />
             <Chip size="small" label={post.source} sx={{ height: 18, fontSize: 10, color: sourceColor, borderColor: sourceColor }} variant="outlined" />
+            {verdict && verdict.action !== "allow" && <ModInfo verdict={verdict} />}
             <WhyRecommended reason={reason} />
+            {canVisit && <IconButton size="small" onClick={(e) => setAuthMenu(e.currentTarget)}><MoreVertRoundedIcon fontSize="small" /></IconButton>}
           </Stack>
 
+          {restricted && !revealed && (
+            <Box sx={{ mt: 1, p: 1.5, borderRadius: 1, bgcolor: "rgba(232,146,12,0.08)", border: "1px solid rgba(232,146,12,0.45)" }}>
+              <Typography variant="body2"><b>{verdict!.action === "flag" ? "Flagged" : verdict!.action === "review" ? "Pending community review" : "Reduced"}</b> — {verdict!.reasoning}</Typography>
+              <Typography variant="caption" color="text.secondary">Advisory · {Math.round(verdict!.confidence * 100)}% confidence · the network didn't delete it — you decide.</Typography>
+              <Box><Button size="small" sx={{ mt: 0.5 }} onClick={() => setRevealed(true)}>Show anyway</Button></Box>
+            </Box>
+          )}
+
+          {(!restricted || revealed) && (<>
           {post.text && <Typography component="div" sx={{ mt: 0.5, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{renderText(post.text)}</Typography>}
 
           {(() => {
             const ytId = firstYouTube(post.text ?? "");
-            const linkUrl = ytId ? null : firstLink(post.text ?? "");
+            const spotify = ytId ? null : firstSpotify(post.text ?? "");
+            const linkUrl = ytId || spotify ? null : firstLink(post.text ?? "");
             if (ytId) return <YouTubeCard id={ytId} />;
+            if (spotify) return <SpotifyCard kind={spotify.kind} id={spotify.id} />;
             if (linkUrl) return <LinkCard url={linkUrl} />;
             // uploaded images (no link in text)
             return post.media?.map((m, i) => (m.type === "image" ? <Box key={i} component="img" src={m.url} sx={{ mt: 1, maxWidth: "100%", maxHeight: 360, borderRadius: 2, border: "1px solid var(--bl-line)" }} /> : null));
@@ -188,8 +263,16 @@ export default function PostCard({ post, reason, replies = [] }: { post: Post; r
               </Stack>
             </Box>
           )}
+          </>)}
         </Box>
       </Stack>
+
+      <Menu open={!!authMenu} anchorEl={authMenu} onClose={() => setAuthMenu(null)}>
+        <MenuItem onClick={() => trust("vouch")}>🤝 Vouch for {post.authorName}</MenuItem>
+        <MenuItem onClick={() => trust("report")}>🚩 Report</MenuItem>
+        <MenuItem onClick={() => trust("mute")}>🔇 Mute — hide from your feed</MenuItem>
+        <MenuItem onClick={() => { setAuthMenu(null); visit(); }}>👤 View profile</MenuItem>
+      </Menu>
 
       <Popover open={!!react} anchorEl={react?.el} onClose={() => setReact(null)}>
         <Stack direction="row" sx={{ p: 1 }}>

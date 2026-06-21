@@ -12,6 +12,7 @@ import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded";
 import AccountBalanceWalletRoundedIcon from "@mui/icons-material/AccountBalanceWalletRounded";
 import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
+import LocalCafeRoundedIcon from "@mui/icons-material/LocalCafeRounded";
 import { useStore } from "@/store/useStore";
 import UserAvatar from "@/components/common/UserAvatar";
 import PresenceList from "@/components/layout/PresenceList";
@@ -73,6 +74,26 @@ export default function AppShell({ children }: { children: ReactNode }) {
         })}
 
         <Box sx={{ flex: 1 }} />
+
+        {/* Support — ZuccBook stays free, open-source & uncensored; the only
+            funding is voluntary support for the developer. */}
+        <Tooltip title={compact ? "Support the project" : ""} placement="right">
+          <Box
+            component="a" href="https://buymeacoffee.com/amosroger91" target="_blank" rel="noopener noreferrer"
+            sx={{
+              display: "flex", alignItems: "center", gap: 1.5, px: 1.5, py: 1.1, borderRadius: 2, cursor: "pointer",
+              textDecoration: "none", color: "#5a3a12",
+              background: "linear-gradient(135deg,#ffe08a,#ffce5a)", border: "1px solid #f6b73c",
+              boxShadow: "0 4px 12px rgba(246,183,60,.3)", mb: 0.5,
+              "&:hover": { background: "linear-gradient(135deg,#ffe9a8,#ffd877)" },
+              justifyContent: compact ? "center" : "flex-start",
+            }}
+          >
+            <LocalCafeRoundedIcon />
+            {!compact && <Typography sx={{ fontWeight: 800 }}>Support the project</Typography>}
+          </Box>
+        </Tooltip>
+
         {!compact && <Divider sx={{ my: 1 }} />}
         {!compact && <PresenceList />}
       </Box>

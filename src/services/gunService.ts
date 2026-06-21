@@ -17,8 +17,9 @@ import { bus } from "@/lib/events";
 import { feedService } from "./feedService";
 import { profileService } from "./profileService";
 import { marketplaceService } from "./marketplaceService";
+import { trustService } from "./trustService";
 import { storage } from "./storage";
-import type { ChatMessage, Post, Profile, Listing } from "@/types";
+import type { ChatMessage, Post, Profile, Listing, TrustEdge } from "@/types";
 
 // Public Gun relay peers (best-effort; Gun also keeps a local copy and
 // reconciles when a relay is reachable).
@@ -65,12 +66,17 @@ class GunService {
       gun.get(ROOT).get("market").map().on((d: any) => {
         if (d?.json) { try { marketplaceService.ingest(JSON.parse(d.json) as Listing); } catch {} }
       });
+      // Incoming web-of-trust edges.
+      gun.get(ROOT).get("trust").map().on((d: any) => {
+        if (d?.json) { try { trustService.ingest(JSON.parse(d.json) as TrustEdge); } catch {} }
+      });
 
       // Outgoing: publish whatever the app marks for persistence.
       bus.on("post:publish", (p) => this.putPost(p));
       bus.on("swarm:publish", (m) => { seenSwarm.add(m.id); this.putSwarm(m); });
       bus.on("profile:publish", (p) => { try { gun?.get(ROOT).get("profiles").get(p.pk).put({ json: JSON.stringify(p) }); } catch {} });
       bus.on("market:publish", (l) => { try { gun?.get(ROOT).get("market").get(l.id).put({ json: JSON.stringify(l) }); } catch {} });
+      bus.on("trust:publish", (e) => { try { gun?.get(ROOT).get("trust").get(`${e.from}|${e.to}|${e.community ?? ""}`).put({ json: JSON.stringify(e) }); } catch {} });
     } catch (e) {
       console.warn("[gun] disabled (init failed)", e);
       gun = null;

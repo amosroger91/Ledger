@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box, Grid, Typography, Stack, Chip, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
+import { Box, Grid, Typography, Stack, Chip, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Select, MenuItem } from "@mui/material";
 import TagRoundedIcon from "@mui/icons-material/TagRounded";
 import VolumeUpRoundedIcon from "@mui/icons-material/VolumeUpRounded";
 import EventRoundedIcon from "@mui/icons-material/EventRounded";
@@ -7,7 +7,9 @@ import GlassCard from "@/components/common/GlassCard";
 import { communityService } from "@/services/communityService";
 import { useStore } from "@/store/useStore";
 import { toast } from "@/lib/events";
-import type { Community } from "@/types";
+import type { Community, CommunityPhilosophy } from "@/types";
+
+const PHILOSOPHIES: CommunityPhilosophy[] = ["open", "casual", "professional", "faith", "custom"];
 
 const CHAN_ICON: Record<string, JSX.Element> = {
   text: <TagRoundedIcon fontSize="small" />, voice: <VolumeUpRoundedIcon fontSize="small" />, stage: <VolumeUpRoundedIcon fontSize="small" />, events: <EventRoundedIcon fontSize="small" />,
@@ -30,6 +32,7 @@ export default function CommunitiesView() {
     toast("Community created", "success");
   }
   async function join(id: string) { await communityService.join(id); load(); toast("Joined", "success"); }
+  async function setPhilosophy(id: string, p: CommunityPhilosophy) { await communityService.setPhilosophy(id, p); load(); toast(`Moderation set to “${p}”`, "success"); }
 
   return (
     <Box sx={{ maxWidth: 1100, mx: "auto" }}>
@@ -57,6 +60,14 @@ export default function CommunitiesView() {
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1, minHeight: 40 }}>{c.description}</Typography>
                 <Stack direction="row" spacing={0.5} sx={{ mt: 1, flexWrap: "wrap", gap: 0.5 }}>
                   {c.channels.map((ch) => <Chip key={ch.id} size="small" icon={CHAN_ICON[ch.kind]} label={ch.name} variant="outlined" />)}
+                </Stack>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1.5 }}>
+                  <Typography variant="caption" color="text.secondary">Moderation</Typography>
+                  {c.moderators.includes(me?.publicKey ?? "") ? (
+                    <Select size="small" variant="standard" value={c.values?.philosophy ?? "open"} onChange={(e) => setPhilosophy(c.id, e.target.value as any)} sx={{ fontSize: 12 }}>
+                      {PHILOSOPHIES.map((p) => <MenuItem key={p} value={p} sx={{ fontSize: 12 }}>{p}</MenuItem>)}
+                    </Select>
+                  ) : <Chip size="small" label={c.values?.philosophy ?? "open"} variant="outlined" sx={{ height: 18, fontSize: 10 }} />}
                 </Stack>
                 <Button fullWidth size="small" variant={member ? "outlined" : "contained"} sx={{ mt: 1.5 }} disabled={member} onClick={() => join(c.id)}>
                   {member ? "Joined" : "Join"}

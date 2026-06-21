@@ -3,7 +3,7 @@
 //  driven: services emit, the UI and other services subscribe.
 //  Decouples the service layer from React entirely.
 // ============================================================
-import type { Post, ChatMessage, RichPresence, ListenRoom, WatchPartyState, Profile, Listing } from "@/types";
+import type { Post, ChatMessage, RichPresence, ListenRoom, WatchPartyState, Profile, Listing, TrustEdge } from "@/types";
 
 export interface ZuccBookEvents {
   "identity:ready": { pk: string };
@@ -16,6 +16,8 @@ export interface ZuccBookEvents {
   "profile:update": Profile;     // a peer's profile arrived
   "market:publish": Listing;     // persist/sync a marketplace listing
   "market:update": Listing;      // a listing arrived/changed
+  "trust:publish": TrustEdge;    // share a web-of-trust edge
+  "trust:update": TrustEdge;     // a trust edge arrived
   "notify": { text: string };
   "chat:message": ChatMessage;
   "chat:typing": { channel: string; pk: string };

@@ -142,6 +142,7 @@ export interface Community {
   moderators: string[];
   createdAt: number;
   owner: string;
+  values?: CommunityValues; // the community's moderation philosophy
 }
 
 export interface Channel {
@@ -207,12 +208,36 @@ export type ModerationProfile =
   | "gaming"
   | "discovery";
 
+// Moderation as graded, explainable advice — never a silent platform delete.
+export type ModerationAction = "allow" | "warn" | "reduce" | "review" | "flag" | "hide";
+export interface ModerationSignal { label: string; weight: number; detail?: string }
 export interface ModerationVerdict {
-  allowed: boolean;
-  score: number;            // 0 = clean, 1 = certainly blocked
-  labels: string[];         // e.g. ["spam","nsfw"]
-  layer: "local-ai" | "community" | "user-filter";
+  action: ModerationAction;
+  allowed: boolean;         // back-compat: false only for "hide" (viewer-level)
+  confidence: number;       // 0..1
+  reasoning: string;        // human-readable summary of the call
+  signals: ModerationSignal[];
+  labels: string[];
+}
+
+// A directed trust relationship — the web of trust. Optionally community-scoped.
+export type TrustKind = "vouch" | "block" | "mute" | "report";
+export interface TrustEdge {
+  from: string;             // public key
+  to: string;               // public key
+  kind: TrustKind;
+  community?: string;       // scope to a community (contextual trust)
   reason?: string;
+  at: number;
+}
+
+// A community's own moderation values — it adapts the agent, not a global rule.
+export type CommunityPhilosophy = "professional" | "casual" | "faith" | "open" | "custom";
+export interface CommunityValues {
+  philosophy: CommunityPhilosophy;
+  strictness: number;       // 0 (lax) .. 1 (strict)
+  allowProfanity: boolean;
+  focus: string[];          // categories the community especially cares about
 }
 
 export interface Badge { id: string; label: string; icon: string; description: string; tier: 1 | 2 | 3; }

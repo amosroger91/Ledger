@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { Box, ToggleButtonGroup, ToggleButton, Stack, Typography, Button, useMediaQuery, LinearProgress, Chip, CircularProgress } from "@mui/material";
+import LocalCafeRoundedIcon from "@mui/icons-material/LocalCafeRounded";
 import Composer from "./Composer";
 import PostCard from "./PostCard";
 import GlassCard from "@/components/common/GlassCard";
@@ -28,14 +29,16 @@ export default function FeedView() {
   const [summary, setSummary] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [replies, setReplies] = useState<Map<string, Post[]>>(new Map());
+  const [verdicts, setVerdicts] = useState<Map<string, import("@/types").ModerationVerdict>>(new Map());
 
   const algo = settings.feedAlgorithm;
 
   const refresh = useCallback(async () => {
     const subscribedTopics = (await rssService.config()).topics;
-    const { posts, reasons } = await feedService.generate(algo, { moderation: settings.moderationProfile, subscribedTopics });
+    const { posts, reasons, verdicts } = await feedService.generate(algo, { moderation: settings.moderationProfile, subscribedTopics });
     setPosts(posts);
     setReasons(reasons);
+    setVerdicts(verdicts);
     setSummary(companionService.summarizeFeed(posts));
     // group replies under their parent post
     const map = new Map<string, Post[]>();
@@ -76,7 +79,7 @@ export default function FeedView() {
         {posts.length === 0 && (
           <GlassCard><Typography color="text.secondary">No posts match this view yet. Switch algorithms or post something — your feed is generated locally.</Typography></GlassCard>
         )}
-        {posts.map((p) => <PostCard key={p.id} post={p} reason={reasons.get(p.id)} replies={replies.get(p.id) ?? []} />)}
+        {posts.map((p) => <PostCard key={p.id} post={p} reason={reasons.get(p.id)} replies={replies.get(p.id) ?? []} verdict={verdicts.get(p.id)} />)}
       </Box>
 
       {!compact && (
@@ -91,6 +94,25 @@ export default function FeedView() {
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               Posts are ranked by an embedding model running <b>on this device</b>. Tap the <b>insights</b> icon on any post to see exactly why it surfaced. Nothing is sent to a server.
             </Typography>
+          </GlassCard>
+
+          <GlassCard sx={{ mt: 2, border: "1px solid #f6b73c", background: "linear-gradient(180deg, rgba(255,224,138,0.35), rgba(255,255,255,0.6))" }}>
+            <Typography variant="overline" sx={{ color: "#9a6b14", fontWeight: 800 }}>Support the project ☕</Typography>
+            <Typography variant="body2" sx={{ mt: 0.5 }}>
+              ZuccBook will <b>always be free</b> — a true bastion of openness and decentralization.
+              Moderation is systematic and transparent (you decide, not a corporation), the on-device LLM is here to
+              <b> make sense of content instead of censoring you</b>, and the feed algorithm is <b>open source and uncorrupted</b> —
+              unlike every other platform out there.
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              There are no ads, no data harvesting, and no investors to please. The only thing that keeps it going is you
+              supporting the developer directly. 🙂
+            </Typography>
+            <Button fullWidth variant="contained" href="https://buymeacoffee.com/amosroger91" target="_blank" rel="noopener noreferrer"
+              startIcon={<LocalCafeRoundedIcon />}
+              sx={{ mt: 1.5, fontWeight: 800, color: "#5a3a12", background: "linear-gradient(135deg,#ffe08a,#ffce5a)", boxShadow: "0 4px 12px rgba(246,183,60,.3)", "&:hover": { background: "linear-gradient(135deg,#ffe9a8,#ffd877)" } }}>
+              Buy me a coffee
+            </Button>
           </GlassCard>
         </Box>
       )}

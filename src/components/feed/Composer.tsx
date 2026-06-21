@@ -29,7 +29,7 @@ export default function Composer() {
     const body = text.trim();
     if (!body && !media.length) return;
     const verdict = moderationService.classify(body, moderation);
-    if (!verdict.allowed) { toast(`Held by your "${moderation}" filter (${verdict.reason})`, "warn"); return; }
+    if (verdict.action === "flag" || verdict.action === "hide") { toast(`This would be flagged: ${verdict.reasoning} — edit and retry`, "warn"); return; }
     const p = await feedService.createPost({ text: body, media: media.length ? media : undefined });
     peerService.publishPost(p);
     setText(""); setMedia([]);

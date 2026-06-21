@@ -14,6 +14,7 @@ import { peerService } from "./peerService";
 import { rssService } from "./rssService";
 import { gunService } from "./gunService";
 import { profileService } from "./profileService";
+import { trustService } from "./trustService";
 import type { AppSettings } from "@/types";
 
 export interface BootResult { onboarded: boolean; settings: AppSettings }
@@ -28,6 +29,7 @@ export async function boot(): Promise<BootResult> {
   await storage.saveSettings(settings);
 
   await feedService.init();
+  await trustService.load();           // load my web-of-trust edges
   await purgeSeededPosts();            // remove demo posts left by earlier builds
   const me = await identityService.load();
   companionService.configure(settings.useWebLLM, settings.llmModel);

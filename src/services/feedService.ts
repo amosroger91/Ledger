@@ -5,12 +5,13 @@
 //  recommendation server, and every ranking is explainable.
 // ============================================================
 import type {
-  Post, PostKind, FeedAlgorithm, RecommendationReason, MediaRef,
+  Post, PostKind, FeedAlgorithm, RecommendationReason, MediaRef, ModerationVerdict, CommunityValues,
 } from "@/types";
 import { storage } from "./storage";
 import { identityService } from "./identityService";
 import { moderationService } from "./moderationService";
 import { reputationService } from "./reputationService";
+import { profileService } from "./profileService";
 import { embed, cosine, topTerms, InterestProfile } from "@/lib/embeddings";
 import { bus } from "@/lib/events";
 import { newId } from "@/lib/id";
@@ -125,11 +126,28 @@ class FeedService {
   /* ---------- feed generation ---------- */
   async generate(
     algorithm: FeedAlgorithm,
-    opts: { moderation: ModerationProfile; friends?: string[]; community?: string; subscribedTopics?: string[] } = { moderation: "discovery" },
-  ): Promise<{ posts: Post[]; reasons: Map<string, RecommendationReason> }> {
+    opts: { moderation: ModerationProfile; friends?: string[]; community?: string; subscribedTopics?: string[]; values?: CommunityValues } = { moderation: "discovery" },
+  ): Promise<{ posts: Post[]; reasons: Map<string, RecommendationReason>; verdicts: Map<string, ModerationVerdict> }> {
     let posts = (await storage.allPosts()).filter((p) => !p.replyTo); // top-level only
-    // Layer 1/3 moderation
-    posts = posts.filter((p) => moderationService.filterPost(p, opts.moderation).allowed);
+    const meId = identityService.pk;
+
+    // Layered moderation → graded verdicts. We only drop "hide" (you muted them);
+    // everything else stays, with the verdict surfaced in the UI.
+    const verdicts = new Map<string, ModerationVerdict>();
+    posts = posts.filter((p) => {
+      const bot = p.author === "rss-bot" || p.author === "system";
+      const v = moderationService.evaluate([p.text, p.poll?.question].filter(Boolean).join(" "), {
+        profile: opts.moderation,
+        authorPk: bot ? undefined : p.author,
+        authorName: p.authorName,
+        authorReputation: profileService.get(p.author)?.reputation ?? (p.author === meId ? 999 : 0),
+        knownAuthor: bot || p.author === meId || !!profileService.get(p.author),
+        community: p.community,
+        values: opts.values,
+      });
+      verdicts.set(p.id, v);
+      return v.action !== "hide";
+    });
 
     // "For You" = real human activity + RSS Bot posts only from topics you
     // subscribed to. No LLM / interest-embedding curation involved.
@@ -202,7 +220,7 @@ class FeedService {
 
     // Sort by score, then newest-first as the tiebreaker.
     scored.sort((a, b) => b.score - a.score || b.p.createdAt - a.p.createdAt);
-    return { posts: scored.map((s) => s.p), reasons };
+    return { posts: scored.map((s) => s.p), reasons, verdicts };
   }
 
   interestVector() { return this.profile.vector(); }
