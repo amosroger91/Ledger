@@ -40,7 +40,7 @@ export default function Onboarding() {
   return (
     <Box sx={{ position: "relative", zIndex: 1, minHeight: "100vh", display: "grid", placeItems: "center", p: 2 }}>
       <GlassCard sx={{ p: 4, maxWidth: 480, width: "100%" }}>
-        <Typography variant="h3" sx={{ background: "linear-gradient(90deg,#39c6f5,#3a7bf0,#36e0c4)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>
+        <Typography variant="h3" sx={{ background: "linear-gradient(90deg,#3f97ff,#1668e0,#0a55cf)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>
           ZuccBook
         </Typography>
         <Typography variant="body1" color="text.secondary" sx={{ mt: 1, mb: 3 }}>

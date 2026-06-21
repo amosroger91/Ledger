@@ -9,7 +9,7 @@ export default function UserAvatar({
   return (
     <Avatar
       src={avatar || undefined}
-      sx={{ width: size, height: size, fontSize: Math.round(size * 0.4), fontWeight: 800, color: "#031426", background: avatar ? undefined : avatarGradient(pk), ...sx }}
+      sx={{ width: size, height: size, fontSize: Math.round(size * 0.4), fontWeight: 800, color: "#ffffff", background: avatar ? undefined : avatarGradient(pk), ...sx }}
     >
       {!avatar && initials(name)}
     </Avatar>

@@ -45,7 +45,7 @@ export default function ListenView() {
 
       <ToggleButtonGroup
         exclusive size="small" value={mode} onChange={(_, v) => v && setMode(v)}
-        sx={{ mb: 2, "& .MuiToggleButton-root": { border: "1px solid rgba(58,155,240,0.18)", color: "text.secondary", "&.Mui-selected": { background: "linear-gradient(135deg,#39c6f5,#3a7bf0)", color: "#031426" } } }}
+        sx={{ mb: 2, "& .MuiToggleButton-root": { border: "1px solid rgba(58,155,240,0.18)", color: "text.secondary", "&.Mui-selected": { background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#ffffff" } } }}
       >
         <ToggleButton value="music"><MusicNoteRoundedIcon fontSize="small" sx={{ mr: 0.5 }} /> Music</ToggleButton>
         <ToggleButton value="video"><SmartDisplayRoundedIcon fontSize="small" sx={{ mr: 0.5 }} /> Video</ToggleButton>
@@ -80,7 +80,7 @@ export default function ListenView() {
                     <Stack direction="row" alignItems="center" spacing={1.5}>
                       <Box sx={{ flex: 1, minWidth: 0 }}>
                         <Typography noWrap sx={{ fontWeight: 700 }}>{s.name}</Typography>
-                        <Chip size="small" label={s.genre} sx={{ mt: 0.5, bgcolor: "rgba(58,123,240,0.14)", color: "#3a7bf0" }} />
+                        <Chip size="small" label={s.genre} sx={{ mt: 0.5, bgcolor: "rgba(58,123,240,0.14)", color: "#1668e0" }} />
                       </Box>
                       <Button size="small" variant="contained" sx={{ minWidth: 0, px: 1.2 }} onClick={() => playStation(s)}><PlayArrowRoundedIcon /></Button>
                     </Stack>

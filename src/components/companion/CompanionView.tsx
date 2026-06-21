@@ -98,7 +98,7 @@ export default function CompanionView() {
     <Box sx={{ maxWidth: 820, mx: "auto", height: "100%", display: "flex", flexDirection: "column" }}>
       <GlassCard sx={{ mb: 2 }}>
         <Stack direction="row" alignItems="center" spacing={2}>
-          <Avatar sx={{ background: "linear-gradient(135deg,#39c6f5,#3a7bf0,#36e0c4)", color: "#031426" }}><AutoAwesomeRoundedIcon /></Avatar>
+          <Avatar sx={{ background: "linear-gradient(135deg,#3f97ff,#1668e0,#0a55cf)", color: "#ffffff" }}><AutoAwesomeRoundedIcon /></Avatar>
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography variant="h6">Your Companion</Typography>
             <Typography variant="caption" color="text.secondary">
@@ -129,7 +129,7 @@ export default function CompanionView() {
         {history.length === 0 && <Typography color="text.secondary">Ask me anything — I run as a real LLM on your own device. Or use a quick tool below (those are instant and need no download).</Typography>}
         {history.map((m) => (
           <Stack key={m.id} direction="row" justifyContent={m.role === "user" ? "flex-end" : "flex-start"}>
-            <Box sx={{ maxWidth: "78%", px: 1.5, py: 1, borderRadius: 2, background: m.role === "user" ? "linear-gradient(135deg,#39c6f5,#3a7bf0)" : "rgba(255,255,255,0.06)", color: m.role === "user" ? "#031426" : "text.primary" }}>
+            <Box sx={{ maxWidth: "78%", px: 1.5, py: 1, borderRadius: 2, background: m.role === "user" ? "linear-gradient(135deg,#3f97ff,#1668e0)" : "#ffffff", color: m.role === "user" ? "#ffffff" : "text.primary" }}>
               <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>{m.text}</Typography>
             </Box>
           </Stack>

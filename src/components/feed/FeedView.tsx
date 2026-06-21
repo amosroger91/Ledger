@@ -53,7 +53,7 @@ export default function FeedView() {
         <ToggleButtonGroup
           exclusive size="small" value={algo}
           onChange={(_, v) => v && setSettings({ feedAlgorithm: v })}
-          sx={{ mb: 2, flexWrap: "wrap", "& .MuiToggleButton-root": { border: "1px solid rgba(58,155,240,0.18)", color: "text.secondary", "&.Mui-selected": { background: "linear-gradient(135deg,#39c6f5,#3a7bf0)", color: "#031426" } } }}
+          sx={{ mb: 2, flexWrap: "wrap", "& .MuiToggleButton-root": { border: "1px solid rgba(58,155,240,0.18)", color: "text.secondary", "&.Mui-selected": { background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#ffffff" } } }}
         >
           {ALGOS.map((a) => <ToggleButton key={a.id} value={a.id}>{a.label}</ToggleButton>)}
         </ToggleButtonGroup>

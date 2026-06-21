@@ -3,6 +3,8 @@ import ReactDOM from "react-dom/client";
 import { ThemeProvider, CssBaseline } from "@mui/material";
 import { HashRouter } from "react-router-dom";
 import { theme } from "@/theme/theme";
+import "@/bliss.css";   // the Bliss / XP "Luna" design system (tokens + components)
+import "@/bliss.js";    // Bliss behavior layer (window.Bliss); harmless for our MUI tree
 import App from "@/App";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

@@ -37,12 +37,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const compact = useMediaQuery("(max-width:900px)");
 
   return (
-    <Box sx={{ position: "relative", zIndex: 1, display: "grid", gridTemplateColumns: compact ? "72px 1fr" : "240px 1fr", minHeight: "100vh" }}>
+    <Box sx={{ position: "relative", zIndex: 1, minHeight: "100vh", p: { xs: 0, md: 2 } }}>
+    <Box sx={{ display: "grid", gridTemplateColumns: compact ? "64px 1fr" : "230px 1fr", minHeight: { xs: "100vh", md: "calc(100vh - 32px)" }, bgcolor: "var(--bl-face)", border: "1px solid var(--bl-edge-frame)", borderRadius: { xs: 0, md: "8px" }, overflow: "hidden", boxShadow: "0 12px 44px rgba(0,0,0,0.4)" }}>
       {/* nav rail */}
-      <Box sx={{ borderRight: "1px solid rgba(58,155,240,0.12)", p: 1.5, display: "flex", flexDirection: "column", gap: 0.5, position: "sticky", top: 0, height: "100vh", backdropFilter: "blur(12px)" }}>
+      <Box sx={{ borderRight: "1px solid var(--bl-line)", p: 1, display: "flex", flexDirection: "column", gap: 0.25, position: "sticky", top: 0, height: { xs: "100vh", md: "calc(100vh - 34px)" }, background: "linear-gradient(180deg, var(--bl-tasks-1), var(--bl-tasks-2))" }}>
         <Stack direction="row" alignItems="center" spacing={1} sx={{ px: 1, py: 1.5 }}>
-          <Box sx={{ width: 28, height: 28, borderRadius: "8px", background: "linear-gradient(135deg,#39c6f5,#3a7bf0,#36e0c4)", boxShadow: "0 0 18px rgba(58,155,240,.5)" }} />
-          {!compact && <Typography variant="h6" sx={{ background: "linear-gradient(90deg,#39c6f5,#3a7bf0)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>ZuccBook</Typography>}
+          <Box sx={{ width: 28, height: 28, borderRadius: "8px", background: "linear-gradient(135deg,#3f97ff,#1668e0,#0a55cf)", boxShadow: "0 0 18px rgba(58,155,240,.5)" }} />
+          {!compact && <Typography variant="h6" sx={{ background: "linear-gradient(90deg,#3f97ff,#1668e0)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>ZuccBook</Typography>}
         </Stack>
 
         {NAV.map((item) => {
@@ -53,8 +54,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 onClick={() => nav(item.to)}
                 sx={{
                   display: "flex", alignItems: "center", gap: 1.5, px: 1.5, py: 1.1, borderRadius: 2, cursor: "pointer",
-                  color: active ? "#031426" : "text.secondary",
-                  background: active ? "linear-gradient(135deg,#39c6f5,#3a7bf0)" : "transparent",
+                  color: active ? "#ffffff" : "text.secondary",
+                  background: active ? "linear-gradient(135deg,#3f97ff,#1668e0)" : "transparent",
                   boxShadow: active ? "0 6px 18px rgba(58,155,240,.3)" : "none",
                   "&:hover": { background: active ? undefined : "rgba(58,155,240,0.08)", color: active ? undefined : "text.primary" },
                   justifyContent: compact ? "center" : "flex-start",
@@ -73,21 +74,22 @@ export default function AppShell({ children }: { children: ReactNode }) {
       </Box>
 
       {/* main column */}
-      <Box sx={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-        {/* top bar */}
-        <Stack direction="row" alignItems="center" spacing={1.5} sx={{ px: 2.5, py: 1.5, borderBottom: "1px solid rgba(58,155,240,0.12)", position: "sticky", top: 0, zIndex: 5, backdropFilter: "blur(14px)", background: "rgba(5,6,15,0.5)" }}>
-          <Typography variant="h6" sx={{ flex: 1, opacity: 0.9 }}>{NAV.find((n) => n.to === pathname)?.label ?? "ZuccBook"}</Typography>
-          <Chip size="small" label={`${onlineCount} online`} sx={{ bgcolor: "rgba(84,201,90,0.12)", color: "#54c95a", "& .MuiChip-label": { fontWeight: 700 } }} icon={<Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#54c95a", boxShadow: "0 0 8px #54c95a", ml: 1 }} />} />
+      <Box sx={{ display: "flex", flexDirection: "column", minWidth: 0, bgcolor: "var(--bl-face)" }}>
+        {/* Luna title bar */}
+        <Stack direction="row" alignItems="center" spacing={1.5} sx={{ px: 2, py: 1, position: "sticky", top: 0, zIndex: 5, color: "#fff", borderBottom: "1px solid var(--bl-title-edge)", background: "var(--bl-gloss-title), linear-gradient(180deg, var(--bl-title-hi), var(--bl-title-low))", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)" }}>
+          <Typography variant="h6" sx={{ flex: 1, color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.4)" }}>{NAV.find((n) => n.to === pathname)?.label ?? "ZuccBook"}</Typography>
+          <Chip size="small" label={`${onlineCount} online`} sx={{ bgcolor: "rgba(255,255,255,0.92)", color: "var(--bl-green-600)", border: "none", "& .MuiChip-label": { fontWeight: 700 } }} icon={<Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#4ca325", ml: 1 }} />} />
           <Tooltip title={me?.username ?? ""}>
             <Box sx={{ position: "relative", cursor: "pointer" }} onClick={() => nav("/profile")}>
-              <UserAvatar pk={me?.publicKey ?? ""} name={me?.username ?? "?"} avatar={me?.avatar} size={34} />
-              <Box sx={{ position: "absolute", right: -1, bottom: -1, width: 11, height: 11, borderRadius: "50%", bgcolor: STATUS_COLOR[status], border: "2px solid #05060f" }} />
+              <UserAvatar pk={me?.publicKey ?? ""} name={me?.username ?? "?"} avatar={me?.avatar} size={32} />
+              <Box sx={{ position: "absolute", right: -1, bottom: -1, width: 11, height: 11, borderRadius: "50%", bgcolor: STATUS_COLOR[status], border: "2px solid #fff" }} />
             </Box>
           </Tooltip>
         </Stack>
 
         <Box sx={{ flex: 1, overflowY: "auto", p: { xs: 1.5, md: 3 }, pb: 12 }}>{children}</Box>
       </Box>
+    </Box>
     </Box>
   );
 }

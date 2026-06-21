@@ -110,7 +110,7 @@ export default function ChatroomView() {
         </GlassCard>
         <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 1 }}>
           {ROOMS.map((r) => (
-            <Chip key={r} label={"#" + r} onClick={() => enter(r)} sx={{ bgcolor: "rgba(58,123,240,0.14)", color: "#9fd0ff", fontWeight: 600 }} />
+            <Chip key={r} label={"#" + r} onClick={() => enter(r)} sx={{ bgcolor: "rgba(58,123,240,0.14)", color: "#0a55cf", fontWeight: 600 }} />
           ))}
         </Stack>
       </Box>
@@ -149,7 +149,7 @@ export default function ChatroomView() {
         {tiles.length > 0 && (
           <Stack direction="row" spacing={1} sx={{ mb: 1, overflowX: "auto", pb: 0.5 }}>
             {tiles.map(([id, stream]) => (
-              <Box key={id} sx={{ position: "relative", flex: "0 0 auto", width: 160, height: 120, borderRadius: 2, overflow: "hidden", border: "1px solid rgba(255,255,255,0.14)", background: "#05080f" }}>
+              <Box key={id} sx={{ position: "relative", flex: "0 0 auto", width: 160, height: 120, borderRadius: 2, overflow: "hidden", border: "1px solid rgba(0,0,0,0.14)", background: "#05080f" }}>
                 <video autoPlay playsInline muted={id === me?.publicKey} ref={(el) => { if (el && el.srcObject !== stream) el.srcObject = stream; }} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 <Typography variant="caption" sx={{ position: "absolute", left: 0, bottom: 0, px: 0.8, background: "rgba(0,0,0,0.6)" }}>
                   {members.find((m) => m.id === id)?.name ?? (id === me?.publicKey ? "You" : "Guest")}
@@ -168,7 +168,7 @@ export default function ChatroomView() {
               <Stack key={m.id} direction="row" spacing={1} justifyContent={mine ? "flex-end" : "flex-start"} sx={{ "&:hover .react-add": { opacity: 0.8 } }}>
                 {!mine && <UserAvatar pk={m.author} name={m.authorName} avatar={m.authorAvatar} size={28} />}
                 <Box sx={{ maxWidth: "72%" }}>
-                  <Box sx={{ px: 1.5, py: 0.9, borderRadius: 2, background: mine ? "linear-gradient(135deg,#39c6f5,#3a7bf0)" : "rgba(255,255,255,0.06)", color: mine ? "#031426" : "text.primary" }}>
+                  <Box sx={{ px: 1.5, py: 0.9, borderRadius: 2, background: mine ? "linear-gradient(135deg,#3f97ff,#1668e0)" : "#ffffff", color: mine ? "#ffffff" : "text.primary" }}>
                     {!mine && <Typography variant="caption" sx={{ fontWeight: 700 }}>{m.authorName}</Typography>}
                     {m.text && <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.text}</Typography>}
                     {m.media?.map((md, i) => md.type === "image" ? <Box key={i} component="img" src={md.url} sx={{ mt: 0.5, maxWidth: "100%", maxHeight: 240, borderRadius: 1.5 }} /> : null)}
@@ -176,7 +176,7 @@ export default function ChatroomView() {
                   </Box>
                   <Stack direction="row" spacing={0.5} sx={{ mt: 0.3, flexWrap: "wrap" }} justifyContent={mine ? "flex-end" : "flex-start"}>
                     {Object.entries(m.reactions || {}).filter(([, v]) => v.length).map(([e, v]) => (
-                      <Chip key={e} size="small" label={`${e} ${v.length}`} onClick={() => ctrl.current?.sendReact(m.id, e)} sx={{ height: 20, bgcolor: v.includes(me?.publicKey ?? "") ? "rgba(58,155,240,0.3)" : "rgba(255,255,255,0.06)", cursor: "pointer" }} />
+                      <Chip key={e} size="small" label={`${e} ${v.length}`} onClick={() => ctrl.current?.sendReact(m.id, e)} sx={{ height: 20, bgcolor: v.includes(me?.publicKey ?? "") ? "rgba(58,155,240,0.3)" : "#ffffff", cursor: "pointer" }} />
                     ))}
                     <IconButton className="react-add" size="small" sx={{ opacity: 0, transition: "opacity .15s" }} onClick={(e) => setReactAnchor({ el: e.currentTarget, id: m.id })}><AddReactionRoundedIcon sx={{ fontSize: 16 }} /></IconButton>
                   </Stack>

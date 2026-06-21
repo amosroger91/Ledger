@@ -1,97 +1,109 @@
 import { createTheme, alpha } from "@mui/material/styles";
 
 // ============================================================
-//  Aurora design system — a Vista/Aero glass language: frosted
-//  translucent chrome over flowing aurora gradients, lit from
-//  within. Tokens mirror design-langauge-files/aurora.
+//  Bliss / Windows XP "Luna" — fully adopted. Light, warm, glossy
+//  chrome on the #ece9d8 control face, Luna-blue accents, the
+//  raised 3D button, Tahoma/Trebuchet faces. Mirrors bliss.css
+//  tokens (see src/bliss.css).
 // ============================================================
-export const AURORA = {
-  night0: "#05080f",
-  night1: "#0a0f1a",
-  night2: "#111a2b",
-  ink: "#eef4ff",
-  inkDim: "#b6c6dc",
-  accent: "#3a9bf0",
-  accentBright: "#9fd0ff",
-  accentDeep: "#0b3a66",
-  ok: "#54c95a",
-  warn: "#f0a93a",
-  danger: "#ef5f63",
-  // aurora gradient ribbon
-  aur1: "#39c6f5", aur2: "#3a7bf0", aur3: "#36e0c4", aur4: "#5a9bff",
+export const BL = {
+  blue400: "#3f97ff", blue500: "#1668e0", blue600: "#0a55cf", blue700: "#0a4ec4", blue800: "#003db5",
+  green500: "#4ca325",
+  white: "#ffffff", panel: "#fbfaf4", raised: "#f6f4ec", face: "#ece9d8", faceDark: "#dcd8c4",
+  edge: "#919b9c", line: "#d6d2bf", sunk: "#7f9db9",
+  ink: "#1b2733", inkDim: "#51606e", inkFaint: "#8a96a2",
+  ok: "#3ba33b", info: "#2a72e0", warn: "#e8920c", danger: "#d23b2f", tip: "#ffffe1",
 };
 
-const glassBg = "rgba(255,255,255,0.08)";
-// the signature Aero glass: specular top lip + soft inner shade + deep shadow
-const glassInner = "inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -34px 54px rgba(0,0,0,0.28)";
-const glassShadow = "0 24px 60px rgba(0,0,0,0.50), 0 4px 14px rgba(0,0,0,0.34)";
+const UI = '"Tahoma", "Segoe UI", Verdana, Geneva, system-ui, sans-serif';
+const TITLE = '"Trebuchet MS", "Segoe UI", Tahoma, system-ui, sans-serif';
 
-const UI = '"Open Sans", "Segoe UI", system-ui, -apple-system, sans-serif';
-const DISPLAY = '"Segoe UI", "Open Sans", system-ui, sans-serif';
+// The signature Luna button gloss.
+const sheen = "linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.04) 46%, rgba(0,0,0,0.06) 54%, rgba(0,0,0,0.18) 100%)";
 
 export const theme = createTheme({
   palette: {
-    mode: "dark",
-    primary: { main: AURORA.accent, light: AURORA.accentBright, dark: AURORA.accentDeep },
-    secondary: { main: AURORA.aur3 },
-    error: { main: AURORA.danger },
-    warning: { main: AURORA.warn },
-    success: { main: AURORA.ok },
-    info: { main: AURORA.accent },
-    background: { default: AURORA.night0, paper: glassBg },
-    text: { primary: AURORA.ink, secondary: AURORA.inkDim },
-    divider: "rgba(255,255,255,0.12)",
+    mode: "light",
+    primary: { main: BL.blue500, light: BL.blue400, dark: BL.blue700, contrastText: "#fff" },
+    secondary: { main: BL.green500 },
+    error: { main: BL.danger }, warning: { main: BL.warn }, success: { main: BL.ok }, info: { main: BL.info },
+    background: { default: "transparent", paper: BL.panel },
+    text: { primary: BL.ink, secondary: BL.inkDim },
+    divider: BL.line,
   },
-  shape: { borderRadius: 14 },
+  shape: { borderRadius: 4 },
   typography: {
     fontFamily: UI,
-    h1: { fontFamily: DISPLAY, fontWeight: 700, letterSpacing: "-0.01em" },
-    h2: { fontFamily: DISPLAY, fontWeight: 700 },
-    h3: { fontFamily: DISPLAY, fontWeight: 700 },
-    h4: { fontFamily: DISPLAY, fontWeight: 600 },
-    h5: { fontFamily: DISPLAY, fontWeight: 600 },
-    h6: { fontFamily: DISPLAY, fontWeight: 600, letterSpacing: "0.01em" },
-    button: { fontWeight: 600, letterSpacing: "0.01em", textTransform: "none" },
-    overline: { letterSpacing: "0.14em" },
+    fontSize: 13,
+    h1: { fontFamily: TITLE, fontWeight: 700 }, h2: { fontFamily: TITLE, fontWeight: 700 },
+    h3: { fontFamily: TITLE, fontWeight: 700 }, h4: { fontFamily: TITLE, fontWeight: 700 },
+    h5: { fontFamily: TITLE, fontWeight: 700 }, h6: { fontFamily: TITLE, fontWeight: 700 },
+    button: { textTransform: "none", fontWeight: 700 },
+    overline: { letterSpacing: "0.08em", fontWeight: 700, color: BL.inkDim },
   },
   components: {
     MuiPaper: {
       styleOverrides: {
         root: {
           backgroundImage: "none",
-          backgroundColor: glassBg,
-          backdropFilter: "blur(18px) saturate(1.35)",
-          WebkitBackdropFilter: "blur(18px) saturate(1.35)",
-          border: "1px solid rgba(255,255,255,0.14)",
-          boxShadow: glassInner,
+          backgroundColor: BL.panel,
+          border: `1px solid ${BL.line}`,
+          boxShadow: "inset 0 1px 0 #fff, 0 1px 2px rgba(0,0,0,0.12)",
+          backdropFilter: "none",
         },
       },
     },
     MuiButton: {
       styleOverrides: {
-        root: { borderRadius: 999, paddingInline: 18 },
-        containedPrimary: {
-          color: "#031426",
-          backgroundImage: `linear-gradient(180deg, ${AURORA.accentBright}, ${AURORA.accent})`,
-          boxShadow: `inset 0 1px 0 rgba(255,255,255,0.6), 0 6px 18px ${alpha(AURORA.accent, 0.45)}`,
-          "&:hover": { backgroundImage: `linear-gradient(180deg, #c2e4ff, ${AURORA.accent})` },
+        root: {
+          borderRadius: 3,
+          border: `1px solid ${BL.edge}`,
+          backgroundColor: BL.raised,
+          backgroundImage: sheen,
+          color: BL.ink,
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.7)",
+          "&:hover": { backgroundColor: "#fdfdfb", borderColor: BL.blue500 },
         },
-        outlined: { borderColor: "rgba(255,255,255,0.25)", backdropFilter: "blur(8px)" },
+        containedPrimary: {
+          color: "#fff",
+          border: `1px solid ${BL.blue800}`,
+          backgroundColor: BL.blue500,
+          backgroundImage: `${sheen}, linear-gradient(180deg, ${BL.blue400}, ${BL.blue600})`,
+          textShadow: "0 1px 1px rgba(0,0,0,0.35)",
+          "&:hover": { backgroundImage: `${sheen}, linear-gradient(180deg, #5aa8ff, ${BL.blue600})`, borderColor: BL.blue800 },
+        },
+        outlined: { backgroundImage: "none", backgroundColor: BL.raised },
+        text: { backgroundImage: "none", backgroundColor: "transparent", border: "1px solid transparent", boxShadow: "none", "&:hover": { backgroundColor: alpha(BL.blue500, 0.08), borderColor: "transparent" } },
       },
     },
-    MuiChip: { styleOverrides: { root: { borderRadius: 999, fontWeight: 600, backdropFilter: "blur(6px)" } } },
-    MuiTooltip: { styleOverrides: { tooltip: { background: alpha(AURORA.night2, 0.96), border: "1px solid rgba(255,255,255,0.18)", backdropFilter: "blur(8px)" } } },
-    MuiCssBaseline: {
+    MuiChip: {
       styleOverrides: {
-        "*::-webkit-scrollbar": { width: 10, height: 10 },
-        "*::-webkit-scrollbar-thumb": { background: alpha(AURORA.accent, 0.3), borderRadius: 8 },
-        "*::-webkit-scrollbar-track": { background: "transparent" },
+        root: { borderRadius: 3, fontWeight: 600, backgroundColor: BL.raised, border: `1px solid ${BL.line}` },
+        outlined: { backgroundColor: BL.white },
       },
     },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          borderRadius: 2, backgroundColor: BL.white,
+          "& fieldset": { borderColor: BL.sunk },
+          "&:hover fieldset": { borderColor: BL.blue500 },
+          "&.Mui-focused fieldset": { borderColor: BL.blue500, borderWidth: 1 },
+        },
+        input: { boxShadow: "inset 0 1px 1px rgba(0,0,0,0.12)" },
+      },
+    },
+    MuiToggleButton: {
+      styleOverrides: { root: { borderRadius: 3, textTransform: "none", color: BL.inkDim } },
+    },
+    MuiTooltip: {
+      styleOverrides: { tooltip: { backgroundColor: BL.tip, color: BL.ink, border: `1px solid ${BL.edge}`, fontSize: 12, boxShadow: "0 2px 6px rgba(0,0,0,0.3)" }, arrow: { color: BL.tip } },
+    },
+    MuiAvatar: { styleOverrides: { root: { border: "1px solid rgba(0,0,0,0.18)" } } },
+    MuiDivider: { styleOverrides: { root: { borderColor: BL.line } } },
   },
 });
 
-// Back-compat export (older components referenced NEON.*)
-export const NEON = { cyan: AURORA.aur1, violet: AURORA.aur2, magenta: AURORA.aur3 };
-// The brand gradient ribbon used for wordmarks / accents.
-export const AURORA_RIBBON = `linear-gradient(90deg, ${AURORA.aur1}, ${AURORA.aur2}, ${AURORA.aur3})`;
+// Luna-blue title gloss for window/title bars.
+export const TITLE_GLOSS = `linear-gradient(180deg, ${BL.blue400} 0%, ${BL.blue500} 48%, ${BL.blue600} 100%)`;
+export const NEON = { cyan: BL.blue400, violet: BL.blue500, magenta: BL.blue600 }; // back-compat

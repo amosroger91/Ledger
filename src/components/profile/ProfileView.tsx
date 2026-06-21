@@ -56,7 +56,7 @@ export default function ProfileView() {
           <Box sx={{ flex: 1 }}>
             <Stack direction="row" spacing={1} alignItems="center">
               <Typography variant="h5">{me?.username}</Typography>
-              <Chip size="small" label={rank} sx={{ background: "linear-gradient(135deg,#39c6f5,#3a7bf0)", color: "#031426", fontWeight: 700 }} />
+              <Chip size="small" label={rank} sx={{ background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#ffffff", fontWeight: 700 }} />
             </Stack>
             <Tooltip title={me?.publicKey ?? ""}>
               <Typography variant="caption" color="text.secondary" sx={{ fontFamily: "monospace" }}>id {fingerprint(me?.publicKey ?? "")}</Typography>

@@ -19,7 +19,7 @@ function renderText(text: string) {
   const parts = text.split(/(https?:\/\/[^\s]+)/g);
   return parts.map((p, i) =>
     /^https?:\/\//.test(p)
-      ? <a key={i} href={p} target="_blank" rel="noopener noreferrer" style={{ color: "#9fd0ff", wordBreak: "break-all" }}>{p}</a>
+      ? <a key={i} href={p} target="_blank" rel="noopener noreferrer" style={{ color: "#0a55cf", wordBreak: "break-all" }}>{p}</a>
       : <span key={i}>{p}</span>,
   );
 }
@@ -29,7 +29,7 @@ function ReactRow({ post, me, onAdd }: { post: Post; me: string; onAdd: (el: HTM
     <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mt: 1, flexWrap: "wrap", gap: 0.5 }}>
       {Object.entries(post.reactions).filter(([, v]) => v.length).map(([emoji, voters]) => (
         <Chip key={emoji} size="small" label={`${emoji} ${voters.length}`} onClick={() => feedService.react(post.id, emoji)}
-          sx={{ bgcolor: voters.includes(me) ? "rgba(58,155,240,0.2)" : "rgba(255,255,255,0.05)", cursor: "pointer" }} />
+          sx={{ bgcolor: voters.includes(me) ? "rgba(58,155,240,0.2)" : "rgba(0,0,0,0.04)", cursor: "pointer" }} />
       ))}
       <IconButton size="small" onClick={(e) => onAdd(e.currentTarget, post.id)}><AddReactionRoundedIcon fontSize="small" /></IconButton>
     </Stack>
@@ -43,7 +43,7 @@ export default function PostCard({ post, reason, replies = [] }: { post: Post; r
   const [showReplies, setShowReplies] = useState(false);
   const [replyText, setReplyText] = useState("");
 
-  const sourceColor = post.source === "self" ? "#54c95a" : post.source === "relay" || post.source === "peer" ? "#39c6f5" : "#7a85a8";
+  const sourceColor = post.source === "self" ? "#54c95a" : post.source === "relay" || post.source === "peer" ? "#3f97ff" : "#7a85a8";
 
   async function sendReply() {
     const t = replyText.trim();
@@ -61,8 +61,8 @@ export default function PostCard({ post, reason, replies = [] }: { post: Post; r
           <Stack direction="row" alignItems="center" spacing={1}>
             <Typography sx={{ fontWeight: 700 }} noWrap>{post.authorName}</Typography>
             {post.author === "rss-bot"
-              ? <Chip size="small" label="BOT" sx={{ height: 16, fontSize: 9, bgcolor: "rgba(58,123,240,0.2)", color: "#9fd0ff" }} />
-              : <Tooltip title="Cryptographically signed by author"><VerifiedRoundedIcon sx={{ fontSize: 15, color: "#39c6f5" }} /></Tooltip>}
+              ? <Chip size="small" label="BOT" sx={{ height: 16, fontSize: 9, bgcolor: "rgba(58,123,240,0.2)", color: "#0a55cf" }} />
+              : <Tooltip title="Cryptographically signed by author"><VerifiedRoundedIcon sx={{ fontSize: 15, color: "#3f97ff" }} /></Tooltip>}
             <Typography variant="caption" color="text.secondary">· {relativeTime(post.createdAt)}</Typography>
             <Box sx={{ flex: 1 }} />
             <Chip size="small" label={post.source} sx={{ height: 18, fontSize: 10, color: sourceColor, borderColor: sourceColor }} variant="outlined" />
@@ -88,7 +88,7 @@ export default function PostCard({ post, reason, replies = [] }: { post: Post; r
 
           {post.tags.length > 0 && (
             <Stack direction="row" spacing={0.5} sx={{ mt: 1, flexWrap: "wrap", gap: 0.5 }}>
-              {post.tags.map((t) => <Chip key={t} size="small" label={"#" + t} sx={{ bgcolor: "rgba(58,123,240,0.12)", color: "#3a7bf0" }} />)}
+              {post.tags.map((t) => <Chip key={t} size="small" label={"#" + t} sx={{ bgcolor: "rgba(58,123,240,0.12)", color: "#1668e0" }} />)}
             </Stack>
           )}
 
