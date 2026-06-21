@@ -27,7 +27,7 @@ export const theme = createTheme({
     primary: { main: BL.blue500, light: BL.blue400, dark: BL.blue700, contrastText: "#fff" },
     secondary: { main: BL.green500 },
     error: { main: BL.danger }, warning: { main: BL.warn }, success: { main: BL.ok }, info: { main: BL.info },
-    background: { default: "transparent", paper: BL.panel },
+    background: { default: "#d8e7fb", paper: BL.panel },  // valid color; the .bl-bliss wallpaper covers it
     text: { primary: BL.ink, secondary: BL.inkDim },
     divider: BL.line,
   },
