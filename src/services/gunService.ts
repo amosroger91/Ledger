@@ -16,8 +16,9 @@ import Gun from "gun";
 import { bus } from "@/lib/events";
 import { feedService } from "./feedService";
 import { profileService } from "./profileService";
+import { marketplaceService } from "./marketplaceService";
 import { storage } from "./storage";
-import type { ChatMessage, Post, Profile } from "@/types";
+import type { ChatMessage, Post, Profile, Listing } from "@/types";
 
 // Public Gun relay peers (best-effort; Gun also keeps a local copy and
 // reconciles when a relay is reachable).
@@ -60,11 +61,16 @@ class GunService {
       gun.get(ROOT).get("profiles").map().on((d: any) => {
         if (d?.json) { try { profileService.ingest(JSON.parse(d.json) as Profile); } catch {} }
       });
+      // Incoming marketplace listings.
+      gun.get(ROOT).get("market").map().on((d: any) => {
+        if (d?.json) { try { marketplaceService.ingest(JSON.parse(d.json) as Listing); } catch {} }
+      });
 
       // Outgoing: publish whatever the app marks for persistence.
       bus.on("post:publish", (p) => this.putPost(p));
       bus.on("swarm:publish", (m) => { seenSwarm.add(m.id); this.putSwarm(m); });
       bus.on("profile:publish", (p) => { try { gun?.get(ROOT).get("profiles").get(p.pk).put({ json: JSON.stringify(p) }); } catch {} });
+      bus.on("market:publish", (l) => { try { gun?.get(ROOT).get("market").get(l.id).put({ json: JSON.stringify(l) }); } catch {} });
     } catch (e) {
       console.warn("[gun] disabled (init failed)", e);
       gun = null;

@@ -100,6 +100,12 @@ export const TOPIC_FEEDS: Record<string, Feed[]> = {
   // ---- GitHub releases (native .atom) ----
   "GitHub Releases": [github("ollama/ollama"), github("microsoft/vscode"), github("facebook/react"), github("vercel/next.js"), github("denoland/deno")],
 
+  // ---- 3D printing ----
+  "3D Printing": [
+    { url: "https://cults3d.com/en/creations/feed", name: "Cults3D — latest creations" },
+    { url: "https://all3dp.com/feed/", name: "All3DP" },
+  ],
+
   // ---- Local: Fort Smith, AR (via Google News RSS + the station feed) ----
   "Fort Smith, AR": [
     { url: "https://www.5newsonline.com/feeds/syndication/rss/news", name: "5NEWS (KFSM)" },

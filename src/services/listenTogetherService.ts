@@ -58,13 +58,13 @@ class ListenTogetherService {
     current = station; paused = false;
     audio = new Audio(station.url); audio.volume = volume;
     audio.onended = () => announce();
-    try { await audio.play(); announce(); return true; }
+    try { await audio.play(); announce(); bus.emit("media:play", { id: "radio" }); return true; }
     catch { announce(); return false; }
   }
   pause() { if (audio) { try { audio.pause(); } catch {} paused = true; announce(); } }
   async resume(): Promise<boolean> {
     if (!audio && current) return this.play(current);
-    if (audio) { try { await audio.play(); paused = false; announce(); return true; } catch { return false; } }
+    if (audio) { try { await audio.play(); paused = false; announce(); bus.emit("media:play", { id: "radio" }); return true; } catch { return false; } }
     return false;
   }
   toggle() { if (!audio || paused) return this.resume(); this.pause(); return Promise.resolve(true); }
@@ -80,3 +80,6 @@ class ListenTogetherService {
 }
 
 export const listenTogetherService = new ListenTogetherService();
+
+// One-media-at-a-time: pause the radio when another video/sound starts.
+bus.on("media:play", ({ id }) => { if (id !== "radio") listenTogetherService.pause(); });

@@ -55,8 +55,10 @@ export default function GlobalWatchPlayer() {
     lastStage.current = s; setStage(s); bus.emit("stage:out", s);
   }
   function onStateChange(e: any) {
+    const YT = (window as any).YT;
+    if (e.data === YT.PlayerState.PLAYING) bus.emit("media:play", { id: "watch" }); // others pause
     if (applying.current) return;
-    const YT = (window as any).YT; let t = 0; try { t = e.target.getCurrentTime(); } catch {}
+    let t = 0; try { t = e.target.getCurrentTime(); } catch {}
     if (e.data === YT.PlayerState.PLAYING) broadcast(true, t);
     else if (e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED) broadcast(false, t);
   }
@@ -95,9 +97,13 @@ export default function GlobalWatchPlayer() {
       ensurePlayer(videoId, 0, true); presenceService.setActivity("Watching", "a watch party");
       broadcast(true, 0, videoId); setTimeout(() => { applying.current = false; }, 1200);
     });
+    // When another video/sound plays, pause our player locally (don't broadcast).
+    const offMedia = bus.on("media:play", ({ id }) => {
+      if (id !== "watch" && player.current) { try { applying.current = true; player.current.pauseVideo(); setTimeout(() => { applying.current = false; }, 800); } catch {} }
+    });
     const cur = peerService.currentStage(); lastStage.current = cur;
     if (cur?.videoId) applyRemote(cur, true);
-    return () => { off(); offStart(); };
+    return () => { off(); offStart(); offMedia(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

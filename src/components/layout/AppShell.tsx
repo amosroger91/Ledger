@@ -8,6 +8,8 @@ import ForumRoundedIcon from "@mui/icons-material/ForumRounded";
 import HeadphonesRoundedIcon from "@mui/icons-material/HeadphonesRounded";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import RssFeedRoundedIcon from "@mui/icons-material/RssFeedRounded";
+import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded";
+import AccountBalanceWalletRoundedIcon from "@mui/icons-material/AccountBalanceWalletRounded";
 import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import { useStore } from "@/store/useStore";
@@ -22,6 +24,8 @@ const NAV = [
   { to: "/listen", label: "Watch & Listen", icon: <HeadphonesRoundedIcon /> },
   { to: "/companion", label: "Companion", icon: <AutoAwesomeRoundedIcon /> },
   { to: "/topics", label: "Topics", icon: <RssFeedRoundedIcon /> },
+  { to: "/market", label: "Market", icon: <StorefrontRoundedIcon /> },
+  { to: "/wallet", label: "Wallet", icon: <AccountBalanceWalletRoundedIcon /> },
   { to: "/profile", label: "Profile", icon: <PersonRoundedIcon /> },
   { to: "/settings", label: "Settings", icon: <SettingsRoundedIcon /> },
 ];
@@ -37,10 +41,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const compact = useMediaQuery("(max-width:900px)");
 
   return (
-    <Box sx={{ position: "relative", zIndex: 1, minHeight: "100vh", p: { xs: 0, md: 2 } }}>
-    <Box sx={{ display: "grid", gridTemplateColumns: compact ? "64px 1fr" : "230px 1fr", minHeight: { xs: "100vh", md: "calc(100vh - 32px)" }, bgcolor: "var(--bl-face)", border: "1px solid var(--bl-edge-frame)", borderRadius: { xs: 0, md: "8px" }, overflow: "hidden", boxShadow: "0 12px 44px rgba(0,0,0,0.4)" }}>
-      {/* nav rail */}
-      <Box sx={{ borderRight: "1px solid var(--bl-line)", p: 1, display: "flex", flexDirection: "column", gap: 0.25, position: "sticky", top: 0, height: { xs: "100vh", md: "calc(100vh - 34px)" }, background: "linear-gradient(180deg, var(--bl-tasks-1), var(--bl-tasks-2))" }}>
+    <Box sx={{ position: "relative", zIndex: 1, height: "100vh", overflow: "hidden", p: { xs: 0, md: 2 } }}>
+    <Box sx={{ display: "grid", gridTemplateColumns: compact ? "64px 1fr" : "230px 1fr", height: { xs: "100vh", md: "calc(100vh - 32px)" }, bgcolor: "var(--bl-face)", border: "1px solid var(--bl-edge-frame)", borderRadius: { xs: 0, md: "8px" }, overflow: "hidden", boxShadow: "0 12px 44px rgba(0,0,0,0.4)" }}>
+      {/* nav rail — full height, stays put while the content column scrolls */}
+      <Box sx={{ borderRight: "1px solid var(--bl-line)", p: 1, display: "flex", flexDirection: "column", gap: 0.25, height: "100%", overflowY: "auto", background: "linear-gradient(180deg, var(--bl-tasks-1), var(--bl-tasks-2))" }}>
         <Stack direction="row" alignItems="center" spacing={1} sx={{ px: 1, py: 1.5 }}>
           <Box sx={{ width: 28, height: 28, borderRadius: "8px", background: "linear-gradient(135deg,#3f97ff,#1668e0,#0a55cf)", boxShadow: "0 0 18px rgba(58,155,240,.5)" }} />
           {!compact && <Typography variant="h6" sx={{ background: "linear-gradient(90deg,#3f97ff,#1668e0)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>ZuccBook</Typography>}

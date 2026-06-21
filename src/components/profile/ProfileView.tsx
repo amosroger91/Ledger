@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Box, Stack, Typography, TextField, Button, Chip, LinearProgress, Grid, Tooltip, Divider } from "@mui/material";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import MyLocationRoundedIcon from "@mui/icons-material/MyLocationRounded";
@@ -67,6 +67,7 @@ export default function ProfileView() {
 
 /* ============================ viewing someone else ============================ */
 function ViewProfile({ pk }: { pk: string }) {
+  const nav = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(profileService.get(pk));
   useEffect(() => {
     setProfile(profileService.get(pk));
@@ -93,9 +94,10 @@ function ViewProfile({ pk }: { pk: string }) {
           </Box>
         </Stack>
         {profile.bio && <Typography sx={{ mt: 1 }}>{profile.bio}</Typography>}
-        <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+        <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 1 }}>
           <Typography variant="body2"><b>{profile.reputation}</b> reputation</Typography>
           <Typography variant="body2"><b>{reputationService.rank(profile.reputation)}</b></Typography>
+          {profile.walletAddress && <Button size="small" variant="contained" onClick={() => nav("/wallet", { state: { to: profile.walletAddress } })}>💸 Pay</Button>}
         </Stack>
         {profile.badges?.length > 0 && <Stack direction="row" sx={{ mt: 1, flexWrap: "wrap", gap: 0.5 }}>{profile.badges.map((b) => <Chip key={b} size="small" label={`${BADGES[b]?.icon ?? "🏅"} ${BADGES[b]?.label ?? b}`} />)}</Stack>}
         {profile.communities?.length > 0 && (

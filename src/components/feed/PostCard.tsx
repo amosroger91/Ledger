@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Stack, Box, Typography, IconButton, Chip, Popover, Tooltip, TextField, Button } from "@mui/material";
 import AddReactionRoundedIcon from "@mui/icons-material/AddReactionRounded";
 import VerifiedRoundedIcon from "@mui/icons-material/VerifiedRounded";
 import ReplyRoundedIcon from "@mui/icons-material/ReplyRounded";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import { linkPreviewService, type Preview } from "@/services/linkPreviewService";
+import { bus } from "@/lib/events";
+import { newId } from "@/lib/id";
 import GlassCard from "@/components/common/GlassCard";
 import WhyRecommended from "./WhyRecommended";
 import UserAvatar from "@/components/common/UserAvatar";
@@ -25,16 +27,27 @@ function firstLink(text: string): string | null {
   return urls.find((u) => !IMG_RE.test(u) && !YT_RE.test(u)) ?? null;
 }
 
-// Click-to-play YouTube card (loads the iframe only when you press play).
-function YouTubeCard({ id, thumb }: { id: string; thumb?: string }) {
+// Click-to-play YouTube card. The thumbnail is derived from the video id
+// (always valid) with an <img> + onError fallback, rather than trusting the
+// RSS feed's media URL which is sometimes not an image.
+function YouTubeCard({ id }: { id: string }) {
   const [play, setPlay] = useState(false);
+  const cid = useRef(newId());
+  // play exclusivity: stop if some other media starts
+  useEffect(() => bus.on("media:play", ({ id }) => { if (id !== cid.current) setPlay(false); }), []);
+  const start = () => { setPlay(true); bus.emit("media:play", { id: cid.current }); };
   return (
     <Box sx={{ position: "relative", pt: "56.25%", mt: 1, borderRadius: 1, overflow: "hidden", border: "1px solid var(--bl-line)", bgcolor: "#000" }}>
       {play ? (
         <Box component="iframe" src={`https://www.youtube.com/embed/${id}?autoplay=1&rel=0`} title="YouTube" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen sx={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }} />
       ) : (
-        <Box onClick={() => setPlay(true)} sx={{ position: "absolute", inset: 0, cursor: "pointer", backgroundImage: `url(${thumb || `https://i.ytimg.com/vi/${id}/hqdefault.jpg`})`, backgroundSize: "cover", backgroundPosition: "center", display: "grid", placeItems: "center" }}>
-          <Box sx={{ width: 64, height: 46, borderRadius: 2, bgcolor: "rgba(0,0,0,0.72)", display: "grid", placeItems: "center" }}><PlayArrowRoundedIcon sx={{ color: "#fff", fontSize: 36 }} /></Box>
+        <Box onClick={start} sx={{ position: "absolute", inset: 0, cursor: "pointer" }}>
+          <Box component="img" src={`https://i.ytimg.com/vi/${id}/hqdefault.jpg`} alt="" loading="lazy"
+            onError={(e) => { const t = e.currentTarget as HTMLImageElement; if (!t.dataset.fb) { t.dataset.fb = "1"; t.src = `https://i.ytimg.com/vi/${id}/mqdefault.jpg`; } }}
+            sx={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+          <Box sx={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
+            <Box sx={{ width: 64, height: 46, borderRadius: 2, bgcolor: "rgba(0,0,0,0.72)", display: "grid", placeItems: "center" }}><PlayArrowRoundedIcon sx={{ color: "#fff", fontSize: 36 }} /></Box>
+          </Box>
         </Box>
       )}
     </Box>
@@ -123,7 +136,7 @@ export default function PostCard({ post, reason, replies = [] }: { post: Post; r
           {(() => {
             const ytId = firstYouTube(post.text ?? "");
             const linkUrl = ytId ? null : firstLink(post.text ?? "");
-            if (ytId) return <YouTubeCard id={ytId} thumb={post.media?.[0]?.url} />;
+            if (ytId) return <YouTubeCard id={ytId} />;
             if (linkUrl) return <LinkCard url={linkUrl} />;
             // uploaded images (no link in text)
             return post.media?.map((m, i) => (m.type === "image" ? <Box key={i} component="img" src={m.url} sx={{ mt: 1, maxWidth: "100%", maxHeight: 360, borderRadius: 2, border: "1px solid var(--bl-line)" }} /> : null));

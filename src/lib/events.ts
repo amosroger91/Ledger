@@ -3,7 +3,7 @@
 //  driven: services emit, the UI and other services subscribe.
 //  Decouples the service layer from React entirely.
 // ============================================================
-import type { Post, ChatMessage, RichPresence, ListenRoom, WatchPartyState, Profile } from "@/types";
+import type { Post, ChatMessage, RichPresence, ListenRoom, WatchPartyState, Profile, Listing } from "@/types";
 
 export interface ZuccBookEvents {
   "identity:ready": { pk: string };
@@ -14,6 +14,8 @@ export interface ZuccBookEvents {
   "swarm:publish": ChatMessage;  // persist a Swarm Lounge message
   "profile:publish": Profile;    // persist/sync my public profile
   "profile:update": Profile;     // a peer's profile arrived
+  "market:publish": Listing;     // persist/sync a marketplace listing
+  "market:update": Listing;      // a listing arrived/changed
   "notify": { text: string };
   "chat:message": ChatMessage;
   "chat:typing": { channel: string; pk: string };
@@ -26,6 +28,7 @@ export interface ZuccBookEvents {
   "stage:in": WatchPartyState;   // a watch-party update arrived from a peer
   "stage:out": WatchPartyState;  // local watch-party change to broadcast
   "watch:start": { videoId: string };  // start/replace the watch-party video
+  "media:play": { id: string };         // some media started — others should pause
   "companion:thinking": boolean;
   "rss:refreshing": boolean;
   "companion:model": { state: "loading" | "ready" | "error"; id: string; progress?: number; text?: string };

@@ -10,6 +10,7 @@ import { bus } from "@/lib/events";
 import { identityService } from "./identityService";
 import { reputationService } from "./reputationService";
 import { communityService } from "./communityService";
+import { walletService } from "./walletService";
 
 const cache = new Map<string, Profile>();
 
@@ -32,7 +33,10 @@ class ProfileService {
     const communities = (await communityService.list())
       .filter((c) => c.members.includes(me.publicKey))
       .map((c) => c.name);
+    let walletAddress: string | undefined;
+    try { walletAddress = await walletService.address(); } catch {}
     return {
+      walletAddress,
       pk: me.publicKey,
       username: me.username,
       avatar: me.avatar || undefined,

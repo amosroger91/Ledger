@@ -19,6 +19,8 @@ import CompanionView from "@/components/companion/CompanionView";
 import ProfileView from "@/components/profile/ProfileView";
 import SettingsView from "@/components/settings/SettingsView";
 import TopicsView from "@/components/topics/TopicsView";
+import MarketView from "@/components/market/MarketView";
+import WalletView from "@/components/wallet/WalletView";
 import MiniPlayer from "@/components/layout/MiniPlayer";
 import GlobalWatchPlayer from "@/components/layout/GlobalWatchPlayer";
 
@@ -58,6 +60,8 @@ export default function App() {
             <Route path="/listen" element={<ListenView />} />
             <Route path="/companion" element={<CompanionView />} />
             <Route path="/topics" element={<TopicsView />} />
+            <Route path="/market" element={<MarketView />} />
+            <Route path="/wallet" element={<WalletView />} />
             <Route path="/profile" element={<ProfileView />} />
             <Route path="/u/:pk" element={<ProfileView />} />
             <Route path="/settings" element={<SettingsView />} />

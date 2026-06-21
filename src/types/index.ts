@@ -31,7 +31,24 @@ export interface Profile {
   badges: string[];
   reputation: number;
   communities: string[];    // names of communities they've joined
+  walletAddress?: string;   // Polygon address, so others can pay you
   updatedAt: number;
+}
+
+/** A marketplace listing. Buying pays the seller's Polygon address directly. */
+export interface Listing {
+  id: string;
+  seller: string;           // public key
+  sellerName: string;
+  sellerAddress: string;    // Polygon wallet address to pay
+  title: string;
+  description?: string;
+  image?: string;           // data URL
+  currency: "MATIC" | "USDC";
+  price: string;            // human amount
+  createdAt: number;
+  sold?: boolean;
+  soldTo?: string;          // buyer pk
 }
 
 /** The private half, kept only on this device (never transmitted). */

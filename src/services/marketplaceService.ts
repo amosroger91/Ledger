@@ -1,0 +1,59 @@
+// ============================================================
+//  marketplaceService — buy & sell items on Polygon. Listings sync
+//  via Gun so everyone sees them; buying pays the seller's Polygon
+//  address directly (trust-based P2P payment — no escrow/NFT yet).
+// ============================================================
+import type { Listing } from "@/types";
+import { bus } from "@/lib/events";
+import { identityService } from "./identityService";
+import { walletService, type Currency } from "./walletService";
+import { newId } from "@/lib/id";
+
+const cache = new Map<string, Listing>();
+
+class MarketplaceService {
+  list(): Listing[] { return [...cache.values()].sort((a, b) => b.createdAt - a.createdAt); }
+
+  ingest(l: Listing) {
+    if (!l || !l.id) return;
+    const prev = cache.get(l.id);
+    if (prev && prev.createdAt > l.createdAt && !l.sold) return;
+    cache.set(l.id, l);
+    bus.emit("market:update", l);
+  }
+
+  async create(input: { title: string; description?: string; image?: string; price: string; currency: Listing["currency"] }): Promise<Listing> {
+    const me = identityService.current!;
+    const listing: Listing = {
+      id: newId("mkt"),
+      seller: me.publicKey,
+      sellerName: me.username,
+      sellerAddress: await walletService.address(),
+      title: input.title,
+      description: input.description,
+      image: input.image,
+      currency: input.currency,
+      price: input.price,
+      createdAt: Date.now(),
+    };
+    cache.set(listing.id, listing);
+    bus.emit("market:publish", listing);
+    return listing;
+  }
+
+  /** Pay the seller on Polygon, then mark the listing sold. Returns tx hash. */
+  async buy(listing: Listing): Promise<string> {
+    const hash = await walletService.send(listing.sellerAddress, listing.price, listing.currency as Currency);
+    const sold: Listing = { ...listing, sold: true, soldTo: identityService.pk, createdAt: Date.now() };
+    cache.set(listing.id, sold);
+    bus.emit("market:publish", sold);
+    return hash;
+  }
+
+  remove(id: string) {
+    const l = cache.get(id);
+    if (l) { const gone = { ...l, sold: true, createdAt: Date.now() }; cache.set(id, gone); bus.emit("market:publish", gone); }
+  }
+}
+
+export const marketplaceService = new MarketplaceService();
