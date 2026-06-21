@@ -12,6 +12,7 @@ import { communityService } from "./communityService";
 import { presenceService } from "./presenceService";
 import { peerService } from "./peerService";
 import { rssService } from "./rssService";
+import { gunService } from "./gunService";
 import type { AppSettings } from "@/types";
 
 export interface BootResult { onboarded: boolean; settings: AppSettings }
@@ -33,6 +34,7 @@ export async function boot(): Promise<BootResult> {
   if (me) {
     presenceService.setStatus(settings.presenceStatus);
     await communityService.seedDefaults();
+    gunService.start();   // durable cross-user persistence + sync (posts, swarm)
     peerService.start();
     rssService.refresh().catch(() => {}); // fire-and-forget; throttled internally
     // Keep topping up while the app is open so new stories arrive during a
@@ -45,6 +47,7 @@ export async function boot(): Promise<BootResult> {
 /** Called right after onboarding finishes (identity just created). */
 export async function onOnboarded() {
   await communityService.seedDefaults();
+  gunService.start();
   peerService.start();
 }
 

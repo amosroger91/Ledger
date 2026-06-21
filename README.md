@@ -76,7 +76,10 @@ GitHub Pages only serves static files, so ZuccBook is pure browser tech:
 - **Web Crypto** — your identity keypair, signing, and verification.
 - **WebLLM (WebGPU/WASM)** — the AI companion, cached locally after first download.
 - **IndexedDB + localStorage** — all your data, on your device, offline-first.
-- **No accounts, no auth server, no database, no hosting cost.**
+- **[Gun.js](https://gun.eco/)** — a decentralized graph database that syncs over
+  public relay peers, so posts (human **and** RSS-Bot) and the public Swarm Lounge
+  **persist and reach people who were offline** — still with no database you own or pay for.
+- **No accounts, no auth server, no central database, no hosting cost.**
 
 See **[ARCHITECTURE.md](./ARCHITECTURE.md)** for the full design, storage schema,
 service/AI/P2P layers, and the Phase 2 / Phase 3 roadmap.

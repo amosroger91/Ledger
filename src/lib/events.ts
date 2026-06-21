@@ -10,6 +10,8 @@ export interface ZuccBookEvents {
   "feed:post": Post;
   "feed:updated": void;
   "feed:react-out": { postId: string; emoji: string };
+  "post:publish": Post;          // persist a post to the durable graph (Gun)
+  "swarm:publish": ChatMessage;  // persist a Swarm Lounge message
   "notify": { text: string };
   "chat:message": ChatMessage;
   "chat:typing": { channel: string; pk: string };

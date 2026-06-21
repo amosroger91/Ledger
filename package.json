@@ -15,6 +15,7 @@
     "@emotion/styled": "^11.11.5",
     "@mui/icons-material": "^5.15.20",
     "@mui/material": "^5.15.20",
+    "gun": "^0.2020.1241",
     "idb": "^8.0.0",
     "nanoid": "^5.0.7",
     "peerjs": "^1.5.4",

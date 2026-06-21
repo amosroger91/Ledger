@@ -223,6 +223,7 @@ class RssService {
             source: "relay",
           };
           await feedService.ingest(post);
+          bus.emit("post:publish", post);   // persist bot posts to the durable graph
           posted++;
         }
       }

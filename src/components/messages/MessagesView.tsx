@@ -38,7 +38,8 @@ export default function MessagesView() {
       text: t, reactions: {}, createdAt: Date.now(),
     };
     await storage.putMessage(msg);
-    peerService.sendDM(msg);
+    peerService.sendDM(msg);                 // live relay
+    if (channel === "swarm") bus.emit("swarm:publish", msg);  // durable (Gun)
     setInput(""); load();
   }
 

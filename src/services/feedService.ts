@@ -57,6 +57,7 @@ class FeedService {
     await reputationService.award("participation", 2, "created a post");
     bus.emit("feed:post", post);
     bus.emit("feed:updated", undefined);
+    bus.emit("post:publish", post);   // persist to the durable graph (Gun)
     return post;
   }
 
@@ -66,6 +67,26 @@ class FeedService {
     post.embedding ??= embed([post.text ?? "", ...post.tags].join(" "));
     await storage.putPost(post);
     bus.emit("feed:updated", undefined);
+  }
+
+  /** Absorb a post from durable storage (Gun): insert if new, else merge in
+   *  any reactions we don't have yet. Never re-publishes (avoids sync loops). */
+  async absorb(post: Post) {
+    if (!post || !post.id) return;
+    const existing = await storage.getPost(post.id);
+    if (!existing) {
+      post.embedding ??= embed([post.text ?? "", ...(post.tags ?? [])].join(" "));
+      await storage.putPost(post);
+      bus.emit("feed:updated", undefined);
+      return;
+    }
+    let changed = false;
+    for (const [emoji, voters] of Object.entries(post.reactions ?? {})) {
+      const cur = existing.reactions[emoji] ?? [];
+      const union = [...new Set([...cur, ...voters])];
+      if (union.length !== cur.length) { existing.reactions[emoji] = union; changed = true; }
+    }
+    if (changed) { await storage.putPost(existing); bus.emit("feed:updated", undefined); }
   }
 
   /** Toggle a reaction by a specific person (used for both local and remote).
@@ -83,10 +104,12 @@ class FeedService {
     bus.emit("feed:updated", undefined);
   }
 
-  /** Local reaction → apply + broadcast to the swarm (bus, to avoid an import cycle). */
+  /** Local reaction → apply, broadcast live (peer relay), and persist (Gun). */
   async react(postId: string, emoji: string) {
     await this.applyReaction(postId, emoji, identityService.pk);
     bus.emit("feed:react-out", { postId, emoji });
+    const updated = await storage.getPost(postId);
+    if (updated) bus.emit("post:publish", updated);
   }
 
   async repliesFor(postId: string): Promise<Post[]> {
