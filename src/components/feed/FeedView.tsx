@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Box, ToggleButtonGroup, ToggleButton, Stack, Typography, Button, useMediaQuery } from "@mui/material";
+import { Box, ToggleButtonGroup, ToggleButton, Stack, Typography, Button, useMediaQuery, LinearProgress, Chip, CircularProgress } from "@mui/material";
 import Composer from "./Composer";
 import PostCard from "./PostCard";
 import GlassCard from "@/components/common/GlassCard";
@@ -25,6 +25,7 @@ export default function FeedView() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [reasons, setReasons] = useState<Map<string, RecommendationReason>>(new Map());
   const [summary, setSummary] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
   const algo = settings.feedAlgorithm;
 
@@ -36,6 +37,7 @@ export default function FeedView() {
   }, [algo, settings.moderationProfile]);
 
   useEffect(() => { refresh(); const off = bus.on("feed:updated", refresh); return off; }, [refresh]);
+  useEffect(() => { const off = bus.on("rss:refreshing", setRefreshing); return off; }, []);
   useEffect(() => { rssService.refresh().catch(() => {}); }, []); // top up RSS Bot stories (throttled)
 
   return (
@@ -50,6 +52,18 @@ export default function FeedView() {
         </ToggleButtonGroup>
 
         <Composer />
+
+        {refreshing && (
+          <GlassCard sx={{ mb: 1.5, p: 0, overflow: "hidden" }}>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ px: 2, py: 1 }}>
+              <CircularProgress size={16} />
+              <Typography variant="body2" color="text.secondary">RSS Bot is fetching fresh stories…</Typography>
+              <Box sx={{ flex: 1 }} />
+              <Chip size="small" label="live" sx={{ height: 18, fontSize: 10, bgcolor: "rgba(84,201,90,0.16)", color: "#54c95a" }} />
+            </Stack>
+            <LinearProgress sx={{ height: 3 }} />
+          </GlassCard>
+        )}
 
         {posts.length === 0 && (
           <GlassCard><Typography color="text.secondary">No posts match this view yet. Switch algorithms or post something — your feed is generated locally.</Typography></GlassCard>

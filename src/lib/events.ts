@@ -18,6 +18,7 @@ export interface ZuccBookEvents {
   "listen:state": ListenRoom;
   "listen:now": { station: { name: string; genre: string; url: string } | null; playing: boolean };
   "companion:thinking": boolean;
+  "rss:refreshing": boolean;
   "companion:model": { state: "loading" | "ready" | "error"; id: string; progress?: number; text?: string };
   "toast": { kind: "info" | "success" | "warn" | "error"; message: string };
 }

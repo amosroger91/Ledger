@@ -13,6 +13,7 @@ import AppShell from "@/components/layout/AppShell";
 import FeedView from "@/components/feed/FeedView";
 import CommunitiesView from "@/components/communities/CommunitiesView";
 import MessagesView from "@/components/messages/MessagesView";
+import ChatroomView from "@/components/chatroom/ChatroomView";
 import ListenView from "@/components/listen/ListenView";
 import CompanionView from "@/components/companion/CompanionView";
 import ProfileView from "@/components/profile/ProfileView";
@@ -50,6 +51,7 @@ export default function App() {
             <Route path="/" element={<FeedView />} />
             <Route path="/communities" element={<CommunitiesView />} />
             <Route path="/messages" element={<MessagesView />} />
+            <Route path="/chatroom" element={<ChatroomView />} />
             <Route path="/listen" element={<ListenView />} />
             <Route path="/companion" element={<CompanionView />} />
             <Route path="/topics" element={<TopicsView />} />

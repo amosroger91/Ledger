@@ -1,72 +1,116 @@
-# 🌌 Nebula
+# 🌌 ZuccBook
 
-**A decentralized, local-first, browser-native social platform.** No accounts, no
-email, no servers required for core functionality, ~$0 to host. You generate a
-cryptographic identity you own, your feed is ranked by AI **on your own device**,
-and people connect **peer-to-peer**.
+### A social network that no company owns — not even a little.
 
-Think *Twitter × Discord × Reddit × Spotify Social × Xbox Live × Twitch Chat ×
-an AI companion* — running from static files.
+Stop and think about how strange this is for a second:
+
+**This app has no server.** There's no company in the middle. When you post, chat,
+or talk here, it doesn't travel to a Facebook data center to be stored, scanned,
+profiled, sold, or "moderated" by someone you'll never meet. Your identity, your
+posts, and your messages live **on your own device**, and you talk to other people
+**directly, browser-to-browser**. There is no central database — so there's nothing
+for a tech billionaire to mine, nothing to leak, nothing to subpoena, and nothing
+anyone can flip a switch to take away. The AI that powers your feed and your
+companion runs **on your own computer**, not in someone's cloud.
+
+And here's the part that's honestly just *very cool*: **the GitHub repository you're
+reading right now is also what hosts the live app — for free.** The same code is
+both the product *and* the server. GitHub Pages serves these static files to the
+whole world at $0/month. No hosting bill. No backend to run. No infrastructure to
+own. A complete social platform that fits in a folder and costs nothing to keep
+alive. (Yes, it's called *ZuccBook*. Yes, that's the joke.) 😄
+
+> **In plain terms:** normally a social app = your data sitting on a corporation's
+> computers, under their rules. ZuccBook flips it: *your* computer is the computer,
+> *you* own your account (it's literally a file), and the "website" is just free,
+> public, static code anyone can read, fork, or re-host. Decentralization, for real.
+
+## 🔗 Live app: https://amosroger91.github.io/ZuccBook/
+
+> Open it in **two browser windows** to watch presence, chatrooms, and the post
+> relay connect peer-to-peer with no server in between.
 
 ---
 
-## Quick start
+## What it does
+
+- **Own your identity** — on first launch your browser generates a cryptographic
+  keypair (Web Crypto, ECDSA P-256). Your public key *is* your account; every post
+  is signed by it. **Export it as a file** to move to another device. No email, no
+  password, no signup, no server.
+- **Local feed engine** — posts are ranked **on your device** with on-device
+  embeddings + vector search. Newest-first by default, plus For You / Trending /
+  Discovery, and a **"why am I seeing this?"** breakdown on every post.
+- **On-device AI companion** — a real LLM (WebLLM / WebGPU) that runs **entirely in
+  your browser**. Pick the model; it downloads once and is then **cached** (loads
+  from memory on later visits). Private by construction — your prompts never leave
+  your machine. Falls back to a fast offline engine when there's no WebGPU.
+- **Chatrooms** — live peer-to-peer rooms: text chat, presence, reactions, image
+  sharing, and **voice/video** (WebRTC mesh), all with no server.
+- **Direct & swarm messages** — DMs and a global "Swarm Lounge".
+- **Watch & Listen Together** — internet radio *and* YouTube, with a **persistent
+  mini-player** docked at the bottom of every screen (play/pause, station, volume).
+- **Topics & RSS Bot** — subscribe to topics and a bot keeps your feed alive even
+  with zero human traffic: it pulls the top stories from the most relevant feeds
+  (curated list across 10 topics + your own custom feeds, individually toggleable)
+  and posts the headline, summary, link, and time. Stories you "missed" while away
+  backfill into the timeline at their real publish time.
+- **Communities** — Discord/Reddit-style servers with text/voice/stage/event channels.
+- **Profiles** — display name + uploadable photo, stored locally and shared peer-to-peer.
+- **Reputation, not followers** — helpfulness/expertise/participation/trust, with ranks & badges.
+- **Layered local moderation** — pick a filter profile (Family-Friendly → Unfiltered); it runs locally.
+- **Live online count** + rich presence (online/idle/away/dnd + activity).
+- **Offline-first** — everything lives in your browser (IndexedDB); the UI is the
+  **Aurora** glass design system (a Vista/Aero homage).
+
+---
+
+## How it works (genuinely no backend)
+
+GitHub Pages only serves static files, so ZuccBook is pure browser tech:
+
+- **[PeerJS](https://peerjs.com/) / WebRTC** — direct browser-to-browser data &
+  media through a free public broker. Chatrooms and the post relay use a **star
+  topology**: the first person in a room becomes the relay hub and re-election
+  happens automatically if they leave.
+- **Web Crypto** — your identity keypair, signing, and verification.
+- **WebLLM (WebGPU/WASM)** — the AI companion, cached locally after first download.
+- **IndexedDB + localStorage** — all your data, on your device, offline-first.
+- **No accounts, no auth server, no database, no hosting cost.**
+
+See **[ARCHITECTURE.md](./ARCHITECTURE.md)** for the full design, storage schema,
+service/AI/P2P layers, and the Phase 2 / Phase 3 roadmap.
+
+## Run it locally
 
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-# or
-npm run build && npm run preview
 ```
 
-Open it in **two browser windows** to see presence, the post relay, and Swarm
-Lounge chat connect peer-to-peer.
+(Use `localhost` or HTTPS — Web Crypto and getUserMedia need a secure context.)
 
-> Needs a secure context for Web Crypto — use `localhost` or HTTPS (both fine).
+## Deploy (this is the cool part)
 
----
+```bash
+npm run build      # -> dist/  (static files)
+```
+Push `dist/` to a `gh-pages` branch (or any static host / IPFS / a USB stick) and
+it's live. `base: "./"` + HashRouter mean it runs from any path with no server
+config. The repo hosts itself.
 
-## What works today (MVP)
+## Honest limits
 
-- **Own your identity** — a P-256 keypair generated on-device (Web Crypto). Your
-  public key is your id; every post is signed. **Export/import** it as a file to
-  move between devices. No password, no email, no server.
-- **Local feed engine** — posts ranked on your machine with on-device embeddings
-  + vector search. Five algorithms (For You / Newest / Trending / Discovery /
-  Circle) and a **"why am I seeing this?"** breakdown on every post.
-- **Local AI companion** — summarizes your feed, explains trends, suggests
-  communities, drafts replies, flags misinformation. Runs locally (fast heuristic
-  engine; optional **on-device WebGPU LLM** via WebLLM in Settings).
-- **Communities** — Discord/Reddit-style servers with text/voice/stage/event
-  channels.
-- **Peer-to-peer** — presence (online/idle/away/dnd + rich activity), a global
-  post relay, and the **Swarm Lounge** chat, all over PeerJS with **no backend**.
-- **Listen Together** — synced internet radio with rich presence ("Listening to…").
-- **Reputation, not followers** — a ledger of helpfulness/expertise/participation/
-  trust, with ranks and badges.
-- **Layered moderation** — local AI + selectable filter profiles (Family-Friendly,
-  Academic, Gaming, Discovery, Unfiltered).
-- **Offline-first** — everything lives in IndexedDB; the UI is a cyberpunk/glass
-  Material UI shell.
-
-See **[ARCHITECTURE.md](./ARCHITECTURE.md)** for the full design, storage schema,
-service/AI/P2P layers, and the Phase 2 / Phase 3 roadmaps.
-
----
+- The public PeerJS broker is best-effort; heavy use would want a self-hosted relay.
+- Voice/video is a mesh, so it's tuned for small rooms (~8).
+- RSS feeds are fetched through public CORS proxies, so a source can occasionally fail.
+- True background posting while the tab is closed needs a Service Worker; today the
+  feed backfills "missed" stories on return and tops up while open.
+- The on-device LLM needs WebGPU and a one-time model download (then it's cached).
 
 ## Tech
 
-React · TypeScript · Vite · Material UI · Zustand · IndexedDB (`idb`) · PeerJS
-(WebRTC) · Web Crypto · optional WebLLM (WebGPU).
+React · TypeScript · Vite · Material UI (Aurora theme) · Zustand · IndexedDB (`idb`)
+· PeerJS (WebRTC) · Web Crypto · WebLLM (WebGPU).
 
-## Deploy (GitHub Pages / any static host)
-
-`npm run build` → deploy `dist/`. The build uses `base: "./"` + HashRouter, so it
-runs from any path with no server config (GitHub Pages, Netlify, IPFS, even a USB
-stick).
-
-## Status
-
-A production-grade **foundation + MVP** that proves the architecture end-to-end.
-The heaviest features (full WebRTC voice/video mesh, E2E group chat, P2P games,
-WebGPU LLM by default) are scoped with clean interfaces in the roadmap. MIT.
+MIT. *Not affiliated with Facebook/Meta — the name is affectionate satire.*

@@ -14,6 +14,7 @@ import type { Post } from "@/types";
 import { storage } from "./storage";
 import { feedService } from "./feedService";
 import { embed } from "@/lib/embeddings";
+import { bus } from "@/lib/events";
 
 export interface Feed { url: string; name: string; }
 export interface RssConfig {
@@ -194,8 +195,10 @@ class RssService {
     c.lastRun = Date.now();
     await this.save(c);
 
+    bus.emit("rss:refreshing", true);
     const seen = new Set(c.seen);
     let posted = 0;
+    try {
     for (const topic of c.topics) {
       const feeds = (await this.feedsForTopic(topic)).slice(0, 2); // two most relevant
       for (const feed of feeds) {
@@ -223,6 +226,9 @@ class RssService {
           posted++;
         }
       }
+    }
+    } finally {
+      bus.emit("rss:refreshing", false);
     }
     c.seen = [...seen].slice(-600);
     await this.save(c);

@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
 import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import ChatRoundedIcon from "@mui/icons-material/ChatRounded";
+import ForumRoundedIcon from "@mui/icons-material/ForumRounded";
 import HeadphonesRoundedIcon from "@mui/icons-material/HeadphonesRounded";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import RssFeedRoundedIcon from "@mui/icons-material/RssFeedRounded";
@@ -17,6 +18,7 @@ const NAV = [
   { to: "/", label: "Feed", icon: <HomeRoundedIcon /> },
   { to: "/communities", label: "Communities", icon: <GroupsRoundedIcon /> },
   { to: "/messages", label: "Messages", icon: <ChatRoundedIcon /> },
+  { to: "/chatroom", label: "Chatroom", icon: <ForumRoundedIcon /> },
   { to: "/listen", label: "Watch & Listen", icon: <HeadphonesRoundedIcon /> },
   { to: "/companion", label: "Companion", icon: <AutoAwesomeRoundedIcon /> },
   { to: "/topics", label: "Topics", icon: <RssFeedRoundedIcon /> },
