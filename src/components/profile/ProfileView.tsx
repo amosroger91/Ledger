@@ -22,42 +22,60 @@ import { fingerprint } from "@/lib/crypto";
 import { bus, toast } from "@/lib/events";
 import type { Profile } from "@/types";
 
-// New profiles start from this editable template (MySpace style).
+// New profiles start from this editable template — it shows off full control:
+// the whole page background, fonts, layout, even animation, are yours to change.
 export const STARTER_HTML = `<style>
-  .me { font-family: Tahoma, sans-serif; padding: 14px; }
-  .me h2 { color: #1668e0; margin: 0 0 6px; }
-  .me .tag { display:inline-block; background:#dbe8fb; color:#0a4ec4;
-             border-radius:4px; padding:2px 8px; margin:2px; font-size:12px; }
-  .me a { color:#1668e0; }
+  body {
+    margin: 0;
+    min-height: 100%;
+    font-family: 'Trebuchet MS', Tahoma, system-ui, sans-serif;
+    color: #f3f7ff;
+    background: radial-gradient(120% 120% at 20% 0%, #3f97ff 0%, #1668e0 38%, #0a1f4d 100%);
+  }
+  .wrap { max-width: 560px; margin: 28px auto; padding: 22px; }
+  .card {
+    padding: 20px 22px; border-radius: 18px;
+    background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.22);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.35); backdrop-filter: blur(8px);
+  }
+  h1 { margin: 0 0 8px; font-size: 26px; }
+  a { color: #bcdcff; }
+  .tags { margin-top: 12px; }
+  .tag { display:inline-block; padding:4px 12px; margin:3px; border-radius:999px;
+         background: rgba(255,255,255,0.16); font-size: 12px; }
+  marquee { margin-top: 14px; opacity: .85; }
 </style>
-<div class="me">
-  <h2>Welcome to my page ✦</h2>
-  <p>This is <b>my</b> corner — edit the HTML/CSS to make it yours.</p>
-  <p><span class="tag">music</span> <span class="tag">coding</span> <span class="tag">coffee</span></p>
-  <marquee>★ thanks for stopping by ★</marquee>
+<div class="wrap">
+  <div class="card">
+    <h1>✦ welcome to my corner ✦</h1>
+    <p>This whole page is <b>mine</b> — I changed the background, the fonts, the layout… everything.
+       Edit the HTML &amp; CSS to make it yours (old-school MySpace style).</p>
+    <div class="tags">
+      <span class="tag">music</span><span class="tag">coding</span><span class="tag">coffee</span>
+    </div>
+    <marquee>★ thanks for stopping by ★</marquee>
+  </div>
 </div>`;
 
-/* ---- sandboxed custom HTML, isolated in a shadow root ---- */
-function sanitizeHtml(html: string): string {
-  const doc = new DOMParser().parseFromString(html, "text/html");
-  doc.querySelectorAll("script, object, embed, link, meta, base").forEach((n) => n.remove());
-  doc.querySelectorAll("*").forEach((el) => {
-    [...el.attributes].forEach((a) => {
-      const n = a.name.toLowerCase();
-      if (n.startsWith("on")) el.removeAttribute(a.name);
-      if ((n === "href" || n === "src" || n === "xlink:href") && /^\s*javascript:/i.test(a.value)) el.removeAttribute(a.name);
-    });
-  });
-  return doc.body.innerHTML;
+// Minimal blank canvas so the user's HTML/CSS controls everything (incl. the
+// page background). No app styling is forced in. Same-origin is intentionally
+// withheld, so even scripts in a peer's profile can't touch your account/keys.
+function profileHtmlDoc(html: string): string {
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0}img,iframe,video,canvas,svg{max-width:100%}</style></head><body>${html}</body></html>`;
 }
 function CustomHtml({ html }: { html: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const host = ref.current; if (!host) return;
-    const sh = host.shadowRoot || host.attachShadow({ mode: "open" });
-    sh.innerHTML = `<div style="color:#1b2733;font-family:Tahoma,system-ui,sans-serif;line-height:1.5">${sanitizeHtml(html)}</div>`;
-  }, [html]);
-  return <div ref={ref} />;
+  const [tall, setTall] = useState(false);
+  return (
+    <Box sx={{ position: "relative", borderRadius: 2, overflow: "hidden", border: "1px solid var(--bl-line)", bgcolor: "#fff" }}>
+      <Box component="iframe" title="profile page" srcDoc={profileHtmlDoc(html)}
+        sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-modals allow-presentation"
+        sx={{ width: "100%", height: tall ? 1100 : 560, border: 0, display: "block" }} />
+      <Button size="small" onClick={() => setTall((v) => !v)}
+        sx={{ position: "absolute", bottom: 8, right: 8, minWidth: 0, px: 1, py: 0.25, fontSize: 11, textTransform: "none", bgcolor: "rgba(255,255,255,0.92)", border: "1px solid var(--bl-line)", color: "text.secondary", "&:hover": { bgcolor: "#fff" } }}>
+        {tall ? "Collapse" : "Expand"}
+      </Button>
+    </Box>
+  );
 }
 
 async function detectLocation(): Promise<string> {
@@ -73,53 +91,95 @@ async function detectLocation(): Promise<string> {
   } catch { return `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`; }
 }
 
+const normUrl = (u: string) => (/^https?:\/\//i.test(u) ? u : `https://${u}`);
+
 function Banner({ header, color = "#3f97ff" }: { header?: string; color?: string }) {
   return <Box sx={{ height: 160, borderRadius: 1, mb: -6, backgroundImage: header ? `url(${header})` : `linear-gradient(135deg, ${color}, #1668e0)`, backgroundSize: "cover", backgroundPosition: "center", border: "1px solid var(--bl-line)" }} />;
 }
 
-const normUrl = (u: string) => (/^https?:\/\//i.test(u) ? u : `https://${u}`);
-
-/* ============ shared read-only presentation (visitor view + preview) ============ */
-function ProfileDisplay({ profile, own }: { profile: Profile; own?: boolean }) {
-  const nav = useNavigate();
+function StatTile({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <Box sx={{ maxWidth: 720, mx: "auto" }}>
-      <GlassCard sx={{ mb: 2 }}>
-        <Banner header={profile.header} />
-        <Stack direction="row" spacing={2} alignItems="flex-end" sx={{ px: 1 }}>
-          <UserAvatar pk={profile.pk} name={profile.username} avatar={profile.avatar} size={80} />
-          <Box sx={{ pb: 1, minWidth: 0 }}>
-            <Typography variant="h5">{profile.username}</Typography>
-            {profile.quote && <Typography variant="body2" sx={{ fontStyle: "italic" }}>“{profile.quote}”</Typography>}
-            {profile.location && <Typography variant="caption" color="text.secondary">📍 {profile.location}</Typography>}
-          </Box>
-        </Stack>
+    <Box sx={{ flex: 1, textAlign: "center", py: 1, borderRadius: 2, bgcolor: "rgba(58,155,240,0.07)", border: "1px solid rgba(58,155,240,0.14)" }}>
+      <Typography sx={{ fontWeight: 800, fontSize: 18, lineHeight: 1.1, color: "#1668e0" }}>{value}</Typography>
+      <Typography variant="caption" color="text.secondary">{label}</Typography>
+    </Box>
+  );
+}
 
-        {(profile.website || profile.email || profile.phone) && (
-          <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: "wrap", gap: 0.5 }}>
-            {profile.website && <Chip size="small" icon={<LanguageRoundedIcon />} label={profile.website.replace(/^https?:\/\//, "")} component="a" clickable href={normUrl(profile.website)} target="_blank" rel="noopener noreferrer" />}
-            {profile.email && <Chip size="small" icon={<EmailRoundedIcon />} label={profile.email} component="a" clickable href={`mailto:${profile.email}`} />}
-            {profile.phone && <Chip size="small" icon={<PhoneRoundedIcon />} label={profile.phone} component="a" clickable href={`tel:${profile.phone}`} />}
+/* ============ shared presentation (visitor view, your default view & preview) ============ */
+function ProfileDisplay({ profile, own, onEdit }: { profile: Profile; own?: boolean; onEdit?: () => void }) {
+  const nav = useNavigate();
+  const rank = reputationService.rank(profile.reputation);
+  return (
+    <Box sx={{ maxWidth: 760, mx: "auto" }}>
+      <GlassCard sx={{ p: 0, overflow: "hidden", mb: 2 }}>
+        {/* hero */}
+        <Box sx={{ position: "relative", height: 200, backgroundImage: profile.header ? `url(${profile.header})` : "linear-gradient(135deg,#3f97ff,#1668e0,#0a2a6b)", backgroundSize: "cover", backgroundPosition: "center" }}>
+          <Box sx={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(0,0,0,0.28))" }} />
+          {own && onEdit && (
+            <Button size="small" startIcon={<EditRoundedIcon />} onClick={onEdit}
+              sx={{ position: "absolute", top: 12, right: 12, textTransform: "none", fontWeight: 700, bgcolor: "rgba(255,255,255,0.92)", color: "#1668e0", boxShadow: 2, "&:hover": { bgcolor: "#fff" } }}>
+              Edit profile
+            </Button>
+          )}
+        </Box>
+
+        <Box sx={{ px: { xs: 2, sm: 3 }, pb: 2.5 }}>
+          {/* avatar overlapping the hero */}
+          <Box sx={{ mt: "-58px", mb: 1 }}>
+            <Box sx={{ display: "inline-flex", borderRadius: "50%", border: "4px solid var(--bl-face)", boxShadow: "0 6px 20px rgba(0,0,0,0.25)" }}>
+              <UserAvatar pk={profile.pk} name={profile.username} avatar={profile.avatar} size={104} />
+            </Box>
+          </Box>
+
+          <Stack direction="row" alignItems="center" spacing={1} sx={{ flexWrap: "wrap" }}>
+            <Typography variant="h4" sx={{ fontWeight: 800, lineHeight: 1.1 }}>{profile.username}</Typography>
+            <Chip size="small" label={rank} sx={{ background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#fff", fontWeight: 700 }} />
           </Stack>
-        )}
+          {profile.quote && <Typography sx={{ mt: 0.5, fontStyle: "italic", color: "text.secondary" }}>“{profile.quote}”</Typography>}
+          {profile.location && <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>📍 {profile.location}</Typography>}
+          {profile.bio && <Typography sx={{ mt: 1.25, lineHeight: 1.6 }}>{profile.bio}</Typography>}
 
-        {profile.bio && <Typography sx={{ mt: 1 }}>{profile.bio}</Typography>}
+          {(profile.website || profile.email || profile.phone) && (
+            <Stack direction="row" spacing={1} sx={{ mt: 1.25, flexWrap: "wrap", gap: 0.5 }}>
+              {profile.website && <Chip size="small" icon={<LanguageRoundedIcon />} label={profile.website.replace(/^https?:\/\//, "")} component="a" clickable href={normUrl(profile.website)} target="_blank" rel="noopener noreferrer" />}
+              {profile.email && <Chip size="small" icon={<EmailRoundedIcon />} label={profile.email} component="a" clickable href={`mailto:${profile.email}`} />}
+              {profile.phone && <Chip size="small" icon={<PhoneRoundedIcon />} label={profile.phone} component="a" clickable href={`tel:${profile.phone}`} />}
+            </Stack>
+          )}
 
-        <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 1 }}>
-          <Typography variant="body2"><b>{profile.reputation}</b> reputation</Typography>
-          <Typography variant="body2"><b>{reputationService.rank(profile.reputation)}</b></Typography>
-          {!own && profile.walletAddress && <Button size="small" variant="contained" onClick={() => nav("/wallet", { state: { to: profile.walletAddress } })}>💸 Pay</Button>}
-        </Stack>
+          <Stack direction="row" spacing={1.5} sx={{ mt: 2 }}>
+            <StatTile label="Reputation" value={profile.reputation} />
+            <StatTile label="Rank" value={<span style={{ fontSize: 13 }}>{rank}</span>} />
+            <StatTile label="Groups" value={profile.communities?.length ?? 0} />
+          </Stack>
 
-        {profile.badges?.length > 0 && <Stack direction="row" sx={{ mt: 1, flexWrap: "wrap", gap: 0.5 }}>{profile.badges.map((b) => <Chip key={b} size="small" label={`${BADGES[b]?.icon ?? "🏅"} ${BADGES[b]?.label ?? b}`} />)}</Stack>}
-        {profile.communities?.length > 0 && (
-          <Box sx={{ mt: 1.5 }}>
-            <Typography variant="overline" color="text.secondary">Communities</Typography>
-            <Stack direction="row" sx={{ flexWrap: "wrap", gap: 0.5, mt: 0.5 }}>{profile.communities.map((c) => <Chip key={c} size="small" variant="outlined" label={c} />)}</Stack>
-          </Box>
-        )}
+          {!own && profile.walletAddress && (
+            <Button fullWidth variant="contained" sx={{ mt: 1.5 }} onClick={() => nav("/wallet", { state: { to: profile.walletAddress } })}>💸 Pay {profile.username}</Button>
+          )}
+
+          {profile.badges?.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="overline" color="text.secondary">Badges</Typography>
+              <Stack direction="row" sx={{ flexWrap: "wrap", gap: 0.5, mt: 0.5 }}>{profile.badges.map((b) => <Chip key={b} size="small" label={`${BADGES[b]?.icon ?? "🏅"} ${BADGES[b]?.label ?? b}`} />)}</Stack>
+            </Box>
+          )}
+          {profile.communities?.length > 0 && (
+            <Box sx={{ mt: 1.5 }}>
+              <Typography variant="overline" color="text.secondary">Groups</Typography>
+              <Stack direction="row" sx={{ flexWrap: "wrap", gap: 0.5, mt: 0.5 }}>{profile.communities.map((c) => <Chip key={c} size="small" variant="outlined" label={c} />)}</Stack>
+            </Box>
+          )}
+        </Box>
       </GlassCard>
-      {profile.html && <GlassCard><Typography variant="overline" color="text.secondary">Their page</Typography><Box sx={{ mt: 1 }}><CustomHtml html={profile.html} /></Box></GlassCard>}
+
+      {/* the fully-custom MySpace canvas */}
+      {profile.html && (
+        <GlassCard sx={{ p: { xs: 1, sm: 1.25 } }}>
+          <Typography variant="overline" color="text.secondary" sx={{ px: 0.5 }}>✦ {profile.username}'s space</Typography>
+          <Box sx={{ mt: 0.5 }}><CustomHtml html={profile.html} /></Box>
+        </GlassCard>
+      )}
     </Box>
   );
 }
@@ -162,62 +222,58 @@ function OwnProfile({ me, refreshMe }: { me: any; refreshMe: () => void }) {
   const [breakdown, setBreakdown] = useState<Record<string, number>>({});
   const [communities, setCommunities] = useState<string[]>([]);
   const [locating, setLocating] = useState(false);
-  const [preview, setPreview] = useState<Profile | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [view, setView] = useState<Profile | null>(null);
   const [deviceLogin, setDeviceLogin] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const avatarRef = useRef<HTMLInputElement>(null);
   const headerRef = useRef<HTMLInputElement>(null);
 
+  const buildView = async () => { const v = await profileService.buildSelf(); setView({ ...v, html: v.html || html || STARTER_HTML }); };
   useEffect(() => {
     reputationService.total().then(setRep);
     reputationService.breakdown().then(setBreakdown);
     communityService.list().then((cs) => setCommunities(cs.filter((c) => c.members.includes(me?.publicKey)).map((c) => c.name)));
+    buildView();
   }, [me?.publicKey]);
 
-  const sync = () => { refreshMe(); profileService.publishSelf(); };
-  async function save() { await identityService.update({ username: username.trim() || me.username, bio, quote, website: website.trim(), email: email.trim(), phone: phone.trim(), html }); sync(); toast("Profile saved & shared", "success"); }
-  async function setPhoto(file?: File) { if (!file) return; try { await identityService.update({ avatar: await compressAvatar(file) }); sync(); toast("Photo updated", "success"); } catch { toast("Couldn't load that image", "error"); } }
-  async function setHeader(file?: File) { if (!file) return; try { await identityService.update({ header: await compressBanner(file) }); sync(); toast("Header updated", "success"); } catch { toast("Couldn't load that image", "error"); } }
+  const sync = async () => { refreshMe(); await buildView(); profileService.publishSelf(); };
+  async function save() {
+    await identityService.update({ username: username.trim() || me.username, bio, quote, website: website.trim(), email: email.trim(), phone: phone.trim(), html });
+    await sync(); toast("Profile saved & shared", "success"); setEditing(false);
+  }
+  async function setPhoto(file?: File) { if (!file) return; try { await identityService.update({ avatar: await compressAvatar(file) }); await sync(); toast("Photo updated", "success"); } catch { toast("Couldn't load that image", "error"); } }
+  async function setHeader(file?: File) { if (!file) return; try { await identityService.update({ header: await compressBanner(file) }); await sync(); toast("Header updated", "success"); } catch { toast("Couldn't load that image", "error"); } }
   async function importId(file?: File) { if (!file) return; try { await identityService.importFile(file); refreshMe(); toast("Identity replaced on this device", "success"); } catch { toast("Invalid identity file", "error"); } }
   async function useLocation() {
     setLocating(true);
-    try { const loc = await detectLocation(); await identityService.update({ location: loc }); sync(); toast(`Location set: ${loc}`, "success"); }
+    try { const loc = await detectLocation(); await identityService.update({ location: loc }); await sync(); toast(`Location set: ${loc}`, "success"); }
     catch { toast("Couldn't get your location (permission denied?)", "warn"); }
     finally { setLocating(false); }
-  }
-  async function togglePreview() {
-    if (preview) { setPreview(null); return; }
-    // build a live profile from the current (saved) identity + extras
-    await identityService.update({ username: username.trim() || me.username, bio, quote, website: website.trim(), email: email.trim(), phone: phone.trim(), html });
-    refreshMe();
-    const p = await profileService.buildSelf();
-    setPreview(p);
   }
 
   const rank = reputationService.rank(rep);
   const next = reputationService.nextRank(rep);
   const badges = me?.badges ?? [];
 
-  if (preview) {
-    return (
-      <Box sx={{ maxWidth: 720, mx: "auto" }}>
-        <Stack direction="row" alignItems="center" sx={{ mb: 1 }}>
-          <Chip icon={<VisibilityRoundedIcon />} label="Preview — how visitors see you" color="primary" sx={{ flex: 1, justifyContent: "flex-start" }} />
-          <Button startIcon={<EditRoundedIcon />} onClick={togglePreview}>Back to editing</Button>
-        </Stack>
-        {preview && <ProfileDisplay profile={preview} own />}
-      </Box>
-    );
+  // Default view: exactly how visitors see you, with an Edit button.
+  if (!editing) {
+    return view
+      ? <ProfileDisplay profile={view} own onEdit={() => setEditing(true)} />
+      : <Box sx={{ maxWidth: 760, mx: "auto" }}><GlassCard><LinearProgress /></GlassCard></Box>;
   }
 
   return (
     <Box sx={{ maxWidth: 880, mx: "auto" }}>
+      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
+        <Chip icon={<EditRoundedIcon />} label="Editing your profile" color="primary" sx={{ flex: 1, justifyContent: "flex-start" }} />
+        <Button startIcon={<VisibilityRoundedIcon />} onClick={() => setEditing(false)}>View profile</Button>
+      </Stack>
       <GlassCard sx={{ mb: 2 }}>
         <Box sx={{ position: "relative" }}>
           <Banner header={me?.header} />
           <Stack direction="row" spacing={1} sx={{ position: "absolute", right: 8, top: 8 }}>
-            <Button size="small" startIcon={<VisibilityRoundedIcon />} variant="contained" onClick={togglePreview}>Preview as visitor</Button>
-            <Button size="small" onClick={() => headerRef.current?.click()}>Change header</Button>
+            <Button size="small" variant="contained" onClick={() => headerRef.current?.click()}>Change header</Button>
           </Stack>
           <input ref={headerRef} type="file" accept="image/*" hidden onChange={(e) => setHeader(e.target.files?.[0])} />
         </Box>
@@ -252,12 +308,11 @@ function OwnProfile({ me, refreshMe }: { me: any; refreshMe: () => void }) {
                 <TextField label="Email (optional)" value={email} onChange={(e) => setEmail(e.target.value)} fullWidth />
               </Stack>
               <TextField label="Phone (optional)" value={phone} onChange={(e) => setPhone(e.target.value)} fullWidth sx={{ maxWidth: { sm: "50%" } }} />
-              <TextField label="Custom profile HTML (MySpace style)" value={html} onChange={(e) => setHtml(e.target.value)} fullWidth multiline minRows={8}
+              <TextField label="Your page — full HTML &amp; CSS (MySpace style)" value={html} onChange={(e) => setHtml(e.target.value)} fullWidth multiline minRows={10}
                 InputProps={{ sx: { fontFamily: "monospace", fontSize: 13 } }} />
-              <Typography variant="caption" color="text.secondary">Your HTML/CSS renders in an isolated sandbox (scripts stripped). It's pre-filled with a template — tweak away. Use “Preview as visitor” to see your page as others do.</Typography>
+              <Typography variant="caption" color="text.secondary">This is <b>your</b> canvas — change <b>everything</b>: the background, fonts, colors, layout, even animations and scripts. It renders in a secure sandbox (it can't touch anyone's account or keys), so go wild. Hit <b>Save &amp; view</b> to see it live.</Typography>
               <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 1 }}>
-                <Button variant="contained" onClick={save}>Save & share</Button>
-                <Button variant="outlined" startIcon={<VisibilityRoundedIcon />} onClick={togglePreview}>Preview</Button>
+                <Button variant="contained" onClick={save}>Save &amp; view</Button>
                 <Button variant="text" onClick={() => setHtml(STARTER_HTML)}>Reset HTML</Button>
                 <Button variant="outlined" startIcon={<QrCode2RoundedIcon />} onClick={() => setDeviceLogin(true)}>Log in on another device</Button>
                 <Button variant="outlined" startIcon={<DownloadRoundedIcon />} onClick={() => identityService.exportFile()}>Export identity</Button>
