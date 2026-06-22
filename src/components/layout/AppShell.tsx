@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Box, Stack, Typography, Tooltip, IconButton, Chip, Avatar, Divider, CircularProgress, Badge, Popover, Button, useMediaQuery } from "@mui/material";
+import type { Theme } from "@mui/material";
 import NotificationsRoundedIcon from "@mui/icons-material/NotificationsRounded";
 import { useNavigate, useLocation } from "react-router-dom";
 import { bus } from "@/lib/events";
@@ -24,6 +25,7 @@ import { useStore } from "@/store/useStore";
 import UserAvatar from "@/components/common/UserAvatar";
 import PresenceList from "@/components/layout/PresenceList";
 import InstallButton from "@/components/layout/InstallButton";
+import GlobalSearch from "@/components/layout/GlobalSearch";
 
 const NAV = [
   { to: "/", label: "Feed", icon: <HomeRoundedIcon /> },
@@ -120,14 +122,23 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const me = useStore((s) => s.me);
   const onlineCount = useStore((s) => s.onlineCount);
   const status = useStore((s) => s.settings.presenceStatus);
-  const compact = useMediaQuery((theme) => theme.breakpoints.down("md"));
+  const compact = useMediaQuery((theme: Theme) => theme.breakpoints.down("md"));
+
+  // Logo click → go to the home feed AND scroll it to the very top. rAF runs the
+  // scroll after the route commits; #app-scroll is the persistent scroll container.
+  const goHome = () => {
+    nav("/");
+    // Instant + synchronous: works mid-route-change and even when the tab is
+    // backgrounded (requestAnimationFrame / smooth-scroll get paused then).
+    document.getElementById("app-scroll")?.scrollTo({ top: 0 });
+  };
 
   return (
     <Box sx={{ position: "relative", zIndex: 1, height: "100vh", overflow: "hidden", p: { xs: 0, sm: 1, md: 2 } }}>
     <Box sx={{ display: "grid", gridTemplateColumns: compact ? "56px 1fr" : "230px 1fr", height: { xs: "100vh", md: "calc(100vh - 32px)" }, bgcolor: "var(--bl-face)", border: "1px solid var(--bl-edge-frame)", borderRadius: { xs: 0, md: "8px" }, overflow: "hidden", boxShadow: "0 12px 44px rgba(0,0,0,0.4)" }}>
       {/* nav rail — full height, stays put while the content column scrolls */}
       <Box sx={{ borderRight: "1px solid var(--bl-line)", p: { xs: 0.75, sm: 1 }, display: "flex", flexDirection: "column", gap: 0.25, height: "100%", overflowY: "auto", background: "linear-gradient(180deg, var(--bl-tasks-1), var(--bl-tasks-2))" }}>
-        <Stack direction="row" alignItems="center" spacing={1} onClick={() => nav("/")} role="button" aria-label="Go to home feed"
+        <Stack direction="row" alignItems="center" spacing={1} onClick={goHome} role="button" aria-label="Go to home feed and scroll to top"
           sx={{ px: { xs: 0.5, sm: 1 }, py: 1.5, cursor: "pointer", borderRadius: 2, "&:hover": { opacity: 0.85 } }}>
           <Box component="img" src={`${import.meta.env.BASE_URL}logo.png`} alt="Ledger" sx={{ width: { xs: 28, sm: 30 }, height: { xs: 28, sm: 30 }, borderRadius: "8px", display: "block", boxShadow: "0 0 18px rgba(58,155,240,.35)", flexShrink: 0 }} />
           {!compact && <Typography variant="h6" sx={{ background: "linear-gradient(90deg,#3f97ff,#1668e0)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>Ledger</Typography>}
@@ -191,7 +202,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <Box sx={{ display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, overflow: "hidden", bgcolor: "var(--bl-face)" }}>
         {/* Luna title bar */}
         <Stack direction="row" alignItems="center" spacing={1.5} sx={{ px: 2, py: 1, position: "sticky", top: 0, zIndex: 5, color: "#fff", borderBottom: "1px solid var(--bl-title-edge)", background: "var(--bl-gloss-title), linear-gradient(180deg, var(--bl-title-hi), var(--bl-title-low))", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)" }}>
-          <Typography variant="h6" sx={{ flex: 1, color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.4)" }}>{NAV.find((n) => n.to === pathname)?.label ?? (pathname.startsWith("/chatroom") ? "Town Square" : "Ledger")}</Typography>
+          <Typography variant="h6" sx={{ color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.4)", display: { xs: "none", md: "block" }, whiteSpace: "nowrap", flex: { md: "0 0 auto" } }}>{NAV.find((n) => n.to === pathname)?.label ?? (pathname.startsWith("/chatroom") ? "Town Square" : "Ledger")}</Typography>
+          <Box sx={{ flex: 1, display: "flex", justifyContent: compact ? "flex-end" : "flex-start" }}><GlobalSearch compact={compact} /></Box>
           <ModelStatusChip />
           <AlertsBell />
           <Chip size="small" label={`${onlineCount} online`} sx={{ bgcolor: "rgba(255,255,255,0.92)", color: "var(--bl-green-600)", border: "none", "& .MuiChip-label": { fontWeight: 700 } }} icon={<Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#4ca325", ml: 1 }} />} />
