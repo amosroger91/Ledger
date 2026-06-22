@@ -116,6 +116,10 @@ export const storage = {
       all.sort((a, b) => b.createdAt - a.createdAt);
       return all.slice(0, limit);
     }
+    // Stream newest-first with a cursor (incremental — never one huge deserialize),
+    // keeping every human/self post and capping the rss-bot + nostr firehose at
+    // `limit`, over a bounded window — so per-render cost stays ~constant no matter
+    // how large the global corpus grows.
     const scanCap = Math.max(limit * 4, 3000);
     const out: Post[] = [];
     let firehose = 0, scanned = 0;
@@ -124,7 +128,7 @@ export const storage = {
       scanned++;
       const p = cur.value;
       if (p.author === "rss-bot" || p.source === "nostr") { if (firehose < limit) { out.push(p); firehose++; } } // rss-bot + nostr = the firehose
-      else out.push(p); // everyone else (humans, your posts, changelog) is always kept within the window
+      else out.push(p); // humans, your posts, changelog — always kept within the window
       cur = await cur.continue();
     }
     return out;

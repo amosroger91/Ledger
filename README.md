@@ -81,6 +81,13 @@ own. You are not the product. You are the owner.
   (curated list across 10 topics + your own custom feeds, individually toggleable)
   and posts the headline, summary, link, and time. Stories you "missed" while away
   backfill into the timeline at their real publish time.
+- **Nostr bridge** — Ledger speaks **[Nostr](https://nostr.com/)**: notes (kind 1)
+  for popular hashtags and the topics you follow stream in from public relays as
+  external **NOSTR** users (each note's schnorr signature verified before it's shown).
+  You can **reply and react**, and because Ledger holds a Nostr keypair for you, those
+  actually reach the real authors. **Sign in with your existing Nostr account** (paste
+  your `nsec…` at sign-up) or get a fresh key automatically. Markdown-formatted and
+  foreign-language notes render cleanly, with one-tap **translate-to-English**.
 - **Communities** — Discord/Reddit-style servers with text/voice/stage/event channels.
 - **Wallet & Market (Polygon)** — a self-custody Polygon wallet (send/receive MATIC
   & USDC) and a marketplace where buying pays the seller on-chain, peer-to-peer.
@@ -174,6 +181,49 @@ The result is genuinely cool:
 
 So even with the relay switched off, the news layer keeps running on borrowed slices
 of its readers' devices — no cron job required, no per-user cloud bill.
+
+---
+
+## Nostr — plug into the wider open network
+
+RSS brings the read-only web in; **[Nostr](https://nostr.com/)** plugs Ledger into a
+whole *interactive* decentralized network — millions of notes from a protocol that,
+like Ledger, has no company in the middle. A raw-WebSocket client connects to public
+relays and streams in **kind-1 notes** for popular hashtags **plus the topics you
+follow**, ingesting them as posts authored by `nostr:<pubkey>`. They sit right in your
+feed but are clearly marked as a different **type** of user (external), and **every
+note's schnorr signature is verified** before it's shown, so forgeries are dropped.
+
+It's genuinely **two-way**. On first use Ledger generates a **Nostr keypair** for you
+(or, at sign-up, you can paste your existing **`nsec…`** to sign in with the account
+you already have). With it, your **replies** (NIP-10) and **reactions** (kind 7) are
+signed and published back to the relays — the real Nostr authors actually receive
+them — and you can post brand-new notes too. A couple of niceties make the foreign
+firehose readable:
+
+- **Markdown rendering** — Nostr notes commonly use `**bold**`, `*italic*`, `` `code` ``,
+  links, `#hashtags` and `nostr:` references; Ledger renders that formatting safely
+  (as escaped React nodes, never injected HTML).
+- **Translate to English** — non-English notes get a one-tap **"Translate to English"**
+  (clearly labeled, with a toggle back to the original), or auto-translate from Settings.
+
+Toggle the whole bridge on/off in **Settings → Nostr posts**. Nothing about it touches
+your Ledger identity — it's a separate key for a separate network, bridged into one feed.
+
+---
+
+## Your timeline is also the app's changelog
+
+Ledger has no separate "release notes" page — it ships its own story **into your feed.**
+A built-in bot pulls the repository's recent **GitHub commits** (via the public GitHub
+API, no key), de-dupes them by commit **SHA**, and posts each one as **"Ledger Dev 🛠️"**
+right in the timeline — then syncs them over [Gun.js](https://gun.eco/) like any other
+post, so the whole network watches the project evolve in real time, from inside the app.
+
+That same timeline is one **unified, signed, self-healing record**: human posts, RSS-Bot
+stories (backfilled at their real publish time), bridged Nostr notes, and the dev
+changelog all land in the same place, ranked on your device, and reconciled
+peer-to-peer (see [Emergent collective memory](#emergent-collective-memory) below).
 
 ---
 
@@ -289,6 +339,10 @@ needs nothing else to run:
 - **[Gun.js](https://gun.eco/)** — a decentralized graph database that syncs over
   public relay peers, so posts (human **and** RSS-Bot) and the public Swarm Lounge
   **persist and reach people who were offline** — still with no database you own or pay for.
+- **[Nostr](https://nostr.com/)** — a raw-WebSocket client to public Nostr relays
+  bridges the wider network into your feed: read verified notes, and publish signed
+  replies, reactions and notes with your own Nostr key (`nostr-tools` is used only for
+  the crypto — keygen, signing, verification, npub/nsec encoding).
 - **An optional persistence node** — a tiny Node.js + Gun relay we keep online 24/7
   for durable history and server-side RSS. It's just another peer with **no
   authority**, and the app works fine without it — see
@@ -356,8 +410,8 @@ moderation philosophy in **[MODERATION.md](MODERATION.md)**.
 ## Tech
 
 **App:** React · TypeScript · Vite · Material UI (Bliss/Luna theme) · Zustand · IndexedDB (`idb`)
-· Gun.js · PeerJS (WebRTC) · Web Crypto · WebLLM (WebGPU) · ethers.js (Polygon) ·
-nsfwjs + TensorFlow.js & obscenity (on-device content filtering).
+· Gun.js · PeerJS (WebRTC) · nostr-tools (Nostr bridge) · Web Crypto · WebLLM (WebGPU) ·
+ethers.js (Polygon) · nsfwjs + TensorFlow.js & obscenity (on-device content filtering).
 
 **Optional node:** Node.js · Express · Gun.js · rss-parser (see [`server/`](./server)).
 

@@ -119,15 +119,25 @@ export default function FeedView() {
     setReplies(replies);
   }, [algo, settings.moderationProfile, settings.nostrEnabled, community]);
 
-  // Regenerate immediately on mount, but DEBOUNCE bus-driven updates: a sync burst
-  // (relay RSS dump, Nostr firehose, peer history) fires feed:updated hundreds of
-  // times — coalesce into one rank instead of one-per-event (was effectively O(N^2)).
+  // Regenerate immediately on mount. Bus-driven updates use a leading THROTTLE: the
+  // first update after an idle gap re-ranks at once (your own post appears instantly),
+  // while a sync BURST (relay RSS dump, Nostr firehose, peer history) is coalesced to
+  // at most one re-rank per GAP — so a streaming feed never pins the main thread
+  // re-ranking on every event, and (unlike a plain debounce) never starves either.
   useEffect(() => {
     refresh();
-    let t: ReturnType<typeof setTimeout>;
-    const debounced = () => { clearTimeout(t); t = setTimeout(refresh, 250); };
-    const off = bus.on("feed:updated", debounced);
-    return () => { off(); clearTimeout(t); };
+    const GAP = 400;
+    const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let last = 0;
+    const fire = () => { last = now(); timer = null; refresh(); };
+    const onUpdate = () => {
+      const elapsed = now() - last;
+      if (elapsed >= GAP) { if (timer) clearTimeout(timer); fire(); }   // idle → re-rank now
+      else if (!timer) timer = setTimeout(fire, GAP - elapsed);          // mid-burst → one trailing re-rank at the GAP boundary
+    };
+    const off = bus.on("feed:updated", onUpdate);
+    return () => { off(); if (timer) clearTimeout(timer); };
   }, [refresh]);
   // Scroll to & highlight a post when an alert deep-links to it.
   useEffect(() => bus.on("focus:post", ({ postId }) => {
