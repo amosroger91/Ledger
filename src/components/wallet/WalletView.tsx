@@ -57,7 +57,7 @@ export default function WalletView() {
         <b>Real money, real risk.</b> This is a hot <b>burner wallet</b> whose private key is stored in this browser — anyone with access to this device (or who clears site data without a backup) can lose the funds. Keep only small amounts and <b>export your key</b> to back it up.
       </Alert>
       <Alert severity="error" sx={{ mb: 2 }}>
-        Transactions on Polygon are <b>permanent and irreversible</b>. ZuccBook is non-custodial software provided <b>“as is”</b>, with <b>no warranty</b> — it never holds your keys or funds. <b>You alone are responsible for your funds and transactions.</b> ZuccBook and its authors are <b>not liable for any loss, theft, failed transaction, scam, or damages</b>. Nothing here is financial advice. Crypto is volatile and risky.
+        Transactions on Polygon are <b>permanent and irreversible</b>. Ledger is non-custodial software provided <b>“as is”</b>, with <b>no warranty</b> — it never holds your keys or funds. <b>You alone are responsible for your funds and transactions.</b> Ledger and its authors are <b>not liable for any loss, theft, failed transaction, scam, or damages</b>. Nothing here is financial advice. Crypto is volatile and risky.
       </Alert>
 
       <GlassCard sx={{ mb: 2 }}>

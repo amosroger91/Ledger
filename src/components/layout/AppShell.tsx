@@ -129,7 +129,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <Box sx={{ borderRight: "1px solid var(--bl-line)", p: 1, display: "flex", flexDirection: "column", gap: 0.25, height: "100%", overflowY: "auto", background: "linear-gradient(180deg, var(--bl-tasks-1), var(--bl-tasks-2))" }}>
         <Stack direction="row" alignItems="center" spacing={1} sx={{ px: 1, py: 1.5 }}>
           <Box sx={{ width: 28, height: 28, borderRadius: "8px", background: "linear-gradient(135deg,#3f97ff,#1668e0,#0a55cf)", boxShadow: "0 0 18px rgba(58,155,240,.5)" }} />
-          {!compact && <Typography variant="h6" sx={{ background: "linear-gradient(90deg,#3f97ff,#1668e0)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>ZuccBook</Typography>}
+          {!compact && <Typography variant="h6" sx={{ background: "linear-gradient(90deg,#3f97ff,#1668e0)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>Ledger</Typography>}
         </Stack>
 
         {NAV.map((item) => {
@@ -160,7 +160,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             already installed or unsupported. */}
         <InstallButton compact={compact} />
 
-        {/* Support — ZuccBook stays free, open-source & uncensored; the only
+        {/* Support — Ledger stays free, open-source & uncensored; the only
             funding is voluntary support for the developer. */}
         <Tooltip title={compact ? "Support the project" : ""} placement="right">
           <Box
@@ -188,7 +188,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <Box sx={{ display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, overflow: "hidden", bgcolor: "var(--bl-face)" }}>
         {/* Luna title bar */}
         <Stack direction="row" alignItems="center" spacing={1.5} sx={{ px: 2, py: 1, position: "sticky", top: 0, zIndex: 5, color: "#fff", borderBottom: "1px solid var(--bl-title-edge)", background: "var(--bl-gloss-title), linear-gradient(180deg, var(--bl-title-hi), var(--bl-title-low))", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)" }}>
-          <Typography variant="h6" sx={{ flex: 1, color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.4)" }}>{NAV.find((n) => n.to === pathname)?.label ?? "ZuccBook"}</Typography>
+          <Typography variant="h6" sx={{ flex: 1, color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.4)" }}>{NAV.find((n) => n.to === pathname)?.label ?? "Ledger"}</Typography>
           <ModelStatusChip />
           <AlertsBell />
           <Chip size="small" label={`${onlineCount} online`} sx={{ bgcolor: "rgba(255,255,255,0.92)", color: "var(--bl-green-600)", border: "none", "& .MuiChip-label": { fontWeight: 700 } }} icon={<Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#4ca325", ml: 1 }} />} />

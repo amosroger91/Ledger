@@ -1,4 +1,4 @@
-# ZuccBook — Decentralized Moderation Architecture
+# Ledger — Decentralized Moderation Architecture
 
 > Moderation here is **not** ban/delete by a platform. Content can exist on the
 > network; **every user and community decides what they see**. The system is a

@@ -50,7 +50,7 @@ export default function MarketView() {
       </Stack>
 
       <Alert severity="warning" sx={{ mb: 2 }}>
-        Payments are <b>peer-to-peer and final</b> — there's <b>no escrow and no refunds</b>. A listing is a request to pay a stranger's wallet; nothing guarantees you'll receive the item. Only buy from people you trust. ZuccBook is <b>not responsible for any loss, fraud, or damages</b> — use at your own risk.
+        Payments are <b>peer-to-peer and final</b> — there's <b>no escrow and no refunds</b>. A listing is a request to pay a stranger's wallet; nothing guarantees you'll receive the item. Only buy from people you trust. Ledger is <b>not responsible for any loss, fraud, or damages</b> — use at your own risk.
       </Alert>
 
       <GlassCard sx={{ mb: 2 }}>

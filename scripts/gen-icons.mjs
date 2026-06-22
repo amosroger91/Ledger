@@ -1,6 +1,6 @@
 // Generates the PWA icon set as real PNGs — no image libraries, just Node's
 // zlib. Run with `node scripts/gen-icons.mjs`; output lands in public/.
-// The mark is ZuccBook's blue rounded tile with a white "Z", matching the nav
+// The mark is Ledger's blue rounded tile with a white "L", matching the nav
 // logo gradient (#3f97ff → #1668e0 → #0a55cf).
 import { deflateSync } from "node:zlib";
 import { writeFileSync, mkdirSync } from "node:fs";
@@ -83,8 +83,7 @@ function drawIcon(size, { maskable }) {
   const gx0 = pad, gx1 = size - pad;
   const gy0 = pad, gy1 = size - pad;
   const gw = gx1 - gx0, gh = gy1 - gy0;
-  const bar = gh * 0.2;          // thickness of the Z's top/bottom bars
-  const diagHalf = bar * 0.62;   // half-width of the diagonal stroke
+  const bar = gh * 0.2;          // thickness of the L's strokes
 
   const insideRoundedRect = (x, y) => {
     if (radius <= 0) return true;
@@ -94,13 +93,11 @@ function drawIcon(size, { maskable }) {
     return dx * dx + dy * dy <= radius * radius;
   };
 
-  const inZ = (x, y) => {
+  const inL = (x, y) => {
     if (x < gx0 || x > gx1 || y < gy0 || y > gy1) return false;
-    if (y <= gy0 + bar) return true;            // top bar
-    if (y >= gy1 - bar) return true;            // bottom bar
-    const frac = (y - gy0) / gh;                // 0 at top → 1 at bottom
-    const cx = gx1 - frac * gw;                 // diagonal center, top-right→bottom-left
-    return Math.abs(x - cx) <= diagHalf;        // diagonal stroke
+    if (x <= gx0 + bar) return true;            // vertical (left) stroke
+    if (y >= gy1 - bar) return true;            // bottom (foot) stroke
+    return false;
   };
 
   for (let y = 0; y < size; y++) {
@@ -110,7 +107,7 @@ function drawIcon(size, { maskable }) {
         rgba[i + 3] = 0; // transparent corner
         continue;
       }
-      if (inZ(x + 0.5, y + 0.5)) {
+      if (inL(x + 0.5, y + 0.5)) {
         rgba[i] = 255; rgba[i + 1] = 255; rgba[i + 2] = 255; rgba[i + 3] = 255;
       } else {
         const [r, g, b] = gradientAt(y / size);

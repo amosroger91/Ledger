@@ -22,15 +22,15 @@ export default function InstallHelpDialog({ open, onClose }: { open: boolean; on
 
   async function install() {
     const outcome = await promptInstall();
-    if (outcome === "accepted") { toast("Installing ZuccBook…", "success"); onClose(); }
+    if (outcome === "accepted") { toast("Installing Ledger…", "success"); onClose(); }
   }
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth PaperProps={{ sx: { backgroundImage: "none" } }}>
-      <DialogTitle sx={{ pb: 0.5 }}>Install ZuccBook on your phone</DialogTitle>
+      <DialogTitle sx={{ pb: 0.5 }}>Install Ledger on your phone</DialogTitle>
       <DialogContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          ZuccBook installs straight from the browser — no app store. It then opens full-screen like a native app and works offline.
+          Ledger installs straight from the browser — no app store. It then opens full-screen like a native app and works offline.
         </Typography>
 
         {canPrompt && (
@@ -43,7 +43,7 @@ export default function InstallHelpDialog({ open, onClose }: { open: boolean; on
           {qr && <Box component="img" src={qr} alt="Open on your phone" sx={{ width: 168, height: 168, borderRadius: 2, border: "1px solid var(--bl-line)" }} />}
         </Box>
         <Typography variant="caption" color="text.secondary" sx={{ display: "block", textAlign: "center" }}>
-          On a computer? Scan this with your phone's camera to open ZuccBook there, then follow the steps below.
+          On a computer? Scan this with your phone's camera to open Ledger there, then follow the steps below.
         </Typography>
 
         <Divider sx={{ my: 2 }} />

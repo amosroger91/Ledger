@@ -1,6 +1,6 @@
 {
-  "name": "ZuccBook — the local-first social universe",
-  "short_name": "ZuccBook",
+  "name": "Ledger — the local-first social universe",
+  "short_name": "Ledger",
   "description": "A decentralized, local-first social platform that runs entirely in your browser. You own your identity, your feed is generated on-device, and communication is peer-to-peer.",
   "id": "./",
   "start_url": "./",

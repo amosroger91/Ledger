@@ -64,7 +64,7 @@ export default function SettingsView() {
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           Everything lives in this browser (IndexedDB + localStorage). Clearing site data wipes your local copy — export your identity first from the Profile page.
         </Typography>
-        <Button color="error" variant="outlined" sx={{ mt: 1.5 }} onClick={() => { if (confirm("Reset ZuccBook on this device? This clears local data. Export your identity first!")) { indexedDB.deleteDatabase("nebula"); localStorage.clear(); location.reload(); } }}>
+        <Button color="error" variant="outlined" sx={{ mt: 1.5 }} onClick={() => { if (confirm("Reset Ledger on this device? This clears local data. Export your identity first!")) { indexedDB.deleteDatabase("nebula"); localStorage.clear(); location.reload(); } }}>
           Reset this device
         </Button>
       </GlassCard>

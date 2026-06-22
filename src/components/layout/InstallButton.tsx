@@ -20,7 +20,7 @@ export default function InstallButton({ compact }: { compact: boolean }) {
   async function onClick() {
     if (canPrompt) {
       const outcome = await promptInstall();
-      if (outcome === "accepted") toast("Installing ZuccBook…", "success");
+      if (outcome === "accepted") toast("Installing Ledger…", "success");
       return;
     }
     setIosOpen(true); // iOS: guide the user through Add to Home Screen
@@ -46,7 +46,7 @@ export default function InstallButton({ compact }: { compact: boolean }) {
       </Tooltip>
 
       <Dialog open={iosOpen} onClose={() => setIosOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ fontWeight: 800 }}>Install ZuccBook on your iPhone</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 800 }}>Install Ledger on your iPhone</DialogTitle>
         <DialogContent>
           <Typography sx={{ mb: 2 }} color="text.secondary">
             iOS installs web apps from the Safari share menu. It takes two taps:
@@ -62,7 +62,7 @@ export default function InstallButton({ compact }: { compact: boolean }) {
             </Stack>
           </Stack>
           <Typography sx={{ mt: 2 }} variant="caption" color="text.secondary">
-            ZuccBook then opens full-screen, like a native app. Make sure you're in Safari — other iOS browsers can't add to the home screen.
+            Ledger then opens full-screen, like a native app. Make sure you're in Safari — other iOS browsers can't add to the home screen.
           </Typography>
         </DialogContent>
         <DialogActions>

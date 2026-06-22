@@ -164,7 +164,7 @@ class CompanionService {
   }
 
   private async llmAnswer(eng: any, prompt: string, ctx?: { posts?: Post[] }): Promise<string> {
-    const sys = `You are ZuccBook's on-device AI companion, running fully locally and privately in the user's browser. Be concise, friendly and helpful.`;
+    const sys = `You are Ledger's on-device AI companion, running fully locally and privately in the user's browser. Be concise, friendly and helpful.`;
     const feed = (ctx?.posts ?? []).slice(0, 8).map((p) => `- ${p.authorName}: ${p.text ?? ""}`).join("\n");
     const reply = await eng.chat.completions.create({
       messages: [

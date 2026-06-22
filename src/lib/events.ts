@@ -5,7 +5,7 @@
 // ============================================================
 import type { Post, ChatMessage, RichPresence, ListenRoom, WatchPartyState, Profile, Listing, TrustEdge, Alert } from "@/types";
 
-export interface ZuccBookEvents {
+export interface LedgerEvents {
   "identity:ready": { pk: string };
   "feed:post": Post;
   "feed:updated": void;
@@ -54,16 +54,16 @@ export interface ZuccBookEvents {
 type Handler<T> = (payload: T) => void;
 
 class Bus {
-  private map = new Map<keyof ZuccBookEvents, Set<Handler<any>>>();
+  private map = new Map<keyof LedgerEvents, Set<Handler<any>>>();
 
-  on<K extends keyof ZuccBookEvents>(evt: K, fn: Handler<ZuccBookEvents[K]>): () => void {
+  on<K extends keyof LedgerEvents>(evt: K, fn: Handler<LedgerEvents[K]>): () => void {
     let set = this.map.get(evt);
     if (!set) { set = new Set(); this.map.set(evt, set); }
     set.add(fn);
     return () => set!.delete(fn);
   }
 
-  emit<K extends keyof ZuccBookEvents>(evt: K, payload: ZuccBookEvents[K]): void {
+  emit<K extends keyof LedgerEvents>(evt: K, payload: LedgerEvents[K]): void {
     const set = this.map.get(evt);
     if (set) for (const fn of [...set]) { try { fn(payload); } catch (e) { console.error("[bus]", evt, e); } }
   }
@@ -72,5 +72,5 @@ class Bus {
 export const bus = new Bus();
 
 /** Convenience for the common toast event. */
-export const toast = (message: string, kind: ZuccBookEvents["toast"]["kind"] = "info") =>
+export const toast = (message: string, kind: LedgerEvents["toast"]["kind"] = "info") =>
   bus.emit("toast", { kind, message });

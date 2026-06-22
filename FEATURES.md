@@ -1,9 +1,9 @@
-# ZuccBook — Feature Atlas
+# Ledger — Feature Atlas
 
 > Everything this platform does, and the "wild architecture" that makes each
 > thing possible **with no backend, no database, and no hosting bill.**
 
-ZuccBook is a full social platform — feed, groups, DMs, chatrooms, watch
+Ledger is a full social platform — feed, groups, DMs, chatrooms, watch
 parties, an on‑device AI, a crypto wallet, moderation, fact‑checking — that ships
 as **static files on GitHub Pages**. The repository *is* the server. There is no
 API, no cloud function, no Postgres. Every capability below is achieved purely in

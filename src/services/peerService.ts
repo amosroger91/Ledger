@@ -1,7 +1,7 @@
 // ============================================================
 //  peerService — the peer-to-peer networking layer (PeerJS).
 //
-//  GitHub-Pages-static means no server, so ZuccBook uses a serverless
+//  GitHub-Pages-static means no server, so Ledger uses a serverless
 //  hub-relay: the first peer to claim a well-known id ("nebula-hub-vN")
 //  becomes the relay HUB; everyone else connects to it as a CLIENT.
 //  The hub relays presence, new posts, and direct messages to the
@@ -20,6 +20,8 @@ import { feedService } from "./feedService";
 import { storage } from "./storage";
 import type { ChatMessage, Post, RichPresence, WatchPartyState } from "@/types";
 
+// Frozen network id — NOT brand text. Renaming this forks the P2P swarm so
+// existing clients can't find new ones. Kept as-is through the Ledger rebrand.
 const HUB_ID = "nebula-hub-v1";
 
 type Envelope =

@@ -82,7 +82,7 @@ export default function QrScanDialog({ open, onClose, onFound }: { open: boolean
   function submitManual() {
     const frag = fragOf(manual.trim());
     if (frag) onFound(frag);
-    else setErr("That doesn't look like a ZuccBook sign-in link.");
+    else setErr("That doesn't look like a Ledger sign-in link.");
   }
 
   return (

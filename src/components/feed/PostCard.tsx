@@ -68,7 +68,7 @@ function SpotifyCard({ kind, id }: { kind: string; id: string }) {
     const offMedia = bus.on("media:play", ({ id }) => { if (id !== "spotify") setActive(false); });
     return () => { off(); offMedia(); };
   }, []);
-  const start = () => { setActive(true); bus.emit("spotify:play", { embedUrl: `https://open.spotify.com/embed/${kind}/${id}?utm_source=zuccbook`, dockId: dockId.current }); };
+  const start = () => { setActive(true); bus.emit("spotify:play", { embedUrl: `https://open.spotify.com/embed/${kind}/${id}?utm_source=ledger`, dockId: dockId.current }); };
   return (
     <Box sx={{ mt: 1, position: "relative", height: tall ? 380 : 80, borderRadius: 1.5, overflow: "hidden", border: "1px solid var(--bl-line)" }}>
       {active ? (

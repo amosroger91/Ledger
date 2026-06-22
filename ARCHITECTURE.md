@@ -1,4 +1,4 @@
-# Nebula — Architecture
+# Ledger — Architecture
 
 > A decentralized, local-first, browser-native social platform. No accounts, no
 > servers required for core functionality, ~$0 to host. The browser is the
@@ -14,9 +14,9 @@ this repo) and **what the architecture is built to grow into**.
 ## 1. Philosophy
 
 Traditional social media centralizes the database, the recommendation engine,
-moderation, identity, and chat. Nebula inverts every one of those:
+moderation, identity, and chat. Ledger inverts every one of those:
 
-| Concern | Traditional | Nebula |
+| Concern | Traditional | Ledger |
 |---|---|---|
 | Identity | account on a server | a keypair you generate & own (a file) |
 | Feed ranking | cloud recommender | on-device embeddings + vector search |

@@ -1,5 +1,5 @@
 // ============================================================
-//  ZuccBook — core domain types.
+//  Ledger — core domain types.
 //  Everything in the app is one of these shapes. Records that
 //  travel between peers are signed (see `Signed<T>`).
 // ============================================================

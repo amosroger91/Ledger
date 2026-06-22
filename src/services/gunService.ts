@@ -28,6 +28,10 @@ const PEERS = [
   "https://peer.wallie.io/gun",
   "https://relay.peer.ooo/gun",
 ];
+// Frozen graph namespace — NOT brand text. This is the shared Gun root every
+// peer (and the relay backend) reads/writes; renaming it forks the entire
+// decentralized graph and orphans all existing data. Kept through the Ledger
+// rebrand and must match the backend's GUN_ROOT.
 const ROOT = "zuccbook-v1";
 
 let gun: any = null;

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Box, Typography } from "@mui/material";
 import { marked } from "marked";
 import GlassCard from "@/components/common/GlassCard";
-// The README is the source of truth for "what is ZuccBook" — bundle it at build
+// The README is the source of truth for "what is Ledger" — bundle it at build
 // time and render it here so the About page is always in sync with the repo.
 import readme from "../../../README.md?raw";
 
@@ -10,7 +10,7 @@ export default function AboutView() {
   const html = useMemo(() => marked.parse(readme, { async: false, gfm: true, breaks: false }) as string, []);
   return (
     <Box sx={{ maxWidth: 820, mx: "auto" }}>
-      <Typography variant="h5" sx={{ mb: 0.5 }}>About ZuccBook</Typography>
+      <Typography variant="h5" sx={{ mb: 0.5 }}>About Ledger</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Straight from the project's README — what this is, why it's built this way, and how it all works with no server.</Typography>
       <GlassCard
         // First-party, build-time content — safe to render as HTML.

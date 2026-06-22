@@ -1,6 +1,6 @@
-/* ZuccBook service worker — offline app shell + installability.
+/* Ledger service worker — offline app shell + installability.
  *
- * Deliberately conservative because ZuccBook is local-first and peer-to-peer:
+ * Deliberately conservative because Ledger is local-first and peer-to-peer:
  *  - Only same-origin GET requests are ever cached (the built app shell/assets).
  *  - Cross-origin traffic (Gun relays, PeerJS, the on-device model CDN, embeds)
  *    is passed straight through and never cached — we must not serve stale P2P

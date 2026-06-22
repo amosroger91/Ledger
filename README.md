@@ -1,4 +1,4 @@
-# 🌌 ZuccBook
+# 📒 Ledger
 
 ### A social network that no company owns — not even a little.
 
@@ -18,16 +18,18 @@ reading right now is also what hosts the live app — for free.** The same code 
 both the product *and* the server. GitHub Pages serves these static files to the
 whole world at $0/month. No hosting bill. No backend to run. No infrastructure to
 own. A complete social platform that fits in a folder and costs nothing to keep
-alive. (Yes, it's called *ZuccBook*. Yes, that's the joke.) 😄
+alive. (The name fits what it is: every post is a **signed entry in an open
+record** that no company keeps the books on — your social life as a public
+ledger that *you* own, not them.) 😄
 
 > **In plain terms:** normally a social app = your data sitting on a corporation's
-> computers, under their rules. ZuccBook flips it: *your* computer is the computer,
+> computers, under their rules. Ledger flips it: *your* computer is the computer,
 > *you* own your account (it's literally a file), and the "website" is just free,
 > public, static code anyone can read, fork, or re-host. Decentralization, for real.
 
 ## This is radical ownership as a tech consumer
 
-ZuccBook is what it looks like to **own your software instead of renting it from a
+Ledger is what it looks like to **own your software instead of renting it from a
 platform.** You own your identity (a keypair on your device), your data (in your
 browser, not a data center), the AI (it runs on your own GPU), your money (a
 self-custody wallet whose key never leaves you), and even *what you trust* — there
@@ -91,16 +93,16 @@ and open code. You are not the product. You are the owner.
 
 ## RSS: an old idea that quietly fixes social media
 
-ZuccBook leans hard on **[RSS](https://en.wikipedia.org/wiki/RSS)** — a 25-year-old
+Ledger leans hard on **[RSS](https://en.wikipedia.org/wiki/RSS)** — a 25-year-old
 open standard that big social media spent a decade burying, because it does the one
 thing their business model can't survive: it lets *you* read everything from
 *everywhere* without an algorithm deciding what you deserve to see.
 
 Here's the humility most platforms refuse to admit: **we are not the whole
 internet.** Facebook, X, and TikTok all pretend their walled garden *is* the world,
-and trap you inside it. ZuccBook does the opposite — it assumes the good stuff lives
+and trap you inside it. Ledger does the opposite — it assumes the good stuff lives
 out *there*, on everyone else's timelines, and simply **tunes in.** Through RSS,
-your ZuccBook timeline can monitor *other* timelines: news sites, YouTube channels,
+your Ledger timeline can monitor *other* timelines: news sites, YouTube channels,
 **TikTok creators**, podcasts, subreddits, GitHub releases, a daily Bible verse —
 any feed on the open web. The "RSS Bot" pulls them in and posts them right alongside
 your friends' posts.
@@ -118,7 +120,7 @@ yours, assembled from the whole open web, on your terms — not a corporation's.
 
 Pulling RSS still costs *some* compute — somebody has to actually hit each feed.
 A normal app pays a server farm to poll thousands of feeds around the clock.
-ZuccBook does something stranger: **the readers do it, together, exactly once.**
+Ledger does something stranger: **the readers do it, together, exactly once.**
 
 Every feed carries a tiny **shared "last-fetched" stamp** on the
 [Gun.js](https://gun.eco/) graph. When you refresh, your device looks at only the
@@ -173,7 +175,7 @@ No central archive. No "you had to be there." Just a collective memory that
 ## Posting is permanent — by design
 
 There's a flip side to having no central server: **there's no central server to delete from.**
-When you post on ZuccBook, it doesn't sit in one company's database where a "delete"
+When you post on Ledger, it doesn't sit in one company's database where a "delete"
 button can wipe it. It's **signed by your key and replicated** — across the durable
 [Gun.js](https://gun.eco/) graph, across the peers who received it, and into the
 local storage of everyone who's already seen it. The same architecture that means
@@ -189,7 +191,7 @@ speaking in public, not like a draft you can quietly take back.
 
 ## How it works (genuinely no backend)
 
-GitHub Pages only serves static files, so ZuccBook is pure browser tech:
+GitHub Pages only serves static files, so Ledger is pure browser tech:
 
 - **[PeerJS](https://peerjs.com/) / WebRTC** — direct browser-to-browser data &
   media through a free public broker. Chatrooms and the post relay use a **star
@@ -226,7 +228,7 @@ config. The repo hosts itself.
 
 ## ⚠️ Money & risk (please read)
 
-The Wallet/Market move **real funds on Polygon**. ZuccBook is **non-custodial,
+The Wallet/Market move **real funds on Polygon**. Ledger is **non-custodial,
 open-source software provided “as is”, with no warranty** — it never holds your
 keys or your money. The wallet is a **hot burner wallet** whose private key lives
 in your browser; if you lose the device or clear site data without exporting the
@@ -258,4 +260,5 @@ moderation philosophy in **[MODERATION.md](MODERATION.md)**.
 React · TypeScript · Vite · Material UI (Bliss/Luna theme) · Zustand · IndexedDB (`idb`)
 · Gun.js · PeerJS (WebRTC) · Web Crypto · WebLLM (WebGPU) · ethers.js (Polygon).
 
-MIT. *Not affiliated with Facebook/Meta — the name is affectionate satire.*
+MIT. *Independent and unaffiliated — there's no company behind Ledger. You own
+the ledger, not us.*

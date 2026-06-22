@@ -20,6 +20,9 @@ import { identityService } from "./identityService";
 import { bufToB64url } from "@/lib/crypto";
 import type { SecretIdentity } from "@/types";
 
+// Frozen link scheme — NOT brand text. Existing device-link QR codes/URLs
+// embed this prefix; renaming it breaks links already in the wild. Kept as-is
+// through the Ledger rebrand.
 const PREFIX = "zuccbook-link-v1-";
 const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // no I/O/0/1 (unambiguous)
 

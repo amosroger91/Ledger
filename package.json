@@ -1,9 +1,9 @@
 {
-  "name": "nebula",
+  "name": "ledger",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Nebula — a decentralized, local-first, browser-native social platform.",
+  "description": "Ledger — a decentralized, local-first, browser-native social platform.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

@@ -10,7 +10,7 @@ import type {
   ReputationLedgerEntry, CompanionMessage, AppSettings,
 } from "@/types";
 
-interface ZuccBookDB extends DBSchema {
+interface LedgerDB extends DBSchema {
   identity: { key: string; value: SecretIdentity };
   posts: { key: string; value: Post; indexes: { byTime: number; byAuthor: string; byCommunity: string } };
   messages: { key: string; value: ChatMessage; indexes: { byChannel: string; byTime: number } };
@@ -20,13 +20,16 @@ interface ZuccBookDB extends DBSchema {
   kv: { key: string; value: unknown };
 }
 
+// Frozen IndexedDB name — NOT brand text. Renaming it points the app at an
+// empty database and orphans every existing user's local data. Kept (along with
+// the "nebula:settings" localStorage key below) through the Ledger rebrand.
 const DB_NAME = "nebula";
 const DB_VERSION = 1;
-let dbp: Promise<IDBPDatabase<ZuccBookDB>> | null = null;
+let dbp: Promise<IDBPDatabase<LedgerDB>> | null = null;
 
 function db() {
   if (!dbp) {
-    dbp = openDB<ZuccBookDB>(DB_NAME, DB_VERSION, {
+    dbp = openDB<LedgerDB>(DB_NAME, DB_VERSION, {
       upgrade(d) {
         d.createObjectStore("identity", { keyPath: "publicKey" });
         const posts = d.createObjectStore("posts", { keyPath: "id" });

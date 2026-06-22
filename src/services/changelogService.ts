@@ -1,7 +1,7 @@
 // ============================================================
 //  changelogService — turns the repo's own git history into timeline
 //  activity. Pulls recent commits from the GitHub API (CORS-enabled,
-//  no key) and posts them as "ZuccBook Dev 🛠️" so the app's evolution
+//  no key) and posts them as "Ledger Dev 🛠️" so the app's evolution
 //  shows up right in the feed. Deduped by commit SHA and persisted via
 //  Gun, exactly like the RSS bot — so it spreads across the network.
 // ============================================================
@@ -11,6 +11,9 @@ import { feedService } from "./feedService";
 import { embed } from "@/lib/embeddings";
 import { bus } from "@/lib/events";
 
+// Real GitHub repo path — NOT brand text. The changelog feed fetches commits
+// from here via the GitHub API, so this must stay the actual repo slug even
+// though the product is now "Ledger". Update only if the repo is renamed.
 const REPO = "amosroger91/ZuccBook";
 const THROTTLE_MS = 30 * 60 * 1000;
 
@@ -35,13 +38,13 @@ class ChangelogService {
         const post: Post = {
           id,
           author: "system",
-          authorName: "ZuccBook Dev 🛠️",
+          authorName: "Ledger Dev 🛠️",
           kind: "text",
           text: [`🛠️ ${title}`, body, c.html_url].filter(Boolean).join("\n\n"),
-          tags: ["zuccbook"],
+          tags: ["ledger"],
           createdAt: date,
           reactions: {},
-          embedding: embed(`${title} ${body} zuccbook changelog commit`),
+          embedding: embed(`${title} ${body} ledger changelog commit`),
           source: "relay",
         };
         await feedService.ingest(post);   // ingest dedupes; ignored if already present
