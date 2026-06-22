@@ -1,11 +1,10 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { Box, ToggleButtonGroup, ToggleButton, Stack, Typography, Button, useMediaQuery, LinearProgress, Chip, CircularProgress, TextField, InputAdornment, IconButton, Avatar } from "@mui/material";
+import { Box, ToggleButtonGroup, ToggleButton, Stack, Typography, Button, useMediaQuery, LinearProgress, Chip, CircularProgress, Avatar } from "@mui/material";
 import type { Theme } from "@mui/material";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import ArrowDownwardRoundedIcon from "@mui/icons-material/ArrowDownwardRounded";
-import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import ClearRoundedIcon from "@mui/icons-material/ClearRounded";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import Composer from "./Composer";
@@ -18,7 +17,7 @@ import { changelogService } from "@/services/changelogService";
 import { storage } from "@/services/storage";
 import { useStore } from "@/store/useStore";
 import { bus } from "@/lib/events";
-import { matchesFilter, matchesQuery, type ContentFilter } from "@/lib/postType";
+import { matchesFilter, type ContentFilter } from "@/lib/postType";
 import type { Post, RecommendationReason, FeedAlgorithm } from "@/types";
 
 const ALGOS: { id: FeedAlgorithm; label: string }[] = [
@@ -50,7 +49,6 @@ export default function FeedView() {
   const [replies, setReplies] = useState<Map<string, Post[]>>(new Map());
   const [verdicts, setVerdicts] = useState<Map<string, import("@/types").ModerationVerdict>>(new Map());
   const [filter, setFilter] = useState<ContentFilter>("all");
-  const [query, setQuery] = useState("");
   const [scrolledDeep, setScrolledDeep] = useState(false);
   const [pull, setPull] = useState(0);   // pull-to-refresh progress (0..1.6)
 
@@ -80,8 +78,8 @@ export default function FeedView() {
 
   // Client-side content-type + keyword (+ group) filtering over the ranked feed.
   const shown = useMemo(
-    () => posts.filter((p) => (!community || p.community === community) && matchesFilter(p, filter) && matchesQuery(p, query)),
-    [posts, filter, query, community],
+    () => posts.filter((p) => (!community || p.community === community) && matchesFilter(p, filter)),
+    [posts, filter, community],
   );
 
   // Render the (already in-memory) feed incrementally: mount a small window of
@@ -92,7 +90,7 @@ export default function FeedView() {
   const PAGE = 12;
   const [visibleCount, setVisibleCount] = useState(PAGE);
   // Reset the window when the feed's identity changes (algorithm/filter/search/group).
-  useEffect(() => { setVisibleCount(PAGE); }, [algo, filter, query, community]);
+  useEffect(() => { setVisibleCount(PAGE); }, [algo, filter, community]);
   const visiblePosts = useMemo(() => shown.slice(0, visibleCount), [shown, visibleCount]);
   const hasMore = visibleCount < shown.length;
   // Latest `shown` for non-reactive handlers (e.g. deep-link focus below).
@@ -209,17 +207,8 @@ export default function FeedView() {
         )}
         <Composer community={community ?? undefined} />
 
-        {/* Controls: Row 1 = Search, Row 2 = Tabs + Filter Chips + Refresh */}
+        {/* Controls: Tabs + Filter Chips + Refresh (keyword search lives in the top bar) */}
         <Stack spacing={1} sx={{ mb: 2 }}>
-          <TextField
-            size="small" fullWidth placeholder="Search posts, people, #tags…" value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            InputProps={{
-              startAdornment: <InputAdornment position="start"><SearchRoundedIcon fontSize="small" /></InputAdornment>,
-              endAdornment: query ? <InputAdornment position="end"><IconButton size="small" onClick={() => setQuery("")}><ClearRoundedIcon fontSize="small" /></IconButton></InputAdornment> : undefined,
-            }}
-          />
-
           <Stack direction="row" alignItems="center" spacing={1} sx={{ flexWrap: "wrap", gap: { xs: 1, md: 1 } }}>
             <Box sx={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', mr: 1, '& .MuiToggleButton-root': { whiteSpace: 'nowrap' } }}>
               <ToggleButtonGroup
@@ -268,8 +257,8 @@ export default function FeedView() {
           <GlassCard><Typography color="text.secondary">
             {posts.length === 0
               ? "No posts match this view yet. Switch algorithms or post something — your feed is generated locally."
-              : (filter !== "all" || query)
-                ? "No posts match your filter/search. Try a different content type or clear the search."
+              : (filter !== "all")
+                ? "No posts match this content filter. Try a different type."
                 : "No posts to show."}
           </Typography></GlassCard>
         )}
@@ -323,7 +312,7 @@ export default function FeedView() {
                   </Typography>
                 </Box>
               )}
-              <Button fullWidth variant="outlined" size="small" startIcon={<AutoAwesomeRoundedIcon />} sx={{ mt: 1.5, textTransform: "none", fontWeight: 700 }} href="#/companion">Ask your Companion</Button>
+              <Button fullWidth variant="outlined" size="small" startIcon={<AutoAwesomeRoundedIcon />} sx={{ mt: 1.5, textTransform: "none", fontWeight: 700 }} onClick={() => bus.emit("companion:open", undefined)}>Ask AI</Button>
               {scrolledDeep && (
                 <Button fullWidth size="small" startIcon={<KeyboardArrowUpRoundedIcon />} onClick={backToTop} sx={{ mt: 1, textTransform: "none", fontWeight: 700, color: "text.secondary" }}>Back to top</Button>
               )}
