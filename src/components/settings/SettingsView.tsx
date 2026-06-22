@@ -43,6 +43,12 @@ export default function SettingsView() {
         <Divider />
         {row("Moderation profile", "Layered local filtering. 'Unfiltered' disables Layer 1.",
           <Select size="small" value={settings.moderationProfile} onChange={(e) => setSettings({ moderationProfile: e.target.value as ModerationProfile })}>{MOD.map((m) => <MenuItem key={m} value={m}>{m}</MenuItem>)}</Select>)}
+        <Divider />
+        {row("Filter adult content", "Blur explicit images (classified on-device with nsfwjs — the picture never leaves your device) and hide posts with explicit language behind a tap.",
+          <Switch checked={settings.filterNsfw} onChange={(e) => { setSettings({ filterNsfw: e.target.checked }); toast(e.target.checked ? "Adult content will be filtered on this device" : "Adult-content filter off", "info"); }} />)}
+        <Divider />
+        {row("Censor cuss words", "Mask profanity inline (fuck → f**k) instead of hiding it. Works whether or not the filter above is on.",
+          <Switch checked={settings.censorProfanity} onChange={(e) => setSettings({ censorProfanity: e.target.checked })} />)}
       </GlassCard>
 
       <GlassCard sx={{ mb: 2 }}>

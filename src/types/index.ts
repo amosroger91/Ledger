@@ -291,4 +291,6 @@ export interface AppSettings {
   presenceStatus: PresenceStatus;
   reducedMotion: boolean;
   showFactChecks: boolean;      // surface PolitiFact fact-check cards under RSS posts
+  filterNsfw: boolean;          // hide adult images (on-device nsfwjs) & gate explicit posts
+  censorProfanity: boolean;     // mask cuss words inline (f**k) instead of hiding the post
 }

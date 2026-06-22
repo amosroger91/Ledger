@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Stack, Box, Typography, IconButton, Chip, Popover, Tooltip, TextField, Button } from "@mui/material";
+import type { SxProps, Theme } from "@mui/material";
 import AddReactionRoundedIcon from "@mui/icons-material/AddReactionRounded";
 import VerifiedRoundedIcon from "@mui/icons-material/VerifiedRounded";
 import ReplyRoundedIcon from "@mui/icons-material/ReplyRounded";
@@ -24,6 +25,7 @@ import ReportProblemRoundedIcon from "@mui/icons-material/ReportProblemRounded";
 import { emojify } from "@/lib/emoticons";
 import { decodeEntities } from "@/lib/htmlEntities";
 import { compressPostImage } from "@/lib/image";
+import { nsfwService } from "@/services/nsfwService";
 import { htmlPostDoc } from "./htmlPost";
 import GifPicker from "@/components/common/GifPicker";
 import { bus, toast } from "@/lib/events";
@@ -223,20 +225,50 @@ function LinkCard({ url }: { url: string }) {
   );
 }
 
+// An <img> that, when the on-device adult-content filter is on, is classified
+// by nsfwjs and kept blurred until it's cleared — or, if flagged, until the
+// viewer taps "view". The classification runs locally; the image never leaves
+// the device. With the filter off it's just a plain image.
+function SafeImage({ src, alt, sx }: { src: string; alt?: string; sx?: SxProps<Theme> }) {
+  const filter = useStore((s) => s.settings.filterNsfw);
+  const [status, setStatus] = useState<"ok" | "checking" | "nsfw">(filter ? "checking" : "ok");
+  const [revealed, setRevealed] = useState(false);
+  useEffect(() => {
+    if (!filter) { setStatus("ok"); return; }
+    let on = true;
+    setStatus("checking");
+    nsfwService.isAdultImage(src).then((bad) => { if (on) setStatus(bad ? "nsfw" : "ok"); }).catch(() => { if (on) setStatus("ok"); });
+    return () => { on = false; };
+  }, [src, filter]);
+  const blurred = filter && !revealed && status !== "ok";
+  return (
+    <Box sx={{ position: "relative", display: "inline-block", maxWidth: "100%", lineHeight: 0 }}>
+      <Box component="img" src={src} alt={alt} loading="lazy" sx={{ ...sx, filter: blurred ? "blur(26px)" : "none", transition: "filter .25s ease" }} />
+      {blurred && (
+        <Box onClick={() => { if (status === "nsfw") setRevealed(true); }}
+          sx={{ position: "absolute", inset: 0, borderRadius: 1.5, display: "grid", placeItems: "center", textAlign: "center", p: 1, color: "#fff", background: "rgba(0,0,0,0.32)", cursor: status === "nsfw" ? "pointer" : "default" }}>
+          {status === "checking"
+            ? <Typography variant="caption" sx={{ fontWeight: 700 }}>Scanning image…</Typography>
+            : <Box><Typography variant="caption" sx={{ fontWeight: 800, display: "block" }}>Sensitive content</Typography><Typography variant="caption" sx={{ opacity: 0.85 }}>Tap to view</Typography></Box>}
+        </Box>
+      )}
+    </Box>
+  );
+}
+
 // Render text with clickable links. Direct image links (incl. Tenor GIFs) are
-// rendered inline as images; non-link spans get emoticons translated to emoji.
-function renderText(text: string) {
+// rendered inline as images (NSFW-gated); non-link spans get emoticons
+// translated to emoji and, when `censor` is on, profanity masked (f**k).
+function renderText(text: string, censor: boolean) {
   const parts = decodeEntities(text).split(/(https?:\/\/[^\s]+)/g);
   return parts.map((p, i) => {
     if (/^https?:\/\//.test(p)) {
       if (IMG_RE.test(p)) {
-        return <Box key={i} component="a" href={p} target="_blank" rel="noopener noreferrer" sx={{ display: "block" }}>
-          <Box component="img" src={p} loading="lazy" sx={{ display: "block", mt: 0.5, maxWidth: "100%", maxHeight: 320, borderRadius: 1.5, border: "1px solid var(--bl-line)" }} />
-        </Box>;
+        return <SafeImage key={i} src={p} sx={{ display: "block", mt: 0.5, maxWidth: "100%", maxHeight: 320, borderRadius: 1.5, border: "1px solid var(--bl-line)" }} />;
       }
       return <a key={i} href={p} target="_blank" rel="noopener noreferrer" style={{ color: "#0a55cf", wordBreak: "break-all" }}>{p}</a>;
     }
-    return <span key={i}>{emojify(p)}</span>;
+    return <span key={i}>{emojify(censor ? nsfwService.censorText(p) : p)}</span>;
   });
 }
 
@@ -282,6 +314,7 @@ function ReplyComposer({ parentId, placeholder, autoFocus, onPosted }: { parentI
 // (reactions) and replying at any depth.
 function ReplyNode({ reply, replyMap, mePk, onReact, depth }: { reply: Post; replyMap: Map<string, Post[]>; mePk: string; onReact: (el: HTMLElement, id: string) => void; depth: number }) {
   const [showBox, setShowBox] = useState(false);
+  const censor = useStore((s) => s.settings.censorProfanity);
   const children = replyMap.get(reply.id) ?? [];
   return (
     <Box sx={{ mb: 1 }}>
@@ -292,9 +325,9 @@ function ReplyNode({ reply, replyMap, mePk, onReact, depth }: { reply: Post; rep
             <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>{reply.authorName}</Typography>
             <Typography variant="caption" color="text.secondary">· {relativeTime(reply.createdAt)}</Typography>
           </Stack>
-          {reply.text && <Typography component="div" variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{renderText(reply.text)}</Typography>}
+          {reply.text && <Typography component="div" variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{renderText(reply.text, censor)}</Typography>}
           {reply.media?.map((m, i) => m.type === "image"
-            ? <Box key={i} component="img" src={m.url} loading="lazy" sx={{ mt: 0.5, maxWidth: "100%", maxHeight: 240, borderRadius: 1.5, border: "1px solid var(--bl-line)" }} />
+            ? <SafeImage key={i} src={m.url} sx={{ mt: 0.5, maxWidth: "100%", maxHeight: 240, borderRadius: 1.5, border: "1px solid var(--bl-line)" }} />
             : m.type === "audio" ? <AudioCard key={i} url={m.url} title={m.alt || "Audio track"} /> : null)}
           <Stack direction="row" alignItems="center" spacing={1}>
             <Box sx={{ flex: 1 }}><ReactRow post={reply} me={mePk} onAdd={onReact} /></Box>
@@ -355,6 +388,8 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
   const me = useStore((s) => s.me);
   const mePk = me?.publicKey ?? "";
   const showFactChecks = useStore((s) => s.settings.showFactChecks);
+  const filterNsfw = useStore((s) => s.settings.filterNsfw);
+  const censorProfanity = useStore((s) => s.settings.censorProfanity);
   const nav = useNavigate();
   const canVisit = !!post.author && post.author !== "rss-bot" && post.author !== "system" && !post.author.startsWith("demo_");
   const visit = () => canVisit && nav(`/u/${post.author}`);
@@ -365,6 +400,11 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
   const [factCheck, setFactCheck] = useState<FactCheck | null>(() => factCheckService.getFor(post.id));
   const [fcBusy, setFcBusy] = useState(false);
   const restricted = !!verdict && (verdict.action === "reduce" || verdict.action === "review" || verdict.action === "flag");
+  // On-device adult-content gate for explicit *text*. Images self-gate via
+  // <SafeImage>. When either trips (and the post isn't already restricted by the
+  // moderation layer) the body is hidden behind a "Show anyway" reveal.
+  const textNsfw = filterNsfw && nsfwService.isAdultText(post.text);
+  const gated = restricted || textNsfw;
   const childMap = replyMap ?? new Map<string, Post[]>();
 
   // User-triggered fact-check: derive keywords on-device (their compute), search PolitiFact.
@@ -437,16 +477,22 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
             <IconButton size="small" sx={{ mt: -0.25, color: "text.disabled" }} onClick={(e) => setAuthMenu(e.currentTarget)}><MoreVertRoundedIcon fontSize="small" /></IconButton>
           </Stack>
 
-          {restricted && !revealed && (
+          {gated && !revealed && (restricted ? (
             <Box sx={{ mt: 1, p: 1.5, borderRadius: 1, bgcolor: "rgba(232,146,12,0.08)", border: "1px solid rgba(232,146,12,0.45)" }}>
               <Typography variant="body2"><b>{verdict!.action === "flag" ? "Flagged" : verdict!.action === "review" ? "Pending community review" : "Reduced"}</b> — {verdict!.reasoning}</Typography>
               <Typography variant="caption" color="text.secondary">Advisory · {Math.round(verdict!.confidence * 100)}% confidence · the network didn't delete it — you decide.</Typography>
               <Box><Button size="small" sx={{ mt: 0.5 }} onClick={() => setRevealed(true)}>Show anyway</Button></Box>
             </Box>
-          )}
+          ) : (
+            <Box sx={{ mt: 1, p: 1.5, borderRadius: 1, bgcolor: "rgba(210,59,47,0.07)", border: "1px solid rgba(210,59,47,0.4)" }}>
+              <Typography variant="body2"><b>Sensitive content hidden</b> — this post may contain adult or explicit language.</Typography>
+              <Typography variant="caption" color="text.secondary">Filtered on your device · turn off "Filter adult content" in Settings.</Typography>
+              <Box><Button size="small" sx={{ mt: 0.5 }} onClick={() => setRevealed(true)}>Show anyway</Button></Box>
+            </Box>
+          ))}
 
-          {(!restricted || revealed) && (<>
-          {post.text && <Typography component="div" sx={{ mt: 1, fontSize: 15, lineHeight: 1.55, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{renderText(post.text)}</Typography>}
+          {(!gated || revealed) && (<>
+          {post.text && <Typography component="div" sx={{ mt: 1, fontSize: 15, lineHeight: 1.55, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{renderText(post.text, censorProfanity)}</Typography>}
 
           {post.html && <HtmlCard html={post.html} />}
 
@@ -458,7 +504,7 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
             if (spotify) return <SpotifyCard kind={spotify.kind} id={spotify.id} />;
             if (linkUrl) return <LinkCard url={linkUrl} />;
             // uploaded images (no link in text)
-            return post.media?.map((m, i) => (m.type === "image" ? <Box key={i} component="img" src={m.url} sx={{ mt: 1, maxWidth: "100%", maxHeight: 360, borderRadius: 2, border: "1px solid var(--bl-line)" }} /> : null));
+            return post.media?.map((m, i) => (m.type === "image" ? <SafeImage key={i} src={m.url} sx={{ mt: 1, maxWidth: "100%", maxHeight: 360, borderRadius: 2, border: "1px solid var(--bl-line)" }} /> : null));
           })()}
 
           {post.media?.filter((m) => m.type === "audio").map((m, i) => <AudioCard key={i} url={m.url} title={m.alt || "Audio track"} />)}
@@ -488,7 +534,7 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
       </Stack>
 
       {/* full-width footer — reaction summary, action bar & comments span the whole card */}
-      {(!restricted || revealed) && (
+      {(!gated || revealed) && (
         <Box sx={{ mt: 1 }}>
           {Object.values(post.reactions).some((v) => v.length) && (
             <Box sx={{ mb: 1, display: "flex", flexWrap: "wrap", gap: 0.5 }}>

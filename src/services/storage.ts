@@ -51,9 +51,32 @@ function db() {
   return dbp;
 }
 
+// Ask the browser to make this origin's storage durable so it isn't evicted
+// between visits. This is what keeps an INSTALLED PWA from "forgetting" you:
+// without it, iOS/Safari (and others, under storage pressure) can clear the
+// IndexedDB that holds your identity, logging you out on the next launch.
+// Best-effort and idempotent — safe to call repeatedly. Browsers grant it more
+// readily for installed PWAs and right after a user gesture (e.g. sign-in).
+let persistTried = false;
+export async function requestPersistentStorage(): Promise<boolean> {
+  try {
+    const s: StorageManager | undefined = navigator.storage;
+    if (!s?.persist) return false;
+    if (await s.persisted?.()) return true;     // already durable — nothing to do
+    if (persistTried) return false;             // don't spam the request
+    persistTried = true;
+    return await s.persist();
+  } catch { return false; }
+}
+
 /* ---------- identity ---------- */
 export const storage = {
-  async saveIdentity(id: SecretIdentity) { (await db()).put("identity", id); },
+  async saveIdentity(id: SecretIdentity) {
+    (await db()).put("identity", id);
+    // The moments we save an identity (create / import / token login) are
+    // exactly when we most want storage to stick — request durability now.
+    void requestPersistentStorage();
+  },
   async loadIdentity(): Promise<SecretIdentity | undefined> {
     const all = await (await db()).getAll("identity");
     return all[0];
@@ -125,4 +148,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   presenceStatus: "online",
   reducedMotion: false,
   showFactChecks: true,
+  filterNsfw: true,
+  censorProfanity: false,
 };
