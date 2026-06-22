@@ -315,7 +315,7 @@ function OwnProfile({ me, refreshMe }: { me: any; refreshMe: () => void }) {
                 <Button variant="contained" onClick={save}>Save &amp; view</Button>
                 <Button variant="text" onClick={() => setHtml(STARTER_HTML)}>Reset HTML</Button>
                 <Button variant="outlined" startIcon={<QrCode2RoundedIcon />} onClick={() => setDeviceLogin(true)}>Log in on another device</Button>
-                <Button variant="outlined" startIcon={<DownloadRoundedIcon />} onClick={() => identityService.exportFile()}>Export identity</Button>
+                <Button variant="outlined" startIcon={<DownloadRoundedIcon />} onClick={() => { identityService.exportFile(); toast("Profile data downloaded", "success"); }}>Download profile data</Button>
                 <Button variant="text" onClick={() => fileRef.current?.click()}>Import</Button>
                 <input ref={fileRef} type="file" accept="application/json" hidden onChange={(e) => importId(e.target.files?.[0])} />
               </Stack>

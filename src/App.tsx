@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Box, Snackbar, Alert } from "@mui/material";
 import { boot } from "@/services";
@@ -9,6 +9,8 @@ import { identityService } from "@/services/identityService";
 import { DEFAULT_SETTINGS } from "@/services/storage";
 import Background from "@/components/common/Background";
 import Onboarding from "@/components/onboarding/Onboarding";
+import DeviceLinkReceiver from "@/components/profile/DeviceLinkReceiver";
+import { parseLink } from "@/services/deviceTransferService";
 import AppShell from "@/components/layout/AppShell";
 import FeedView from "@/components/feed/FeedView";
 import CommunitiesView from "@/components/communities/CommunitiesView";
@@ -33,6 +35,8 @@ export default function App() {
   const { ready, onboarded, setReady, setPresence, setOnlineCount } = useStore();
   const [toast, setToast] = useState<{ kind: any; message: string } | null>(null);
   const [notify, setNotify] = useState<string | null>(null);
+  // "#/link?c=…" — another device is sharing its account with this one.
+  const deviceLink = useMemo(() => parseLink(window.location.hash), []);
 
   useEffect(() => {
     let done = false;
@@ -54,8 +58,9 @@ export default function App() {
   return (
     <Box sx={{ minHeight: "100vh", position: "relative" }}>
       <Background />
-      {ready && !onboarded && <Onboarding />}
-      {ready && onboarded && (
+      {ready && deviceLink && <DeviceLinkReceiver code={deviceLink.code} secret={deviceLink.secret} />}
+      {ready && !deviceLink && !onboarded && <Onboarding />}
+      {ready && !deviceLink && onboarded && (
         <AppShell>
           <Routes>
             <Route path="/" element={<FeedView />} />

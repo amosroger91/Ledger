@@ -64,27 +64,35 @@ class IdentityService {
   verify = verifyRecord;
   fingerprint = fingerprint;
 
-  /** Export the full identity (incl. private key) as a downloadable file. */
+  /** Download the full profile data (incl. private key, avatar, bio, custom
+   *  HTML — everything) as a portable file. Import it on another device to
+   *  move your whole account, not just your name. */
   exportFile() {
     if (!this.me) return;
+    const safe = (this.me.username || "profile").replace(/[^a-z0-9_-]+/gi, "-").toLowerCase();
     const blob = new Blob([JSON.stringify(this.me, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `nebula-identity-${this.me.username}.json`;
+    a.download = `zuccbook-profile-${safe}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }
 
-  /** Import an identity file from another device. */
-  async importFile(file: File): Promise<SecretIdentity> {
-    const text = await file.text();
-    const parsed = JSON.parse(text) as SecretIdentity;
-    if (!parsed.publicKey || !parsed.privateKeyJwk) throw new Error("Invalid identity file");
+  /** Adopt a full identity object as this device's account (used by both the
+   *  file import and the P2P device-link transfer). Restores everything. */
+  async importIdentityObject(obj: unknown): Promise<SecretIdentity> {
+    const parsed = obj as SecretIdentity;
+    if (!parsed || !parsed.publicKey || !parsed.privateKeyJwk) throw new Error("Invalid identity");
     this.me = parsed;
     await storage.saveIdentity(parsed);
     bus.emit("identity:ready", { pk: parsed.publicKey });
     return parsed;
+  }
+
+  /** Import an identity file from another device. */
+  async importFile(file: File): Promise<SecretIdentity> {
+    return this.importIdentityObject(JSON.parse(await file.text()));
   }
 
   /** A compact, URL-safe token of the identity (keys + name) for the

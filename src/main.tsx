@@ -25,6 +25,9 @@ async function start() {
   if (login) {
     try { await identityService.importToken(decodeURIComponent(login[1])); } catch (e) { console.warn("[login] token import failed", e); }
     history.replaceState(null, "", `${location.pathname}${location.search}#/`);
+  } else if (/^#\/link\?c=/.test(location.hash)) {
+    // "#/link?c=…" — a P2P device-link handoff; leave it for the in-app
+    // receiver (App → DeviceLinkReceiver) to consume.
   } else if (location.hash && location.hash !== "#/" && location.hash !== "#") {
     // Always open on the home feed — ignore a stale route hash from last session.
     history.replaceState(null, "", `${location.pathname}${location.search}#/`);
