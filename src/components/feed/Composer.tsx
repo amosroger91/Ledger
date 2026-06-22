@@ -1,10 +1,11 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Stack, TextField, Button, IconButton, Box, Chip, Tooltip, Typography } from "@mui/material";
 import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
 import GifBoxRoundedIcon from "@mui/icons-material/GifBoxRounded";
 import AudiotrackRoundedIcon from "@mui/icons-material/AudiotrackRounded";
 import CodeRoundedIcon from "@mui/icons-material/CodeRounded";
 import AutoFixHighRoundedIcon from "@mui/icons-material/AutoFixHighRounded";
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import GlassCard from "@/components/common/GlassCard";
 import GifPicker from "@/components/common/GifPicker";
 import HtmlComposer from "./HtmlComposer";
@@ -25,6 +26,9 @@ export default function Composer({ community }: { community?: string }) {
   const [media, setMedia] = useState<MediaRef[]>([]);
   const [gifOpen, setGifOpen] = useState(false);
   const [htmlOpen, setHtmlOpen] = useState(false);
+  const [showPermanentWarning, setShowPermanentWarning] = useState<boolean>(() => {
+    try { return localStorage.getItem("composer:permanentWarningDismissed") !== "1"; } catch { return true; }
+  });
   const fileRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLInputElement>(null);
 
@@ -79,7 +83,7 @@ export default function Composer({ community }: { community?: string }) {
               {media.map((m, i) => (
                 m.type === "audio"
                   ? <Chip key={i} icon={<AudiotrackRoundedIcon />} label={m.alt || "audio"} onDelete={() => setMedia((x) => x.filter((_, j) => j !== i))} sx={{ bgcolor: "rgba(124,92,255,0.12)" }} />
-                  : <Box key={i} component=\"img\" src={m.url} sx={{ width: { xs: 72, sm: 84 }, height: { xs: 72, sm: 84 }, objectFit: \"cover\", borderRadius: 2, border: \"1px solid rgba(58,155,240,0.2)\", cursor: \"pointer\" }} onClick={() => setMedia((x) => x.filter((_, j) => j !== i))} />
+                  : <Box key={i} component="img" src={m.url} sx={{ width: { xs: 72, sm: 84 }, height: { xs: 72, sm: 84 }, objectFit: "cover", borderRadius: 2, border: "1px solid rgba(58,155,240,0.2)", cursor: "pointer" }} onClick={() => setMedia((x) => x.filter((_, j) => j !== i))} />
               ))}
             </Stack>
           )}
@@ -93,9 +97,18 @@ export default function Composer({ community }: { community?: string }) {
             <Chip size="small" variant="outlined" label="local-only until posted" sx={{ opacity: 0.6, display: { xs: "none", sm: "inline-flex" } }} />
             <Button variant="contained" onClick={post} disabled={!text.trim() && !media.length} sx={{ ml: "auto" }}>Post</Button>
           </Stack>
-          <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1, mb: 0, lineHeight: 1.45 }}>
-            🔗 Posting is <b>permanent</b> — once it's out, it spreads across the network and can't be unsent or deleted. Post like it's forever, because it is.
-          </Typography>
+          {showPermanentWarning && (
+            <Box role="status" aria-live="polite" sx={{ mt: 1, mb: 0, display: 'flex', alignItems: 'flex-start', gap: 1, p: 1, borderRadius: 1, bgcolor: 'rgba(255,243,205,0.98)', border: '1px solid rgba(255,235,59,0.32)' }}>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="caption" color="text.primary" component="p" sx={{ lineHeight: 1.35 }}>
+                  🔗 Posting is <b>permanent</b> — once it's out, it spreads across the network and can't be unsent or deleted. Post like it's forever, because it is.
+                </Typography>
+              </Box>
+              <IconButton size="small" aria-label="Dismiss permanent posting warning" onClick={() => { try { localStorage.setItem("composer:permanentWarningDismissed", "1"); } catch {} setShowPermanentWarning(false); }}>
+                <CloseRoundedIcon fontSize="small" />
+              </IconButton>
+            </Box>
+          )}
         </Box>
       </Stack>
       <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => attach(e.target.files?.[0])} />
