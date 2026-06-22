@@ -60,9 +60,21 @@ export default function CompanionView() {
   }
 
   async function doSend(text: string) {
-    const ctx = await context();
-    await companionService.ask(text, ctx);
-    setHistory(await companionService.history());
+    // Show the user's message immediately (optimistic) and start the typing
+    // bubble — don't make them wait for the model to finish before anything
+    // appears. The final history refresh replaces this with the persisted copy.
+    const optimistic: CompanionMessage = { id: newId("cm"), role: "user", text, at: Date.now() };
+    setHistory((h) => [...h, optimistic]);
+    setThinking(true);
+    try {
+      const ctx = await context();
+      await companionService.ask(text, ctx);
+    } catch (e) {
+      console.warn("[companion] ask failed", e);
+    } finally {
+      setThinking(false);
+      setHistory(await companionService.history());
+    }
   }
 
   function trySend(text: string) {
@@ -128,7 +140,19 @@ export default function CompanionView() {
             </Box>
           </Stack>
         ))}
-        {thinking && <Stack direction="row" alignItems="center" spacing={1}><CircularProgress size={14} /><Typography variant="caption" color="text.secondary">thinking on-device…</Typography></Stack>}
+        {thinking && (
+          <Stack direction="row" justifyContent="flex-start">
+            <Box sx={{ px: 1.75, py: 1.25, borderRadius: 2, background: "#ffffff", display: "flex", alignItems: "center", gap: 0.6, boxShadow: "0 1px 4px rgba(20,40,80,0.06)" }}>
+              {[0, 1, 2].map((i) => (
+                <Box key={i} sx={{
+                  width: 7, height: 7, borderRadius: "50%", bgcolor: "rgba(22,104,224,0.7)",
+                  animation: "cmpTyping 1.2s ease-in-out infinite", animationDelay: `${i * 0.18}s`,
+                  "@keyframes cmpTyping": { "0%,80%,100%": { transform: "translateY(0)", opacity: 0.45 }, "40%": { transform: "translateY(-4px)", opacity: 1 } },
+                }} />
+              ))}
+            </Box>
+          </Stack>
+        )}
         <div ref={endRef} />
       </GlassCard>
 

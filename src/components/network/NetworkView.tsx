@@ -82,7 +82,7 @@ async function buildGraph(ambientN: number): Promise<Graph> {
     const a = act.get(pk)!;
     size[i] = 1.3 + Math.min(4.5, Math.sqrt(a) * 0.7);
     online[i] = onlineSet.has(pk) ? 1 : 0;
-    color[i] = `hsl(${190 + ((h >>> 5) % 85)}, 90%, 64%)`;            // brand blues→violets
+    color[i] = `hsl(${204 + ((h >>> 5) % 34)}, 85%, ${46 + ((h >>> 9) % 12)}%)`;   // brand blues→indigo, legible on the Bliss sky
   }
   const selfIndex = isReal(me) ? (idx.get(me) ?? -1) : -1;
 
@@ -119,6 +119,22 @@ export default function NetworkView() {
     let raf = 0, W = 0, H = 0, dpr = 1;
     let sx = new Float32Array(0), sy = new Float32Array(0);
 
+    // The app's signature Bliss/Luna wallpaper — a blue sky gradient with the
+    // green XP hill bleeding in from the bottom-right. Painted opaque on resize,
+    // and at partial alpha each frame so the drifting nodes leave soft trails.
+    const paintBackdrop = (alpha: number) => {
+      ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = alpha;
+      const sky = ctx.createLinearGradient(0, 0, 0, H);
+      sky.addColorStop(0, "#2f7ad6"); sky.addColorStop(0.34, "#6aa9e4");
+      sky.addColorStop(0.64, "#bfe0f7"); sky.addColorStop(0.82, "#eaf5ff"); sky.addColorStop(1, "#cfe6c4");
+      ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+      const hill = ctx.createRadialGradient(W * 0.8, H * 1.18, 0, W * 0.8, H * 1.18, Math.max(W, H) * 0.72);
+      hill.addColorStop(0, "#95bd5e"); hill.addColorStop(0.26, "#6d9c40"); hill.addColorStop(0.46, "#3f6f28"); hill.addColorStop(0.6, "rgba(63,111,40,0)");
+      ctx.fillStyle = hill; ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = 1;
+    };
+
     const resize = () => {
       dpr = Math.min(2, window.devicePixelRatio || 1);
       const r = canvas.getBoundingClientRect();
@@ -126,7 +142,7 @@ export default function NetworkView() {
       canvas.width = Math.max(1, Math.floor(W * dpr));
       canvas.height = Math.max(1, Math.floor(H * dpr));
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.fillStyle = "#05081a"; ctx.fillRect(0, 0, W, H);
+      paintBackdrop(1);
     };
     resize();
     const ro = new ResizeObserver(resize); ro.observe(canvas);
@@ -137,11 +153,9 @@ export default function NetworkView() {
     const draw = (now: number) => {
       raf = requestAnimationFrame(draw);
       const g = graphRef.current;
-      // motion-trail fade (gives nodes glowing comet tails as the galaxy turns)
-      ctx.globalCompositeOperation = "source-over";
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = "rgba(5,8,26,0.26)";
-      ctx.fillRect(0, 0, W, H);
+      // refresh the Bliss backdrop at partial alpha → soft comet trails as the
+      // constellation turns, while keeping the sky/hill crisp.
+      paintBackdrop(0.32);
       if (!g) return;
 
       mouse.current.x += (mouse.current.tx - mouse.current.x) * 0.04;
@@ -153,15 +167,17 @@ export default function NetworkView() {
       const spiral = 2.2;
       const squash = 0.86;
 
-      // soft galactic core glow
-      const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR * 0.9);
-      core.addColorStop(0, "rgba(60,120,255,0.10)"); core.addColorStop(1, "rgba(5,8,26,0)");
+      // soft white "sun" bloom (additive) — a gentle daylight highlight, then
+      // back to normal painting so node/edge colors read true on the light sky.
+      const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR * 0.95);
+      core.addColorStop(0, "rgba(255,255,255,0.16)"); core.addColorStop(1, "rgba(255,255,255,0)");
       ctx.globalCompositeOperation = "lighter";
-      ctx.fillStyle = core; ctx.beginPath(); ctx.arc(cx, cy, maxR * 0.9, 0, 7); ctx.fill();
+      ctx.fillStyle = core; ctx.beginPath(); ctx.arc(cx, cy, maxR * 0.95, 0, 7); ctx.fill();
+      ctx.globalCompositeOperation = "source-over";
 
-      // ambient field (decorative depth — not counted as real nodes)
+      // ambient field (decorative depth — soft white sky-sparkles, not real nodes)
       const am = g.ambient;
-      ctx.fillStyle = "hsla(212,55%,62%,0.16)";
+      ctx.fillStyle = "rgba(255,255,255,0.5)";
       for (let i = 0; i < am.n; i++) {
         const a = am.ang[i] + theta * 0.55 + am.rn[i] * spiral;
         const r = am.rn[i] * maxR * 1.04;
@@ -181,7 +197,7 @@ export default function NetworkView() {
       // edges — real interactions, one batched translucent path
       const e = g.edges;
       if (e.length) {
-        ctx.strokeStyle = "rgba(96,165,255,0.07)"; ctx.lineWidth = 1; ctx.beginPath();
+        ctx.strokeStyle = "rgba(16,90,207,0.13)"; ctx.lineWidth = 1; ctx.beginPath();
         for (let i = 0; i < e.length; i += 2) { const a = e[i], b = e[i + 1]; ctx.moveTo(sx[a], sy[a]); ctx.lineTo(sx[b], sy[b]); }
         ctx.stroke();
       }
@@ -197,13 +213,16 @@ export default function NetworkView() {
         ctx.beginPath(); ctx.arc(sx[i], sy[i], s, 0, 7); ctx.fill();
       }
 
-      // you
+      // you — a vivid blue dot with a white rim and a pulsing brand-blue ring
       const si = real.selfIndex;
       if (si >= 0) {
-        ctx.globalAlpha = 1; ctx.fillStyle = "#ffffff";
-        ctx.beginPath(); ctx.arc(sx[si], sy[si], 3.4, 0, 7); ctx.fill();
-        ctx.globalAlpha = 0.9; ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.arc(sx[si], sy[si], 8 + Math.sin(now * 0.004) * 1.5, 0, 7); ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = "#1668e0"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(sx[si], sy[si], 9 + Math.sin(now * 0.004) * 1.8, 0, 7); ctx.stroke();
+        ctx.fillStyle = "#0a55cf";
+        ctx.beginPath(); ctx.arc(sx[si], sy[si], 4.4, 0, 7); ctx.fill();
+        ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.arc(sx[si], sy[si], 4.4, 0, 7); ctx.stroke();
       }
       ctx.globalAlpha = 1;
     };
@@ -213,13 +232,13 @@ export default function NetworkView() {
   }, []);
 
   return (
-    <Box sx={{ position: "relative", mt: { xs: -1.5, md: -3 }, mx: { xs: -1.5, md: -3 }, mb: -12, height: { xs: "calc(100vh - 66px)", md: "calc(100vh - 98px)" }, overflow: "hidden", bgcolor: "#05081a" }}>
+    <Box sx={{ position: "relative", mt: { xs: -1.5, md: -3 }, mx: { xs: -1.5, md: -3 }, mb: -12, height: { xs: "calc(100vh - 66px)", md: "calc(100vh - 98px)" }, overflow: "hidden", bgcolor: "#6aa9e4" }}>
       <Box component="canvas" ref={canvasRef} sx={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: "block" }} />
 
-      {/* HUD overlay */}
-      <Box sx={{ position: "absolute", top: 18, left: 18, right: 18, pointerEvents: "none", color: "#dce9ff" }}>
-        <Typography sx={{ fontWeight: 900, fontSize: { xs: 22, md: 28 }, letterSpacing: 0.5, textShadow: "0 2px 12px rgba(0,0,0,0.6)" }}>The Network</Typography>
-        <Typography variant="body2" sx={{ opacity: 0.75, maxWidth: 460, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>
+      {/* HUD overlay — Luna ink on the bright sky */}
+      <Box sx={{ position: "absolute", top: 18, left: 18, right: 18, pointerEvents: "none", color: "#0c2c57" }}>
+        <Typography sx={{ fontWeight: 900, fontSize: { xs: 22, md: 28 }, letterSpacing: 0.5, textShadow: "0 1px 3px rgba(255,255,255,0.7)" }}>The Network</Typography>
+        <Typography variant="body2" sx={{ opacity: 0.85, maxWidth: 460, textShadow: "0 1px 4px rgba(255,255,255,0.7)" }}>
           Every node this device can see — anonymous. No names, just the shape of the swarm and the threads between people.
         </Typography>
         <Stack direction="row" spacing={1} sx={{ mt: 1.5, flexWrap: "wrap", gap: 1 }}>
@@ -230,16 +249,16 @@ export default function NetworkView() {
             ["Posts seen", stats.posts],
           ].map(([label, val]) => (
             <Chip key={label as string} size="small" label={`${val} · ${label}`}
-              sx={{ bgcolor: "rgba(20,40,90,0.55)", color: "#dce9ff", border: "1px solid rgba(120,170,255,0.3)", fontWeight: 700, backdropFilter: "blur(4px)" }} />
+              sx={{ bgcolor: "rgba(255,255,255,0.85)", color: "#1668e0", border: "1px solid rgba(58,155,240,0.4)", fontWeight: 700, backdropFilter: "blur(4px)" }} />
           ))}
         </Stack>
       </Box>
 
       {/* legend */}
-      <Stack direction="row" spacing={2} sx={{ position: "absolute", bottom: 88, left: 18, pointerEvents: "none", color: "#aebfdc" }}>
-        <Legend color="#ffffff" label="you" />
-        <Legend color="#5fe0ff" label="online" />
-        <Legend color="rgba(120,160,255,0.6)" label="seen" />
+      <Stack direction="row" spacing={2} sx={{ position: "absolute", bottom: 88, left: 18, pointerEvents: "none", color: "#0c2c57" }}>
+        <Legend color="#0a55cf" label="you" />
+        <Legend color="#1668e0" label="online" />
+        <Legend color="rgba(16,90,207,0.5)" label="seen" />
       </Stack>
     </Box>
   );
@@ -249,7 +268,7 @@ function Legend({ color, label }: { color: string; label: string }) {
   return (
     <Stack direction="row" spacing={0.75} alignItems="center">
       <Box sx={{ width: 9, height: 9, borderRadius: "50%", bgcolor: color, boxShadow: `0 0 8px ${color}` }} />
-      <Typography variant="caption" sx={{ textShadow: "0 1px 6px rgba(0,0,0,0.6)" }}>{label}</Typography>
+      <Typography variant="caption" sx={{ textShadow: "0 1px 4px rgba(255,255,255,0.7)" }}>{label}</Typography>
     </Stack>
   );
 }

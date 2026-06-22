@@ -5,29 +5,60 @@
 //  can click your name and view your page. Holds a cache of peers'
 //  profiles received from the graph.
 // ============================================================
-import type { Profile } from "@/types";
+import type { Profile, Post } from "@/types";
 import { bus } from "@/lib/events";
 import { signProfile, profileIsAuthentic } from "@/lib/records";
 import { identityService } from "./identityService";
 import { reputationService } from "./reputationService";
 import { communityService } from "./communityService";
 import { walletService } from "./walletService";
+import { storage } from "./storage";
 
 const cache = new Map<string, Profile>();
 
 class ProfileService {
   get(pk: string): Profile | null { return cache.get(pk) ?? null; }
 
+  /** Warm the in-memory cache from the durable store at boot, so peers' pages
+   *  render instantly and work offline (before/without a fresh Gun sync). */
+  async loadCache() {
+    try { for (const p of await storage.allProfiles()) if (!cache.has(p.pk)) cache.set(p.pk, p); } catch {}
+  }
+
   /** A profile arrived from the graph (Gun). Verify the signature before
    *  caching it — otherwise anyone could publish a profile under your pk and
-   *  change the name/avatar/wallet address others see for you. */
+   *  change the name/avatar/wallet address others see for you. Cached to
+   *  IndexedDB too, so it persists across reloads and offline sessions. */
   async ingest(p: Profile) {
     if (!p || !p.pk) return;
     const prev = cache.get(p.pk);
     if (prev && (prev.updatedAt ?? 0) >= (p.updatedAt ?? 0)) return;
     if (!(await profileIsAuthentic(p))) return;
     cache.set(p.pk, p);
+    storage.putProfile(p);
     bus.emit("profile:update", p);
+  }
+
+  /** Best-effort profile when none has synced: a verified-but-cached one from
+   *  the durable store, else a lightweight SNAPSHOT reconstructed from the
+   *  name/avatar denormalized on the person's posts. Lets you view someone's
+   *  page from their posts alone, even if they've never been online with you. */
+  async snapshot(pk: string): Promise<Profile | null> {
+    const stored = await storage.getProfile(pk);
+    if (stored) { if (!cache.has(pk)) cache.set(pk, stored); return stored; }
+    let posts: Post[] = [];
+    try { posts = await storage.postsByAuthor(pk); } catch {}
+    if (!posts.length) return null;
+    const latest = posts.reduce((a, b) => (b.createdAt > a.createdAt ? b : a));
+    return {
+      pk,
+      username: latest.authorName || "Someone",
+      avatar: latest.authorAvatar || undefined,
+      badges: [],
+      reputation: 0,
+      communities: [],
+      updatedAt: 0,   // 0 marks this as a non-authoritative snapshot
+    };
   }
 
   async buildSelf(): Promise<Profile | null> {
@@ -66,6 +97,7 @@ class ProfileService {
     const me = identityService.current;
     if (me) await signProfile(p, me.privateKeyJwk);
     cache.set(p.pk, p);
+    storage.putProfile(p);
     bus.emit("profile:publish", p);
   }
 }

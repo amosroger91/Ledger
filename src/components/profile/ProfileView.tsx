@@ -204,18 +204,39 @@ export default function ProfileView() {
 /* ============================ viewing someone else ============================ */
 function ViewProfile({ pk }: { pk: string }) {
   const [profile, setProfile] = useState<Profile | null>(profileService.get(pk));
+  const [snapshot, setSnapshot] = useState<Profile | null>(null);
   useEffect(() => {
-    setProfile(profileService.get(pk));
+    const cached = profileService.get(pk);
+    setProfile(cached);
+    setSnapshot(null);
     const off = bus.on("profile:update", (p) => { if (p.pk === pk) setProfile(p); });
+    // No full profile cached yet → reconstruct a snapshot from their posts so
+    // the page still works; the real one fills in if/when it syncs.
+    if (!cached) profileService.snapshot(pk).then(setSnapshot);
     return off;
   }, [pk]);
-  if (!profile) return (
+
+  const shown = profile ?? snapshot;
+  if (!shown) return (
     <Box sx={{ maxWidth: 720, mx: "auto" }}>
-      <GlassCard><Typography color="text.secondary">This profile hasn't synced to you yet — it arrives over the network when the person is (or was recently) online.</Typography>
+      <GlassCard><Typography color="text.secondary">We haven't seen anything from this person yet — their profile and posts arrive over the network when they're (or were recently) online.</Typography>
         <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1, fontFamily: "monospace" }}>id {fingerprint(pk)}</Typography></GlassCard>
     </Box>
   );
-  return <ProfileDisplay profile={profile} />;
+  return (
+    <>
+      {!profile && (
+        <Box sx={{ maxWidth: 720, mx: "auto", mb: 1.5 }}>
+          <GlassCard sx={{ background: "rgba(58,155,240,0.08)", borderColor: "rgba(58,155,240,0.24)" }}>
+            <Typography variant="body2" color="text.secondary">
+              📷 Showing a snapshot built from their posts — their full profile (bio, links, custom page) fills in automatically the next time they're online.
+            </Typography>
+          </GlassCard>
+        </Box>
+      )}
+      <ProfileDisplay profile={shown} />
+    </>
+  );
 }
 
 /* ============================ your own profile ============================ */

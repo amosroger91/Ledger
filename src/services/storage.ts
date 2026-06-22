@@ -7,7 +7,7 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type {
   SecretIdentity, Post, ChatMessage, Community,
-  ReputationLedgerEntry, CompanionMessage, AppSettings,
+  ReputationLedgerEntry, CompanionMessage, AppSettings, Profile,
 } from "@/types";
 
 interface LedgerDB extends DBSchema {
@@ -17,6 +17,9 @@ interface LedgerDB extends DBSchema {
   communities: { key: string; value: Community };
   reputation: { key: string; value: ReputationLedgerEntry; indexes: { byTime: number } };
   companion: { key: string; value: CompanionMessage; indexes: { byTime: number } };
+  // Cached public profiles of people we've seen — so a peer's page survives
+  // reloads and is viewable even when they're offline (keyed by public key).
+  profiles: { key: string; value: Profile };
   kv: { key: string; value: unknown };
 }
 
@@ -24,27 +27,34 @@ interface LedgerDB extends DBSchema {
 // empty database and orphans every existing user's local data. Kept (along with
 // the "nebula:settings" localStorage key below) through the Ledger rebrand.
 const DB_NAME = "nebula";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 let dbp: Promise<IDBPDatabase<LedgerDB>> | null = null;
 
 function db() {
   if (!dbp) {
     dbp = openDB<LedgerDB>(DB_NAME, DB_VERSION, {
-      upgrade(d) {
-        d.createObjectStore("identity", { keyPath: "publicKey" });
-        const posts = d.createObjectStore("posts", { keyPath: "id" });
-        posts.createIndex("byTime", "createdAt");
-        posts.createIndex("byAuthor", "author");
-        posts.createIndex("byCommunity", "community");
-        const msgs = d.createObjectStore("messages", { keyPath: "id" });
-        msgs.createIndex("byChannel", "channel");
-        msgs.createIndex("byTime", "createdAt");
-        d.createObjectStore("communities", { keyPath: "id" });
-        const rep = d.createObjectStore("reputation", { keyPath: "id" });
-        rep.createIndex("byTime", "at");
-        const comp = d.createObjectStore("companion", { keyPath: "id" });
-        comp.createIndex("byTime", "at");
-        d.createObjectStore("kv");
+      // Versioned + idempotent so existing users migrate without re-creating
+      // (and throwing on) stores they already have.
+      upgrade(d, oldVersion) {
+        if (oldVersion < 1) {
+          d.createObjectStore("identity", { keyPath: "publicKey" });
+          const posts = d.createObjectStore("posts", { keyPath: "id" });
+          posts.createIndex("byTime", "createdAt");
+          posts.createIndex("byAuthor", "author");
+          posts.createIndex("byCommunity", "community");
+          const msgs = d.createObjectStore("messages", { keyPath: "id" });
+          msgs.createIndex("byChannel", "channel");
+          msgs.createIndex("byTime", "createdAt");
+          d.createObjectStore("communities", { keyPath: "id" });
+          const rep = d.createObjectStore("reputation", { keyPath: "id" });
+          rep.createIndex("byTime", "at");
+          const comp = d.createObjectStore("companion", { keyPath: "id" });
+          comp.createIndex("byTime", "at");
+          d.createObjectStore("kv");
+        }
+        if (oldVersion < 2 && !d.objectStoreNames.contains("profiles")) {
+          d.createObjectStore("profiles", { keyPath: "pk" });
+        }
       },
     });
   }
@@ -95,6 +105,11 @@ export const storage = {
   },
   async postsByAuthor(pk: string) { return (await db()).getAllFromIndex("posts", "byAuthor", pk); },
   async deletePost(id: string) { (await db()).delete("posts", id); },
+
+  /* ---------- profiles (cached peer profiles, viewable offline) ---------- */
+  async putProfile(p: Profile) { (await db()).put("profiles", p); },
+  async getProfile(pk: string): Promise<Profile | undefined> { return (await db()).get("profiles", pk); },
+  async allProfiles(): Promise<Profile[]> { return (await db()).getAll("profiles"); },
 
   /* ---------- messages ---------- */
   async putMessage(m: ChatMessage) { (await db()).put("messages", m); },

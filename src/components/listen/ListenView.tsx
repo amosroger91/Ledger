@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Box, Stack, Typography, Button, Slider, Chip, CircularProgress, Grid, ToggleButtonGroup, ToggleButton, IconButton, Tooltip, TextField, InputAdornment, Select, MenuItem, Link } from "@mui/material";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import PauseRoundedIcon from "@mui/icons-material/PauseRounded";
@@ -30,9 +31,14 @@ import WatchParty from "./WatchParty";
 const fmtCount = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(n));
 
 export default function ListenView() {
+  // Global search can deep-link a genre/station search here: /listen?tag=rock or ?q=…
+  const [sp] = useSearchParams();
+  const initTag = sp.get("tag") ?? "";
+  const initQ = sp.get("q") ?? "";
   // Arrive in "video" if a watch room is already playing (e.g. via the feed's
-  // "Watch with friends" button); otherwise default to music.
-  const [mode, setMode] = useState<"music" | "video" | "jukebox">(() => peerService.currentStage(watchRoomService.current)?.videoId ? "video" : "music");
+  // "Watch with friends" button); a search deep-link forces "music"; else music.
+  const [mode, setMode] = useState<"music" | "video" | "jukebox">(() =>
+    (initTag || initQ) ? "music" : (peerService.currentStage(watchRoomService.current)?.videoId ? "video" : "music"));
   const [jukebox, setJukebox] = useState(audioPlayerService.queue);
   const jukeRef = useRef<HTMLInputElement>(null);
   useEffect(() => bus.on("audio:queue", ({ items }) => setJukebox(items)), []);
@@ -53,9 +59,9 @@ export default function ListenView() {
   const [playing, setPlaying] = useState(listenTogetherService.playing);
   const [vol, setVol] = useState(Math.round(listenTogetherService.volume * 100));
 
-  // query state
-  const [q, setQ] = useState("");
-  const [tag, setTag] = useState("");
+  // query state (seeded from a global-search deep-link if present)
+  const [q, setQ] = useState(initQ);
+  const [tag, setTag] = useState(initTag);
   const [country, setCountry] = useState("US");   // open on American stations by default
   const [sort, setSort] = useState<"popular" | "trending">("popular");
 
