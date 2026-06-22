@@ -59,12 +59,15 @@ export async function boot(): Promise<BootResult> {
     gunService.start();   // durable cross-user persistence + sync (posts, swarm, profiles)
     peerService.start();
     profileService.publishSelf().catch(() => {}); // share my public profile
-    rssService.seedDefaults().then(() => rssService.refresh()).catch(() => {}); // default subs + top-up
+    // RSS is now refreshed by the always-on relay — it pulls every topic in the
+    // catalog every few minutes and seeds the global Gun feed, which we receive
+    // over the peer connection. So clients do NOT fetch feeds on their own: we
+    // only seed the default topic SUBSCRIPTIONS (for the Topics UI + the "For
+    // You" filter). The sole client-side fetch is a manual "Refresh now" in
+    // Topics, for when you want data fresher than the relay's last cycle.
+    rssService.seedDefaults().catch(() => {});
     changelogService.refresh().catch(() => {}); // repo commits → timeline activity
     if (settings.showFactChecks) factCheckService.refresh().catch(() => {}); // PolitiFact index
-    // Keep topping up while the app is open so new stories arrive during a
-    // session; the service throttles actual fetches.
-    setInterval(() => rssService.refresh().catch(() => {}), 6 * 60 * 1000);
   }
   return { onboarded: !!me, settings };
 }
@@ -74,7 +77,7 @@ export async function onOnboarded() {
   await communityService.seedDefaults();
   gunService.start();
   peerService.start();
-  rssService.seedDefaults().then(() => rssService.refresh()).catch(() => {});
+  rssService.seedDefaults().catch(() => {}); // relay refreshes feeds for everyone; no client-side fetch
   changelogService.refresh().catch(() => {});
 }
 

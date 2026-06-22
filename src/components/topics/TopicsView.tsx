@@ -57,7 +57,7 @@ export default function TopicsView() {
       <Stack direction="row" alignItems="center" sx={{ mb: 2 }}>
         <Box sx={{ flex: 1 }}>
           <Typography variant="h5">Topics</Typography>
-          <Typography variant="body2" color="text.secondary">Subscribe to topics and RSS Bot keeps your feed alive — it pulls the top stories and your on-device LLM writes the post.</Typography>
+          <Typography variant="body2" color="text.secondary">Subscribe to topics to shape your feed. The always-on relay refreshes <b>every</b> feed for everyone every few minutes and seeds them into your timeline — you don't fetch anything. <b>Refresh now</b> forces an immediate client-side pull only if you want it fresher than the relay's last cycle.</Typography>
         </Box>
         <Button variant="contained" startIcon={<RefreshRoundedIcon />} disabled={busy} onClick={refresh}>{busy ? "Fetching…" : "Refresh now"}</Button>
       </Stack>

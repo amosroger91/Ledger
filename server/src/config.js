@@ -22,10 +22,11 @@ export const config = {
     "https://relay.peer.ooo/gun",
   ]),
   rss: {
-    refreshMs: Number(env.RSS_REFRESH_MS) || 10 * 60 * 1000, // 10 min
-    concurrency: Number(env.RSS_CONCURRENCY) || 4,
+    // The relay refreshes the WHOLE catalog every cycle so clients never have to.
+    refreshMs: Number(env.RSS_REFRESH_MS) || 10 * 60 * 1000, // 10 min (well under the 1h client cache)
+    concurrency: Number(env.RSS_CONCURRENCY) || 6,
     fetchTimeoutMs: Number(env.RSS_FETCH_TIMEOUT_MS) || 12000,
-    maxItems: Number(env.RSS_MAX_ITEMS) || 800, // ring buffer of newest RSS items
+    maxItems: Number(env.RSS_MAX_ITEMS) || 1500, // ring buffer of newest items (full catalog is large)
   },
   // Optional RSSHub base for sources with no native RSS (Twitch, etc.).
   rsshubBase: (env.RSSHUB_BASE || "https://rsshub.app").replace(/\/$/, ""),

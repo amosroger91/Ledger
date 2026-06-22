@@ -1,9 +1,11 @@
 // ============================================================
-//  rss/aggregator.js — the aggregation half of Ledger. Keeps a registry
-//  of feeds, refreshes them on a timer with bounded concurrency + per-feed
-//  timeout, normalizes every item into the Post shape, and drops them in
-//  the shared store (dedup-safe by stable id). One slow/broken feed can
-//  never stall the rest.
+//  rss/aggregator.js — the aggregation worker. Keeps the full topic
+//  catalog, refreshes EVERY feed on a timer (bounded concurrency +
+//  per-feed timeout + proxy fallback), resolves soft refs (YouTube
+//  handles, podcast names, CVE keywords), normalizes items into the
+//  Post shape, and drops them in the shared store (dedup by stable id).
+//  Because this runs 24/7 for everyone, clients never have to fetch RSS
+//  themselves — they just receive the results over Gun.
 // ============================================================
 import Parser from "rss-parser";
 import { config } from "../config.js";
@@ -11,11 +13,28 @@ import { store } from "../store/index.js";
 import { fetchText, mapLimit } from "../lib/http.js";
 import { itemToPost } from "./normalize.js";
 import { DEFAULT_FEEDS, withId } from "./feeds.js";
+import { resolveYouTube, resolvePodcast, fetchCVE } from "./resolvers.js";
 
 const parser = new Parser({ timeout: config.rss.fetchTimeoutMs });
 const feeds = new Map(); // id -> feed
 let lastRefresh = 0;
 let refreshing = false;
+
+/** Resolve a feed's kind to a list of rss-parser-style items. */
+async function fetchFeedItems(feed) {
+  try {
+    if (feed.kind === "cve") return await fetchCVE(feed.url);
+    let url = feed.url;
+    if (feed.kind === "youtube") url = await resolveYouTube(feed.url);
+    else if (feed.kind === "podcast") url = await resolvePodcast(feed.url);
+    const xml = await fetchText(url, { timeoutMs: config.rss.fetchTimeoutMs });
+    if (!xml) return [];
+    const parsed = await parser.parseString(xml);
+    return parsed.items || [];
+  } catch {
+    return [];
+  }
+}
 
 export const aggregator = {
   feeds: () => [...feeds.values()],
@@ -34,7 +53,7 @@ export const aggregator = {
     for (const f of DEFAULT_FEEDS) if (!feeds.has(f.id)) feeds.set(f.id, f);
   },
 
-  /** Fetch every registered feed, normalize items into the store. Best-effort. */
+  /** Fetch EVERY registered feed, normalize items into the store. Best-effort. */
   async refresh() {
     if (refreshing) return { skipped: true };
     refreshing = true;
@@ -44,37 +63,31 @@ export const aggregator = {
     try {
       const all = [...feeds.values()];
       await mapLimit(all, config.rss.concurrency, async (feed) => {
-        const xml = await fetchText(feed.url, { timeoutMs: config.rss.fetchTimeoutMs });
-        if (!xml) {
+        const items = await fetchFeedItems(feed);
+        if (!items.length) {
           failed++;
           return;
         }
-        try {
-          const parsed = await parser.parseString(xml);
-          for (const item of parsed.items || []) {
-            const post = itemToPost(item, feed);
-            if (!store.rss.has(post.id)) added++;
-            store.putRss(post, config.rss.maxItems);
-          }
-          ok++;
-        } catch {
-          failed++;
+        for (const item of items) {
+          const post = itemToPost(item, feed);
+          if (!store.rss.has(post.id)) added++;
+          store.putRss(post, config.rss.maxItems);
         }
+        ok++;
       });
       lastRefresh = Date.now();
     } finally {
       refreshing = false;
     }
+    console.log(`[rss] refresh: ${ok} ok / ${failed} empty · +${added} new · ${store.rss.size} items`);
     return { feeds: feeds.size, ok, failed, added, items: store.rss.size };
   },
 
-  /** Seed defaults, do an immediate refresh, then refresh on the configured timer. */
+  /** Seed the full catalog, refresh now, then refresh on the configured timer. */
   start() {
     this.seedDefaults();
-    this.refresh()
-      .then((r) => console.log(`[rss] first refresh:`, r))
-      .catch(() => {});
+    this.refresh().catch(() => {});
     setInterval(() => this.refresh().catch(() => {}), config.rss.refreshMs);
-    console.log(`[rss] ${feeds.size} feeds · refresh every ${Math.round(config.rss.refreshMs / 1000)}s`);
+    console.log(`[rss] ${feeds.size} feeds across the full catalog · refresh every ${Math.round(config.rss.refreshMs / 1000)}s`);
   },
 };
