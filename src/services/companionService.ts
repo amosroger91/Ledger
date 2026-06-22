@@ -140,6 +140,46 @@ class CompanionService {
     return { keywords: topTerms(text, n), usedLLM: false };
   }
 
+  /** Generate the shared AI bot's OWN independent public comment on a post —
+   *  written as if it came across the post in the feed, never referencing whoever
+   *  triggered it. Returns the text + the model label used (for provenance). */
+  async commentOnPost(post: Post): Promise<{ text: string; modelLabel: string; usedLLM: boolean }> {
+    const body = (post.text ?? "").slice(0, 700);
+    const prompt = [
+      "You are Ledger AI, an autonomous commenter that browses the public feed and leaves a short comment on posts you find interesting.",
+      "Write ONE genuine, on-topic public comment (1–2 sentences) reacting to the post below, as if you came across it yourself while scrolling.",
+      "Rules: do NOT address anyone, do NOT mention being asked/prompted, never say \"the user\". No greeting, no quotation marks, no hashtags. Just your own take.",
+      "",
+      `Post by ${post.authorName}: "${body}"`,
+    ].join("\n");
+    let text: string | null = null, usedLLM = false;
+    try {
+      if (this.useLLM && isWebGPU()) {
+        const eng = await loadModel(this.model);
+        if (eng) {
+          const r = await eng.chat.completions.create({ messages: [{ role: "user", content: prompt }], temperature: 0.85, max_tokens: 160 });
+          text = r.choices?.[0]?.message?.content ?? null;
+          usedLLM = !!(text && text.trim());
+        }
+      }
+    } catch { /* fall through to heuristic */ }
+    if (!text || !text.trim()) text = this.heuristicComment(body);
+    text = text.trim().replace(/^["'`]+|["'`]+$/g, "").replace(/^comment[:\-\s]+/i, "").trim().slice(0, 600);
+    const modelLabel = usedLLM ? (MODELS.find((m) => m.id === this.model)?.label ?? this.model) : "fast offline engine";
+    return { text, modelLabel, usedLLM };
+  }
+
+  private heuristicComment(text: string): string {
+    const t = topTerms(text, 2).join(" / ") || "this";
+    const opts = [
+      `Interesting angle on ${t} — worth a closer look.`,
+      `This take on ${t} stands out; curious where it leads.`,
+      `Solid food for thought on ${t}.`,
+      `${t}: not the framing I expected, but it lands.`,
+    ];
+    return opts[text.length % opts.length];
+  }
+
   history() { return storage.companionHistory(); }
 
   async ask(prompt: string, context?: { posts?: Post[]; communities?: Community[] }): Promise<CompanionMessage> {

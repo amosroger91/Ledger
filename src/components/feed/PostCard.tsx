@@ -18,6 +18,7 @@ import { linkPreviewService, type Preview } from "@/services/linkPreviewService"
 import { trustService } from "@/services/trustService";
 import { audioPlayerService } from "@/services/audioPlayerService";
 import { watchRoomService } from "@/services/watchRoomService";
+import { companionService } from "@/services/companionService";
 import { factCheckService, type FactCheck } from "@/services/factCheckService";
 import FactCheckRoundedIcon from "@mui/icons-material/FactCheckRounded";
 import ReportProblemRoundedIcon from "@mui/icons-material/ReportProblemRounded";
@@ -467,7 +468,19 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
         : "It currently has no reactions and no comments, so just give your own take on the post itself — don't describe any audience reaction.",
     ].join("\n");
     bus.emit("companion:prompt", { text: prompt });
-    toast("Asked your Companion to weigh in 🤖", "info");
+    toast("Ledger AI is weighing in 🤖", "info");
+    // …and the shared Ledger AI leaves its OWN independent public comment on the
+    // post (once per post — it reads as the bot's take, not about who asked).
+    postAiComment();
+  }
+
+  async function postAiComment() {
+    if (post.author === "ai-bot") return;                       // don't comment on AI's own comments
+    if (replies.some((r) => r.author === "ai-bot")) return;     // already commented
+    try {
+      const { text, modelLabel } = await companionService.commentOnPost(post);
+      await feedService.commentAsAi(post.id, text, modelLabel);
+    } catch { /* best-effort */ }
   }
 
   async function trust(kind: "vouch" | "report" | "mute") {
@@ -489,7 +502,9 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Stack direction="row" alignItems="center" spacing={0.5}>
                 <Typography onClick={visit} sx={{ fontWeight: 700, fontSize: 15, lineHeight: 1.2, cursor: canVisit ? "pointer" : "default", "&:hover": canVisit ? { textDecoration: "underline" } : {} }} noWrap>{post.authorName}</Typography>
-                {post.author === "rss-bot" || post.author === "system"
+                {post.author === "ai-bot"
+                  ? <Chip size="small" label="AI" sx={{ height: 15, fontSize: 9, fontWeight: 700, "& .MuiChip-label": { px: 0.6 }, bgcolor: "rgba(124,92,255,0.16)", color: "#5a35d0" }} />
+                  : post.author === "rss-bot" || post.author === "system"
                   ? <Chip size="small" label="BOT" sx={{ height: 15, fontSize: 9, fontWeight: 700, "& .MuiChip-label": { px: 0.6 }, bgcolor: "rgba(58,123,240,0.14)", color: "#0a55cf" }} />
                   : post.sig
                     ? <Tooltip title="Cryptographically signed by author — verified on arrival"><VerifiedRoundedIcon sx={{ fontSize: 15, color: "#3f97ff" }} /></Tooltip>

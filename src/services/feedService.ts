@@ -71,6 +71,32 @@ class FeedService {
     return post;
   }
 
+  /** Post a comment as the shared on-device AI bot — a reply to `parentId`,
+   *  authored by the "ai-bot" account every AI shares. The model label is
+   *  stamped into the body for later troubleshooting. The id is derived from the
+   *  parent so there's at most one shared AI comment per post across the network
+   *  (re-runs overwrite rather than spam). */
+  async commentAsAi(parentId: string, text: string, modelLabel: string): Promise<Post> {
+    const post: Post = {
+      id: "aic_" + parentId,
+      author: "ai-bot",
+      authorName: "Ledger AI 🤖",
+      kind: "text",
+      text: `${text}\n\n— 🤖 Ledger AI · on-device (${modelLabel})`,
+      tags: ["ai"],
+      createdAt: Date.now(),
+      reactions: {},
+      replyTo: parentId,
+      embedding: embed(text),
+      source: "self",
+    };
+    await storage.putPost(post);
+    bus.emit("feed:post", post);
+    bus.emit("feed:updated", undefined);
+    bus.emit("post:publish", post);   // share via the durable graph (Gun)
+    return post;
+  }
+
   /** Ingest a post received from a peer/relay. Verifies the signature first —
    *  a forged or tampered post (wrong/missing signature for a real author) is
    *  dropped here, before it can reach storage or the feed. Bot authors
@@ -215,7 +241,7 @@ class FeedService {
     // everything else stays, with the verdict surfaced in the UI.
     const verdicts = new Map<string, ModerationVerdict>();
     posts = posts.filter((p) => {
-      const bot = p.author === "rss-bot" || p.author === "system";
+      const bot = p.author === "rss-bot" || p.author === "system" || p.author === "ai-bot";
       const v = moderationService.evaluate([p.text, p.poll?.question].filter(Boolean).join(" "), {
         profile: opts.moderation,
         authorPk: bot ? undefined : p.author,

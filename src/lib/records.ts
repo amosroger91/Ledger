@@ -28,7 +28,7 @@ const enc = new TextEncoder();
  *  they're exempt from signature checks. A real user id is a long SPKI
  *  string and can never collide with these. */
 export function isBotAuthor(pk: string | undefined): boolean {
-  return !pk || pk === "rss-bot" || pk === "system" || pk.startsWith("demo_");
+  return !pk || pk === "rss-bot" || pk === "system" || pk === "ai-bot" || pk.startsWith("demo_");
 }
 
 async function importPriv(jwk: JsonWebKey) {
