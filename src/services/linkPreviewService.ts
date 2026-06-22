@@ -43,6 +43,35 @@ class LinkPreviewService {
     storage.kvSet("lp:" + url, preview);
     return preview;
   }
+
+  /** TikTok unfurl via the official oEmbed endpoint — reliably returns a cover
+   *  thumbnail, title, and author even though TikTok pages don't scrape well.
+   *  Tries the endpoint directly, then falls back through the CORS proxies. */
+  async tiktok(url: string): Promise<Preview> {
+    const key = "tt:" + url;
+    if (mem.has(key)) return mem.get(key)!;
+    const cached = await storage.kvGet<Preview>(key);
+    if (cached) { mem.set(key, cached); return cached; }
+
+    const endpoint = `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`;
+    let j: any = null;
+    for (const f of [endpoint, ...PROXIES.map((p) => p(endpoint))]) {
+      try { const r = await fetch(f, { cache: "no-store" }); if (r.ok) { j = JSON.parse(await r.text()); if (j) break; } } catch {}
+    }
+    let image: string | undefined = j?.thumbnail_url;
+    if (image && image.startsWith("//")) image = "https:" + image;
+    const handle = (j?.author_url || "").match(/@([\w.-]+)/)?.[1] || j?.author_name;
+    const preview: Preview = {
+      url,
+      title: j?.title ? decode(j.title) : undefined,
+      description: handle ? `@${handle}` : undefined,
+      image: image && /^https?:\/\//.test(image) ? image : undefined,
+      site: "TikTok",
+    };
+    mem.set(key, preview);
+    storage.kvSet(key, preview);
+    return preview;
+  }
 }
 
 export const linkPreviewService = new LinkPreviewService();

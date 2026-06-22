@@ -47,14 +47,19 @@ const YT_RE = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\
 const IMG_RE = /\.(png|jpe?g|gif|webp|avif|bmp|svg)(\?[^\s]*)?$/i;
 // Spotify share links: track / album / playlist / episode / show.
 const SPOTIFY_RE = /open\.spotify\.com\/(?:intl-[a-z]+\/)?(track|album|playlist|episode|show|artist)\/([A-Za-z0-9]+)/i;
+const TIKTOK_RE = /https?:\/\/(?:www\.|m\.|vm\.|vt\.)?tiktok\.com\/[^\s]+/i;
 function firstYouTube(text: string): string | null { return text.match(YT_RE)?.[1] ?? null; }
 function firstSpotify(text: string): { kind: string; id: string } | null {
   const m = text.match(SPOTIFY_RE);
   return m ? { kind: m[1].toLowerCase(), id: m[2] } : null;
 }
+function firstTikTok(text: string): string | null {
+  const u = (text.match(/https?:\/\/[^\s]+/g) ?? []).find((x) => TIKTOK_RE.test(x));
+  return u ? u.replace(/[)\].,]+$/, "") : null;
+}
 function firstLink(text: string): string | null {
   const urls = text.match(/https?:\/\/[^\s]+/g) ?? [];
-  return urls.find((u) => !IMG_RE.test(u) && !YT_RE.test(u) && !SPOTIFY_RE.test(u)) ?? null;
+  return urls.find((u) => !IMG_RE.test(u) && !YT_RE.test(u) && !SPOTIFY_RE.test(u) && !TIKTOK_RE.test(u)) ?? null;
 }
 
 // Spotify — click to activate, then the global Spotify player owns the embed so
@@ -204,6 +209,33 @@ function YouTubeCard({ id }: { id: string }) {
       <Button size="small" startIcon={<span style={{ fontSize: 15 }}>🍿</span>} onClick={watchTogether} sx={{ mt: 0.5, color: "text.secondary" }}>
         Watch with friends
       </Button>
+    </Box>
+  );
+}
+
+// TikTok preview — vertical cover thumbnail via oEmbed, click opens TikTok.
+function TikTokCard({ url }: { url: string }) {
+  const [d, setD] = useState<Preview | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => { let on = true; linkPreviewService.tiktok(url).then((p) => on && setD(p)).catch(() => {}); return () => { on = false; }; }, [url]);
+  return (
+    <Box component="a" href={url} target="_blank" rel="noopener noreferrer" sx={{ display: "block", mt: 1.25, border: "1px solid var(--bl-line)", borderRadius: 2.5, overflow: "hidden", textDecoration: "none", color: "inherit", bgcolor: "var(--bl-white)", "&:hover": { bgcolor: "rgba(58,155,240,0.04)" } }}>
+      <Box sx={{ position: "relative", bgcolor: "#000", display: "grid", placeItems: "center", minHeight: d?.image && !failed ? 0 : 160 }}>
+        {d?.image && !failed && (
+          <Box component="img" src={d.image} loading="lazy" onError={() => setFailed(true)}
+            sx={{ width: "100%", maxHeight: 460, objectFit: "cover", display: "block" }} />
+        )}
+        <Box sx={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", pointerEvents: "none" }}>
+          <Box sx={{ width: 60, height: 60, borderRadius: "50%", bgcolor: "rgba(0,0,0,0.55)", display: "grid", placeItems: "center" }}>
+            <PlayArrowRoundedIcon sx={{ color: "#fff", fontSize: 34 }} />
+          </Box>
+        </Box>
+        <Chip size="small" label="TikTok" sx={{ position: "absolute", top: 8, left: 8, height: 20, fontWeight: 800, fontSize: 11, bgcolor: "rgba(0,0,0,0.7)", color: "#fff" }} />
+      </Box>
+      <Box sx={{ p: 1.25 }}>
+        <Typography variant="caption" sx={{ color: "text.secondary", textTransform: "uppercase", letterSpacing: 0.4, fontSize: 11 }}>TikTok{d?.description ? ` · ${d.description}` : ""}</Typography>
+        <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.3, mt: 0.25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{d?.title || "Watch on TikTok"}</Typography>
+      </Box>
     </Box>
   );
 }
@@ -499,9 +531,11 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
           {(() => {
             const ytId = firstYouTube(post.text ?? "");
             const spotify = ytId ? null : firstSpotify(post.text ?? "");
-            const linkUrl = ytId || spotify ? null : firstLink(post.text ?? "");
+            const tiktok = ytId || spotify ? null : firstTikTok(post.text ?? "");
+            const linkUrl = ytId || spotify || tiktok ? null : firstLink(post.text ?? "");
             if (ytId) return <YouTubeCard id={ytId} />;
             if (spotify) return <SpotifyCard kind={spotify.kind} id={spotify.id} />;
+            if (tiktok) return <TikTokCard url={tiktok} />;
             if (linkUrl) return <LinkCard url={linkUrl} />;
             // uploaded images (no link in text)
             return post.media?.map((m, i) => (m.type === "image" ? <SafeImage key={i} src={m.url} sx={{ mt: 1, maxWidth: "100%", maxHeight: 360, borderRadius: 2, border: "1px solid var(--bl-line)" }} /> : null));
