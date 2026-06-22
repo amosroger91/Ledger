@@ -15,9 +15,11 @@ import { bus } from "@/lib/events";
 import { clockTime } from "@/lib/time";
 import type { CompanionMessage, ChatMessage } from "@/types";
 
+// Panels flow inside the dock column (below the buttons), so they always dock
+// in the same bottom-right corner and the buttons ride above them.
 const PANEL_SX = {
-  position: "fixed" as const, right: 16, bottom: 150, zIndex: 1291,
-  width: { xs: "calc(100vw - 32px)", sm: 350 }, height: "min(72vh, 470px)",
+  pointerEvents: "auto" as const,
+  width: { xs: "calc(100vw - 28px)", sm: 350 }, height: "min(70vh, 460px)",
   display: "flex", flexDirection: "column", overflow: "hidden", borderRadius: 3,
   bgcolor: "var(--bl-face)", border: "1px solid var(--bl-edge-frame)", boxShadow: "0 18px 50px rgba(0,0,0,0.45)",
 };
@@ -172,29 +174,31 @@ export default function FloatingDocks() {
 
   const openCompanion = () => { setCompanionOpen(true); setChatOpen(false); };
   const openChat = () => { setChatActive(true); setChatOpen(true); setCompanionOpen(false); };
+  const toggleCompanion = () => (companionOpen ? setCompanionOpen(false) : openCompanion());
+  const toggleChat = () => (chatOpen ? setChatOpen(false) : openChat());
 
   return (
-    <>
+    // Anchored to the bottom-right corner of the content. A flex column: the
+    // button row rides on top, and the open panel docks directly below it toward
+    // the corner — so opening a chat pushes the buttons up, and closing it drops
+    // them back down into the same spot the panel occupied.
+    <Box sx={{ position: "fixed", right: { xs: 14, md: 28 }, bottom: { xs: 14, md: 28 }, zIndex: 1290, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1.25, pointerEvents: "none" }}>
+      <Stack direction="row" spacing={1.25} sx={{ pointerEvents: "auto" }}>
+        <Tooltip title={chatOpen ? "Hide Swarm Lounge" : "Swarm Lounge chat"} placement="top">
+          <Box onClick={toggleChat} sx={bubbleSx("#7c5cff")}>
+            <Badge color="error" variant="dot" invisible={!chatActive || chatOpen}><ForumRoundedIcon sx={{ color: "#fff" }} /></Badge>
+          </Box>
+        </Tooltip>
+        <Tooltip title={companionOpen ? "Hide Companion" : "Chat with your Companion"} placement="top">
+          <Box onClick={toggleCompanion} sx={bubbleSx("linear-gradient(135deg,#3f97ff,#1668e0)")}>
+            <AutoAwesomeRoundedIcon sx={{ color: "#fff" }} />
+          </Box>
+        </Tooltip>
+      </Stack>
+
       {companionOpen && <CompanionPanel intro={intro} autoPrompt={pending} onConsumed={() => setPending(null)} onMin={() => setCompanionOpen(false)} onClose={() => setCompanionOpen(false)} />}
       {chatActive && <ChatroomPanel visible={chatOpen} onMin={() => setChatOpen(false)} onClose={() => { setChatActive(false); setChatOpen(false); }} />}
-
-      <Stack spacing={1.25} sx={{ position: "fixed", right: 16, bottom: 84, zIndex: 1290, alignItems: "flex-end" }}>
-        {!chatOpen && (
-          <Tooltip title="Swarm Lounge chat" placement="left">
-            <Box onClick={openChat} sx={bubbleSx("#7c5cff")}>
-              <Badge color="error" variant="dot" invisible={!chatActive}><ForumRoundedIcon sx={{ color: "#fff" }} /></Badge>
-            </Box>
-          </Tooltip>
-        )}
-        {!companionOpen && (
-          <Tooltip title="Chat with your Companion" placement="left">
-            <Box onClick={openCompanion} sx={bubbleSx("linear-gradient(135deg,#3f97ff,#1668e0)")}>
-              <AutoAwesomeRoundedIcon sx={{ color: "#fff" }} />
-            </Box>
-          </Tooltip>
-        )}
-      </Stack>
-    </>
+    </Box>
   );
 }
 
