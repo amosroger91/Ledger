@@ -6,6 +6,17 @@
     <meta name="theme-color" content="#1668e0" />
     <title>ZuccBook — the local-first social universe</title>
     <meta name="description" content="ZuccBook is a decentralized, local-first social platform that runs in your browser. You own your identity, your feed is generated locally by on-device AI, and communication is peer-to-peer. No accounts, no servers, ~$0 to host." />
+
+    <!-- Progressive Web App: installable on Android (Chrome/Edge) and iOS
+         (Safari → Share → Add to Home Screen). All paths are relative so the
+         install works from any deploy path (domain root, Pages subpath, IPFS). -->
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ZuccBook" />
     <style>
       html, body, #root { height: 100%; margin: 0; }
       /* Bliss uses the real XP faces (Trebuchet MS / Tahoma) which ship on

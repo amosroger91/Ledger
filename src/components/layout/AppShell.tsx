@@ -23,6 +23,7 @@ import LocalCafeRoundedIcon from "@mui/icons-material/LocalCafeRounded";
 import { useStore } from "@/store/useStore";
 import UserAvatar from "@/components/common/UserAvatar";
 import PresenceList from "@/components/layout/PresenceList";
+import InstallButton from "@/components/layout/InstallButton";
 
 const NAV = [
   { to: "/", label: "Feed", icon: <HomeRoundedIcon /> },
@@ -154,6 +155,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
         })}
 
         <Box sx={{ flex: 1 }} />
+
+        {/* Install as a PWA (Android prompt / iOS instructions); self-hides when
+            already installed or unsupported. */}
+        <InstallButton compact={compact} />
 
         {/* Support — ZuccBook stays free, open-source & uncensored; the only
             funding is voluntary support for the developer. */}

@@ -7,6 +7,7 @@ import "@/bliss.css";   // the Bliss / XP "Luna" design system (tokens + compone
 import "@/bliss.js";    // Bliss behavior layer (window.Bliss); harmless for our MUI tree
 import App from "@/App";
 import { identityService } from "@/services/identityService";
+import { registerServiceWorker } from "@/lib/pwa";
 
 // Swallow noisy, non-fatal WebGPU/WebLLM rejections (e.g. "device lost",
 // "Instance dropped in popErrorScope") so a GPU hiccup while the on-device model
@@ -39,6 +40,9 @@ async function start() {
       </ThemeProvider>
     </React.StrictMode>,
   );
+
+  // make the app installable + offline-capable (production builds only)
+  registerServiceWorker();
 
   // dismiss the boot splash once React has painted
   requestAnimationFrame(() => {
