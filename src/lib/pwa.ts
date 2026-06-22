@@ -82,9 +82,21 @@ export function useInstall() {
 export function registerServiceWorker() {
   if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
   if (!import.meta.env.PROD) return;
+  // When a newly-deployed SW takes control, reload ONCE so the fresh build is used
+  // immediately. Without this, a cached SW keeps serving a stale bundle until the
+  // user manually hard-refreshes — which is exactly how a broken build can strand
+  // everyone (the "can't load" hang). The guard prevents a reload loop.
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (reloaded) return;
+    reloaded = true;
+    window.location.reload();
+  });
   window.addEventListener("load", () => {
     // Resolve relative to the document so it works from any deploy subpath.
     const url = new URL("sw.js", document.baseURI).href;
-    navigator.serviceWorker.register(url, { scope: "./" }).catch((e) => console.warn("[pwa] SW registration failed", e));
+    navigator.serviceWorker.register(url, { scope: "./" })
+      .then((reg) => { reg.update().catch(() => {}); }) // proactively pull a newer SW on every load
+      .catch((e) => console.warn("[pwa] SW registration failed", e));
   });
 }
