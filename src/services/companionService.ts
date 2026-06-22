@@ -79,7 +79,11 @@ async function loadModel(id: string): Promise<any | null> {
       const spec = "https://esm.run/@mlc-ai/web-llm";
       const webllm: any = await import(/* @vite-ignore */ spec);
       bus.emit("companion:model", { state: "loading", id, progress: 0, text: "starting" });
-      const eng = await webllm.CreateMLCEngine(id, {
+      // Run the engine in a Web Worker so the heavy model load/compile + inference
+      // never block the UI thread (that was the "page unresponsive" freeze on boot).
+      // The worker hosts WebWorkerMLCEngineHandler — see llm.worker.ts.
+      const worker = new Worker(new URL("./llm.worker.ts", import.meta.url), { type: "module" });
+      const eng = await webllm.CreateWebWorkerMLCEngine(worker, id, {
         initProgressCallback: (p: any) => bus.emit("companion:model", { state: "loading", id, progress: p.progress ?? 0, text: p.text }),
       });
       engine = eng; loadedId = id;

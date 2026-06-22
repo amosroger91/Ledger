@@ -61,7 +61,10 @@ export async function boot(): Promise<BootResult> {
   companionService.configure(settings.useWebLLM, settings.llmModel);
   // "Just download it" — start fetching the model immediately (best-effort,
   // cached by WebLLM after the first time). Progress shows in the UI.
-  if (isWebGPU() && !settings.llmOptOut) companionService.preload().catch(() => {});
+  // WebLLM is NOT preloaded on boot — importing + compiling it on the main thread is
+  // what froze the UI ("page unresponsive"). It now loads ON DEMAND the first time you
+  // use the companion (ask / comment / pick-model) and runs in a Web Worker
+  // (llm.worker.ts), so neither boot nor the feed ever blocks on the model.
 
   if (me) {
     presenceService.setStatus(settings.presenceStatus);

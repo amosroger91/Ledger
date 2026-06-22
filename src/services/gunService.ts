@@ -42,6 +42,36 @@ let started = false;
 const seenSwarm = new Set<string>();
 const rssLedger = new Map<string, number>(); // feedKey → last-fetched epoch (shared across everyone)
 
+// The relay holds the entire global graph (the whole RSS catalog + every post), and
+// Gun replays ALL of it on connect — 1K+ records/sec. Verifying + embedding + storing
+// each one synchronously as it arrives pins the main thread (the app goes unresponsive).
+// So we QUEUE incoming records and drain them in small batches that yield to the event
+// loop between each, keeping the UI responsive no matter how big the firehose is.
+const postQueue: string[] = [];
+const seenPostJson = new Set<string>(); // skip exact re-fires (Gun re-emits a record on every touch)
+let draining = false;
+async function drainPostQueue() {
+  if (draining) return;
+  draining = true;
+  try {
+    while (postQueue.length) {
+      const batch: Post[] = [];
+      for (const j of postQueue.splice(0, 12)) {
+        try { batch.push(JSON.parse(j)); } catch { /* skip malformed */ }
+      }
+      if (batch.length) { try { await feedService.absorbMany(batch); } catch { /* keep draining */ } }
+      await new Promise((r) => setTimeout(r, 0)); // yield — let rendering + input run between batches
+    }
+  } finally { draining = false; }
+}
+function enqueuePost(json: string) {
+  if (seenPostJson.has(json)) return;          // identical record already queued/processed
+  seenPostJson.add(json);
+  if (seenPostJson.size > 20000) seenPostJson.clear(); // bound memory on very long sessions
+  postQueue.push(json);
+  drainPostQueue();
+}
+
 class GunService {
   /** When was this feed last fetched by ANYONE (per the shared ledger)? */
   rssLastFetch(key: string): number { return rssLedger.get(key) ?? 0; }
@@ -59,9 +89,10 @@ class GunService {
     try {
       gun = (Gun as any)({ peers: PEERS, localStorage: false });
 
-      // Incoming feed posts (human + bot) → absorb (dedupe + merge reactions).
+      // Incoming feed posts (human + bot) → QUEUE, then drain in yielding batches
+      // (see drainPostQueue) so the relay's full-graph replay can't freeze the UI.
       gun.get(ROOT).get("posts").map().on((d: any) => {
-        if (d?.json) { try { feedService.absorb(JSON.parse(d.json)); } catch {} }
+        if (d?.json) enqueuePost(d.json);
       });
       // Incoming Swarm Lounge messages → store + surface.
       gun.get(ROOT).get("swarm").map().on((d: any) => {
