@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { Box, ToggleButtonGroup, ToggleButton, Stack, Typography, Button, useMediaQuery, LinearProgress, Chip, CircularProgress, TextField, InputAdornment, IconButton, Avatar } from "@mui/material";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
@@ -83,9 +83,35 @@ export default function FeedView() {
     [posts, filter, query, community],
   );
 
+  // Render the (already in-memory) feed incrementally: mount a small window of
+  // PostCards up front and grow it as you approach the end. PostCards are heavy
+  // (media, embeds, link-preview fetches), so rendering hundreds at once is what
+  // makes the first paint and scrolling slow. This is purely a render-time
+  // window — no extra network; we're just deferring DOM/work, not data.
+  const PAGE = 12;
+  const [visibleCount, setVisibleCount] = useState(PAGE);
+  // Reset the window when the feed's identity changes (algorithm/filter/search/group).
+  useEffect(() => { setVisibleCount(PAGE); }, [algo, filter, query, community]);
+  const visiblePosts = useMemo(() => shown.slice(0, visibleCount), [shown, visibleCount]);
+  const hasMore = visibleCount < shown.length;
+  // Latest `shown` for non-reactive handlers (e.g. deep-link focus below).
+  const shownRef = useRef(shown);
+  shownRef.current = shown;
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!hasMore) return;
+    const root = document.getElementById("app-scroll");
+    const el = sentinelRef.current;
+    if (!el) return;
+    // rootMargin pre-loads the next batch ~one screen early so scrolling never stalls.
+    const io = new IntersectionObserver((es) => { if (es[0].isIntersecting) setVisibleCount((v) => v + PAGE); }, { root, rootMargin: "1200px 0px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMore, shown.length]);
+
   const refresh = useCallback(async () => {
-    const subscribedTopics = (await rssService.config()).topics;
-    const { posts, reasons, verdicts } = await feedService.generate(algo, { moderation: settings.moderationProfile, subscribedTopics });
+    const cfg = await rssService.config();
+    const { posts, reasons, verdicts } = await feedService.generate(algo, { moderation: settings.moderationProfile, subscribedTopics: cfg.topics, mutedTopics: cfg.mutedTopics });
     setPosts(posts);
     setReasons(reasons);
     setVerdicts(verdicts);
@@ -99,6 +125,10 @@ export default function FeedView() {
   useEffect(() => { refresh(); const off = bus.on("feed:updated", refresh); return off; }, [refresh]);
   // Scroll to & highlight a post when an alert deep-links to it.
   useEffect(() => bus.on("focus:post", ({ postId }) => {
+    // The feed is windowed for performance — if the target is past the current
+    // window, reveal enough to mount it before we try to scroll to it.
+    const idx = shownRef.current.findIndex((p) => p.id === postId);
+    if (idx >= 0) setVisibleCount((v) => Math.max(v, idx + 3));
     let tries = 0;
     const tick = () => {
       const el = document.getElementById(`post-${postId}`);
@@ -156,7 +186,7 @@ export default function FeedView() {
   }, [doRefresh]);
 
   return (
-    <Box sx={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "minmax(0,1fr) 300px", gap: 2, maxWidth: 1100, mx: "auto" }}>
+    <Box sx={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "minmax(0,1fr) 340px", gap: 3, maxWidth: 1800, mx: "auto" }}>
       <Box sx={{ minWidth: 0 }}>
         {/* pull / scroll-to-refresh indicator */}
         {pull > 0 && (
@@ -235,7 +265,16 @@ export default function FeedView() {
                 : "No posts to show."}
           </Typography></GlassCard>
         )}
-        {shown.map((p) => <PostCard key={p.id} post={p} reason={reasons.get(p.id)} replies={replies.get(p.id) ?? []} replyMap={replies} verdict={verdicts.get(p.id)} />)}
+        {visiblePosts.map((p) => (
+          // content-visibility:auto lets the browser skip rendering/layout for
+          // cards scrolled off-screen; contain-intrinsic-size "auto 480px"
+          // remembers each card's real height so the scrollbar doesn't jump.
+          // (Progressive enhancement — older browsers just render normally.)
+          <Box key={p.id} sx={{ contentVisibility: "auto", containIntrinsicSize: "auto 480px" }}>
+            <PostCard post={p} reason={reasons.get(p.id)} replies={replies.get(p.id) ?? []} replyMap={replies} verdict={verdicts.get(p.id)} />
+          </Box>
+        ))}
+        {hasMore && <Box ref={sentinelRef} aria-hidden sx={{ height: 1 }} />}
       </Box>
 
       {!compact && (
