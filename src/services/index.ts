@@ -53,6 +53,7 @@ export async function boot(): Promise<BootResult> {
   await trustService.load();           // load my web-of-trust edges
   await profileService.loadCache();    // warm cached peer profiles (viewable offline)
   await purgeSeededPosts();            // remove demo posts left by earlier builds
+  storage.pruneEphemeralPosts().catch(() => {});  // cap the RSS/Nostr cache so storage + ranking stay bounded
   const me = await identityService.load();
   companionService.configure(settings.useWebLLM, settings.llmModel);
   // "Just download it" — start fetching the model immediately (best-effort,
@@ -76,6 +77,7 @@ export async function boot(): Promise<BootResult> {
     changelogService.refresh().catch(() => {}); // repo commits → timeline activity
     if (settings.showFactChecks) factCheckService.refresh().catch(() => {}); // PolitiFact index
     if (settings.nostrEnabled !== false) nostrService.start().catch(() => {}); // stream Nostr notes for your topics
+    setInterval(() => storage.pruneEphemeralPosts().catch(() => {}), 10 * 60 * 1000); // keep the RSS/Nostr cache bounded during long sessions
   }
   return { onboarded: !!me, settings };
 }

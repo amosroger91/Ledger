@@ -240,9 +240,17 @@ class FeedService {
   /* ---------- feed generation ---------- */
   async generate(
     algorithm: FeedAlgorithm,
-    opts: { moderation: ModerationProfile; friends?: string[]; community?: string; subscribedTopics?: string[]; mutedTopics?: string[]; mutedFeeds?: string[]; includeNostr?: boolean; values?: CommunityValues } = { moderation: "discovery" },
-  ): Promise<{ posts: Post[]; reasons: Map<string, RecommendationReason>; verdicts: Map<string, ModerationVerdict> }> {
-    let posts = (await storage.allPosts()).filter((p) => !p.replyTo && !this.hidden.has(p.id)); // top-level, minus posts you hid
+    opts: { moderation: ModerationProfile; friends?: string[]; community?: string; subscribedTopics?: string[]; mutedTopics?: string[]; mutedFeeds?: string[]; includeNostr?: boolean; limit?: number; values?: CommunityValues } = { moderation: "discovery" },
+  ): Promise<{ posts: Post[]; reasons: Map<string, RecommendationReason>; verdicts: Map<string, ModerationVerdict>; replies: Map<string, Post[]> }> {
+    // Bounded working set: rank only the newest window (storage.recentPosts keeps
+    // it O(1) regardless of total corpus size — the key to staying fast at scale).
+    const recent = await storage.recentPosts(opts.limit ?? 800, opts.community);
+    // Build the reply tree from the SAME bounded read (a reply is recent when its
+    // parent is), so refresh() never has to scan the whole store a second time.
+    const replies = new Map<string, Post[]>();
+    for (const p of recent) if (p.replyTo) { const a = replies.get(p.replyTo) ?? []; a.push(p); replies.set(p.replyTo, a); }
+    for (const a of replies.values()) a.sort((x, y) => x.createdAt - y.createdAt);
+    let posts = recent.filter((p) => !p.replyTo && !this.hidden.has(p.id)); // top-level, minus posts you hid
     if (opts.includeNostr === false) posts = posts.filter((p) => p.source !== "nostr");   // Nostr unsubscribed
     const meId = identityService.pk;
 
@@ -363,7 +371,7 @@ class FeedService {
 
     // Sort by score, then newest-first as the tiebreaker.
     scored.sort((a, b) => b.score - a.score || b.p.createdAt - a.p.createdAt);
-    return { posts: scored.map((s) => s.p), reasons, verdicts };
+    return { posts: scored.map((s) => s.p), reasons, verdicts, replies };
   }
 
   interestVector() { return this.profile.vector(); }

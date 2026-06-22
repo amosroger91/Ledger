@@ -105,6 +105,45 @@ export const storage = {
   },
   async postsByAuthor(pk: string) { return (await db()).getAllFromIndex("posts", "byAuthor", pk); },
   async deletePost(id: string) { (await db()).delete("posts", id); },
+  /** Bounded newest-first working set for the feed. A community view reads that
+   *  community's index; the global view scans the newest window (capped) and keeps
+   *  every human/self/peer post while capping the rss/nostr firehose at `limit` —
+   *  so per-render cost is constant no matter how large the global corpus grows. */
+  async recentPosts(limit = 800, community?: string): Promise<Post[]> {
+    const d = await db();
+    if (community) {
+      const all = await d.getAllFromIndex("posts", "byCommunity", community);
+      all.sort((a, b) => b.createdAt - a.createdAt);
+      return all.slice(0, limit);
+    }
+    const scanCap = Math.max(limit * 4, 3000);
+    const out: Post[] = [];
+    let firehose = 0, scanned = 0;
+    let cur = await d.transaction("posts").store.index("byTime").openCursor(null, "prev"); // newest first
+    while (cur && scanned < scanCap) {
+      scanned++;
+      const p = cur.value;
+      if (p.author === "rss-bot" || p.source === "nostr") { if (firehose < limit) { out.push(p); firehose++; } } // rss-bot + nostr = the firehose
+      else out.push(p); // everyone else (humans, your posts, changelog) is always kept within the window
+      cur = await cur.continue();
+    }
+    return out;
+  },
+  /** Cap the external/ephemeral firehose (RSS + Nostr) at `keep` newest, deleting
+   *  the oldest surplus. Never touches your own/peer posts. RSS re-syncs from the
+   *  relay and Nostr re-streams, so this is a safe rolling cache. Returns # deleted. */
+  async pruneEphemeralPosts(keep = 2500): Promise<number> {
+    const d = await db();
+    const ids: string[] = [];
+    let cur = await d.transaction("posts").store.index("byTime").openCursor(null, "next"); // oldest first
+    while (cur) { const p = cur.value as Post; if (p.author === "rss-bot" || p.source === "nostr") ids.push(p.id); cur = await cur.continue(); }
+    const surplus = ids.length - keep;
+    if (surplus <= 0) return 0;
+    const tx = d.transaction("posts", "readwrite");
+    for (let i = 0; i < surplus; i++) tx.store.delete(ids[i]);
+    await tx.done;
+    return surplus;
+  },
 
   /* ---------- profiles (cached peer profiles, viewable offline) ---------- */
   async putProfile(p: Profile) { (await db()).put("profiles", p); },

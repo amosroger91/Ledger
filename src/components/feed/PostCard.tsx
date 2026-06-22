@@ -304,6 +304,37 @@ function renderText(text: string, censor: boolean) {
   });
 }
 
+// Post body with a "See more"/"See less" toggle for very long posts. When
+// collapsed it clamps to a max height and fades out via a CSS mask (so it blends
+// with any card background). Short posts render exactly as before, no button.
+const LONG_THRESHOLD = 900;       // chars — "super super long"
+const COLLAPSED_MAX = 340;        // px
+function PostText({ text, censor }: { text: string; censor: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  const long = text.length > LONG_THRESHOLD || (text.match(/\n/g)?.length ?? 0) > 14;
+  const clamp = long && !expanded;
+  const fade = "linear-gradient(to bottom, #000 78%, transparent)";
+  return (
+    <Box>
+      <Typography
+        component="div"
+        sx={{
+          mt: 1, fontSize: 15, lineHeight: 1.55, whiteSpace: "pre-wrap", wordBreak: "break-word",
+          ...(clamp ? { maxHeight: COLLAPSED_MAX, overflow: "hidden", maskImage: fade, WebkitMaskImage: fade } : {}),
+        }}
+      >
+        {renderText(text, censor)}
+      </Typography>
+      {long && (
+        <Button size="small" disableRipple onClick={() => setExpanded((v) => !v)}
+          sx={{ mt: 0.25, px: 0.5, textTransform: "none", fontWeight: 700, color: "#1668e0", "&:hover": { bgcolor: "transparent", textDecoration: "underline" } }}>
+          {expanded ? "See less" : "See more"}
+        </Button>
+      )}
+    </Box>
+  );
+}
+
 // A reply composer (text + image + GIF) reused at every nesting level.
 function ReplyComposer({ parentId, placeholder, autoFocus, onPosted }: { parentId: string; placeholder: string; autoFocus?: boolean; onPosted?: () => void }) {
   const [text, setText] = useState("");
@@ -553,7 +584,7 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
           ))}
 
           {(!gated || revealed) && (<>
-          {post.text && <Typography component="div" sx={{ mt: 1, fontSize: 15, lineHeight: 1.55, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{renderText(post.text, censorProfanity)}</Typography>}
+          {post.text && <PostText text={post.text} censor={censorProfanity} />}
 
           {post.html && <HtmlCard html={post.html} />}
 

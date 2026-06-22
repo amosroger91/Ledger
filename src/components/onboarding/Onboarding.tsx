@@ -4,6 +4,7 @@ import QrCodeScannerRoundedIcon from "@mui/icons-material/QrCodeScannerRounded";
 import InstallMobileRoundedIcon from "@mui/icons-material/InstallMobileRounded";
 import GlassCard from "@/components/common/GlassCard";
 import { identityService } from "@/services/identityService";
+import { nostrService } from "@/services/nostrService";
 import { onOnboarded } from "@/services";
 import { useStore } from "@/store/useStore";
 import { toast } from "@/lib/events";
@@ -13,6 +14,7 @@ import InstallHelpDialog from "@/components/layout/InstallHelpDialog";
 export default function Onboarding() {
   const refreshMe = useStore((s) => s.refreshMe);
   const [username, setUsername] = useState("");
+  const [nostrKey, setNostrKey] = useState("");
   const [busy, setBusy] = useState(false);
   const [scan, setScan] = useState(false);
   const [install, setInstall] = useState(false);
@@ -28,9 +30,17 @@ export default function Onboarding() {
   async function create() {
     setBusy(true);
     try {
+      // Optional: link an existing Nostr account (paste its nsec). We set the
+      // Nostr key BEFORE onboarding so the network starts with it; an invalid
+      // key aborts before we create the Ledger identity, so the user can fix it.
+      const nsec = nostrKey.trim();
+      if (nsec) {
+        try { await nostrService.importKey(nsec); }
+        catch { toast("That doesn't look like a Nostr nsec key — check it, or leave it blank to get a new one.", "error"); return; }
+      }
       await identityService.create(username);
       refreshMe();   // enter the app immediately
-      toast("Identity generated — it lives only on this device", "success");
+      toast(nsec ? "Linked your Nostr account ✦" : "Identity generated — it lives only on this device", "success");
       onOnboarded().catch((e) => console.warn("[onboard] background init failed", e)); // best-effort
     } catch (e) {
       console.error(e);
@@ -71,8 +81,17 @@ export default function Onboarding() {
             placeholder="leave blank for a random handle"
             fullWidth
           />
+          <TextField
+            label="Link an existing Nostr account (optional)"
+            value={nostrKey}
+            onChange={(e) => setNostrKey(e.target.value)}
+            placeholder="paste your nsec1… key"
+            type="password"
+            fullWidth
+            helperText="Have a Nostr account? Paste its secret key (nsec…) to sign in with it. Leave blank and we'll create a fresh Nostr key for you automatically."
+          />
           <Button variant="contained" size="large" disabled={busy} onClick={create}>
-            Generate my identity →
+            {nostrKey.trim() ? "Link & enter →" : "Generate my identity →"}
           </Button>
 
           <Divider><Chip label="already have an account?" size="small" /></Divider>

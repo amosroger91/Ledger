@@ -110,18 +110,25 @@ export default function FeedView() {
 
   const refresh = useCallback(async () => {
     const cfg = await rssService.config();
-    const { posts, reasons, verdicts } = await feedService.generate(algo, { moderation: settings.moderationProfile, subscribedTopics: cfg.topics, mutedTopics: cfg.mutedTopics, mutedFeeds: cfg.mutedFeeds, includeNostr: settings.nostrEnabled !== false });
+    // generate() now returns the reply tree from its own bounded read — no separate
+    // full-store scan here (that doubled the per-refresh cost on every update).
+    const { posts, reasons, verdicts, replies } = await feedService.generate(algo, { moderation: settings.moderationProfile, subscribedTopics: cfg.topics, mutedTopics: cfg.mutedTopics, mutedFeeds: cfg.mutedFeeds, includeNostr: settings.nostrEnabled !== false, community: community ?? undefined });
     setPosts(posts);
     setReasons(reasons);
     setVerdicts(verdicts);
-    // group replies under their parent post
-    const map = new Map<string, Post[]>();
-    for (const p of await storage.allPosts()) if (p.replyTo) { const a = map.get(p.replyTo) ?? []; a.push(p); map.set(p.replyTo, a); }
-    for (const a of map.values()) a.sort((x, y) => x.createdAt - y.createdAt);
-    setReplies(map);
-  }, [algo, settings.moderationProfile, settings.nostrEnabled]);
+    setReplies(replies);
+  }, [algo, settings.moderationProfile, settings.nostrEnabled, community]);
 
-  useEffect(() => { refresh(); const off = bus.on("feed:updated", refresh); return off; }, [refresh]);
+  // Regenerate immediately on mount, but DEBOUNCE bus-driven updates: a sync burst
+  // (relay RSS dump, Nostr firehose, peer history) fires feed:updated hundreds of
+  // times — coalesce into one rank instead of one-per-event (was effectively O(N^2)).
+  useEffect(() => {
+    refresh();
+    let t: ReturnType<typeof setTimeout>;
+    const debounced = () => { clearTimeout(t); t = setTimeout(refresh, 250); };
+    const off = bus.on("feed:updated", debounced);
+    return () => { off(); clearTimeout(t); };
+  }, [refresh]);
   // Scroll to & highlight a post when an alert deep-links to it.
   useEffect(() => bus.on("focus:post", ({ postId }) => {
     // The feed is windowed for performance — if the target is past the current

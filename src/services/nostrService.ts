@@ -70,6 +70,28 @@ class NostrService {
   myNpub(): string { return this.pkHex ? nip19.npubEncode(this.pkHex) : ""; }
   isStarted() { return this.started; }
 
+  /** Link an EXISTING Nostr account by its secret key (nsec… or 64-char hex),
+   *  replacing this device's auto-generated key. Returns the npub. Used at
+   *  sign-up so people can sign in with their existing Nostr identity. */
+  async importKey(input: string): Promise<string> {
+    const raw = input.trim().replace(/^nostr:/i, "");
+    let sk: Uint8Array;
+    if (/^nsec1[a-z0-9]+$/i.test(raw)) {
+      const dec = nip19.decode(raw);
+      if (dec.type !== "nsec") throw new Error("Not an nsec key");
+      sk = dec.data as Uint8Array;
+    } else if (/^[0-9a-f]{64}$/i.test(raw)) {
+      sk = hexToBytes(raw);
+    } else {
+      throw new Error("Expected a Nostr nsec… key (or 64-char hex)");
+    }
+    const pk = getPublicKey(sk);   // throws if the key is invalid
+    this.sk = sk;
+    this.pkHex = pk;
+    await storage.kvSet("nostr:sk", bytesToHex(sk));
+    return nip19.npubEncode(pk);
+  }
+
   /** Begin streaming Nostr notes (popular hashtags + your topics). */
   async start() {
     if (this.started) return;
