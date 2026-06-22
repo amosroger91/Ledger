@@ -82,6 +82,9 @@ export default function SettingsView() {
         <Divider />
         {row("Nostr posts", "Pull notes from the Nostr network (for the topics you follow) into your feed, shown as external 'NOSTR' users you can reply to and react to. Turn off to hide them.",
           <Switch checked={settings.nostrEnabled !== false} onChange={(e) => { setSettings({ nostrEnabled: e.target.checked }); if (e.target.checked) { nostrService.start().catch(() => {}); toast("Nostr posts on — streaming notes for your topics", "info"); } else { nostrService.stop(); toast("Nostr posts hidden", "info"); } }} />)}
+        <Divider />
+        {row("Auto-translate to English", "Automatically translate posts detected as another language into English, clearly labeled with a one-tap toggle back to the original. Off by default — you can still translate any post on demand from its text.",
+          <Switch checked={settings.autoTranslate === true} onChange={(e) => { setSettings({ autoTranslate: e.target.checked }); toast(e.target.checked ? "Auto-translate on — non-English posts will translate to English" : "Auto-translate off", "info"); }} />)}
       </GlassCard>
 
       <GlassCard sx={{ mb: 2 }}>

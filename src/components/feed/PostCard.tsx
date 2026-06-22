@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Fragment, type ReactNode } from "react";
+import { useState, useEffect, useRef, useMemo, Fragment, type ReactNode } from "react";
 import { Stack, Box, Typography, IconButton, Chip, Popover, Tooltip, TextField, Button } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material";
 import AddReactionRoundedIcon from "@mui/icons-material/AddReactionRounded";
@@ -22,6 +22,8 @@ import { companionService } from "@/services/companionService";
 import { factCheckService, type FactCheck } from "@/services/factCheckService";
 import FactCheckRoundedIcon from "@mui/icons-material/FactCheckRounded";
 import ReportProblemRoundedIcon from "@mui/icons-material/ReportProblemRounded";
+import TranslateRoundedIcon from "@mui/icons-material/TranslateRounded";
+import { translateService, langName, probablyNotEnglish } from "@/services/translateService";
 import { emojify } from "@/lib/emoticons";
 import { decodeEntities } from "@/lib/htmlEntities";
 import { compressPostImage } from "@/lib/image";
@@ -357,26 +359,73 @@ const LONG_THRESHOLD = 900;       // chars — "super super long"
 const COLLAPSED_MAX = 340;        // px
 function PostText({ text, censor, rich }: { text: string; censor: boolean; rich?: boolean }) {
   const [expanded, setExpanded] = useState(false);
-  const long = text.length > LONG_THRESHOLD || (text.match(/\n/g)?.length ?? 0) > 14;
+  const autoTranslate = useStore((s) => s.settings.autoTranslate);
+
+  // Translation state: a cached English version + which one we're showing.
+  const [trans, setTrans] = useState<{ text: string; src: string } | null>(null);
+  const [showOriginal, setShowOriginal] = useState(false);
+  const [translating, setTranslating] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const translatable = useMemo(() => probablyNotEnglish(text), [text]);
+
+  async function doTranslate() {
+    if (trans || translating) return;
+    setTranslating(true); setFailed(false);
+    try { setTrans(await translateService.toEnglish(text)); }
+    catch { setFailed(true); }
+    finally { setTranslating(false); }
+  }
+  // Auto-translate non-English posts when the setting is on.
+  useEffect(() => { if (autoTranslate && translatable && !trans && !translating && !failed) doTranslate(); }, [autoTranslate, translatable]);
+
+  const showingTrans = !!trans && !showOriginal;
+  const body = showingTrans ? trans!.text : text;
+  const long = body.length > LONG_THRESHOLD || (body.match(/\n/g)?.length ?? 0) > 14;
   const clamp = long && !expanded;
   const fade = "linear-gradient(to bottom, #000 78%, transparent)";
+
   return (
     <Box>
+      {showingTrans && (
+        <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mt: 1, mb: 0.25 }}>
+          <TranslateRoundedIcon sx={{ fontSize: 15, color: "#1668e0" }} />
+          <Typography variant="caption" sx={{ color: "#1668e0", fontWeight: 700 }}>Translated from {langName(trans!.src)}</Typography>
+          <Typography variant="caption" color="text.secondary">·</Typography>
+          <Box component="button" onClick={() => setShowOriginal(true)}
+            sx={{ background: "none", border: 0, p: 0, cursor: "pointer", font: "inherit", fontSize: 12, color: "text.secondary", fontWeight: 700, "&:hover": { textDecoration: "underline" } }}>
+            Show original
+          </Box>
+        </Stack>
+      )}
       <Typography
         component="div"
         sx={{
-          mt: 1, fontSize: 15, lineHeight: 1.55, whiteSpace: "pre-wrap", wordBreak: "break-word",
+          mt: showingTrans ? 0 : 1, fontSize: 15, lineHeight: 1.55, whiteSpace: "pre-wrap", wordBreak: "break-word",
           ...(clamp ? { maxHeight: COLLAPSED_MAX, overflow: "hidden", maskImage: fade, WebkitMaskImage: fade } : {}),
         }}
       >
-        {rich ? renderRichText(text, censor) : renderText(text, censor)}
+        {rich ? renderRichText(body, censor) : renderText(body, censor)}
       </Typography>
-      {long && (
-        <Button size="small" disableRipple onClick={() => setExpanded((v) => !v)}
-          sx={{ mt: 0.25, px: 0.5, textTransform: "none", fontWeight: 700, color: "#1668e0", "&:hover": { bgcolor: "transparent", textDecoration: "underline" } }}>
-          {expanded ? "See less" : "See more"}
-        </Button>
-      )}
+      <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flexWrap: "wrap" }}>
+        {long && (
+          <Button size="small" disableRipple onClick={() => setExpanded((v) => !v)}
+            sx={{ mt: 0.25, px: 0.5, textTransform: "none", fontWeight: 700, color: "#1668e0", "&:hover": { bgcolor: "transparent", textDecoration: "underline" } }}>
+            {expanded ? "See less" : "See more"}
+          </Button>
+        )}
+        {/* Translate control: offered on non-English posts; lets you flip back too. */}
+        {(translatable || trans) && (
+          trans
+            ? <Button size="small" disableRipple startIcon={<TranslateRoundedIcon sx={{ fontSize: 16 }} />} onClick={() => setShowOriginal((v) => !v)}
+                sx={{ mt: 0.25, px: 0.5, textTransform: "none", fontWeight: 700, color: "text.secondary", "&:hover": { bgcolor: "transparent", textDecoration: "underline" } }}>
+                {showOriginal ? "Show translation" : "Show original"}
+              </Button>
+            : <Button size="small" disableRipple disabled={translating} startIcon={<TranslateRoundedIcon sx={{ fontSize: 16 }} />} onClick={doTranslate}
+                sx={{ mt: 0.25, px: 0.5, textTransform: "none", fontWeight: 700, color: "#1668e0", "&:hover": { bgcolor: "transparent", textDecoration: "underline" } }}>
+                {translating ? "Translating…" : failed ? "Translation unavailable — retry" : "Translate to English"}
+              </Button>
+        )}
+      </Stack>
     </Box>
   );
 }

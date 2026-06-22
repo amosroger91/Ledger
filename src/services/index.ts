@@ -67,13 +67,14 @@ export async function boot(): Promise<BootResult> {
     gunService.start();   // durable cross-user persistence + sync (posts, swarm, profiles)
     peerService.start();
     profileService.publishSelf().catch(() => {}); // share my public profile
-    // RSS is now refreshed by the always-on relay — it pulls every topic in the
-    // catalog every few minutes and seeds the global Gun feed, which we receive
-    // over the peer connection. So clients do NOT fetch feeds on their own: we
-    // only seed the default topic SUBSCRIPTIONS (for the Topics UI + the "For
-    // You" filter). The sole client-side fetch is a manual "Refresh now" in
-    // Topics, for when you want data fresher than the relay's last cycle.
-    rssService.seedDefaults().catch(() => {});
+    // ONE unified timeline. Nostr streams live (nostrService.start below); RSS /
+    // Reddit / YouTube / podcasts are pulled client-side here so they actually
+    // mingle into the same feed — even when the always-on relay isn't seeding
+    // them over Gun. Fetching is distributed + throttled (per-feed 1-hour TTL
+    // shared via Gun), so this only pulls feeds nobody has refreshed recently.
+    // seedDefaults first so the refresh uses the default topic subscriptions.
+    rssService.seedDefaults().then(() => rssService.refresh()).catch(() => {});
+    setInterval(() => rssService.refresh().catch(() => {}), 15 * 60 * 1000); // keep new stories flowing in
     changelogService.refresh().catch(() => {}); // repo commits → timeline activity
     if (settings.showFactChecks) factCheckService.refresh().catch(() => {}); // PolitiFact index
     if (settings.nostrEnabled !== false) nostrService.start().catch(() => {}); // stream Nostr notes for your topics
@@ -87,7 +88,8 @@ export async function onOnboarded() {
   await communityService.seedDefaults();
   gunService.start();
   peerService.start();
-  rssService.seedDefaults().catch(() => {}); // relay refreshes feeds for everyone; no client-side fetch
+  rssService.seedDefaults().then(() => rssService.refresh()).catch(() => {}); // pull RSS/Reddit into the unified timeline
+  setInterval(() => rssService.refresh().catch(() => {}), 15 * 60 * 1000);
   changelogService.refresh().catch(() => {});
   nostrService.start().catch(() => {}); // stream Nostr notes (on by default for new accounts)
 }

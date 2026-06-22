@@ -291,7 +291,7 @@ function OwnProfile({ me, refreshMe }: { me: any; refreshMe: () => void }) {
   const avatarRef = useRef<HTMLInputElement>(null);
   const headerRef = useRef<HTMLInputElement>(null);
 
-  const buildView = async () => { const v = await profileService.buildSelf(); setView({ ...v, html: v.html || html || STARTER_HTML }); };
+  const buildView = async () => { const v = await profileService.buildSelf(); if (v) setView({ ...v, html: v.html || html || STARTER_HTML }); };
   useEffect(() => {
     reputationService.total().then(setRep);
     reputationService.breakdown().then(setBreakdown);

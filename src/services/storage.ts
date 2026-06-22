@@ -205,4 +205,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   filterNsfw: true,
   censorProfanity: false,
   nostrEnabled: true,
+  autoTranslate: false,
 };
