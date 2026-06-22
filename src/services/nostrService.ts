@@ -30,7 +30,14 @@ const RELAYS = [
   "wss://relay.nostr.band",
 ];
 const SEARCH_RELAYS = ["wss://relay.nostr.band", "wss://relay.noswhere.com"];
+// Stream from a SMALL subset so popular hashtags don't flood every relay at once.
+const STREAM_RELAYS = ["wss://relay.damus.io", "wss://nos.lol", "wss://relay.primal.net"];
 const POPULAR_TAGS = ["nostr", "bitcoin", "news", "technology", "ai", "art", "music", "sports", "politics", "food", "gaming", "crypto", "science", "photography", "travel", "health", "memes", "plebchain", "grownostr"];
+// Hard cap on Nostr notes ingested per session. The Nostr firehose is endless;
+// verifying (schnorr) + embedding + re-rendering every event would saturate the
+// tab and crash it. We take a healthy batch, then stop the stream — the feed
+// stays bounded (and pruneEphemeralPosts trims the cache).
+const NOSTR_SESSION_CAP = 400;
 
 const hexToBytes = (hex: string) => { const a = new Uint8Array(hex.length / 2); for (let i = 0; i < a.length; i++) a[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16); return a; };
 const bytesToHex = (b: Uint8Array) => [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
@@ -56,6 +63,8 @@ class NostrService {
   private sockets = new Map<string, WebSocket>();
   private subId = "led" + rid();
   private filter: Record<string, unknown> | null = null;
+  private ingested = 0;     // notes ingested this session
+  private capped = false;   // hit NOSTR_SESSION_CAP → stream stopped
 
   /** This device's Nostr identity (generated + persisted on first use). */
   async myKeys(): Promise<{ sk: Uint8Array; pk: string; npub: string }> {
@@ -96,12 +105,13 @@ class NostrService {
   async start() {
     if (this.started) return;
     this.started = true;
+    this.ingested = 0; this.capped = false;   // fresh batch each (re)start
     await this.myKeys();
     let topicTags: string[] = [];
     try { const cfg = await rssService.config(); topicTags = (cfg.topics ?? []).map(topicSlug).filter((t) => t.length > 2); } catch {}
     const tags = [...new Set([...POPULAR_TAGS, ...topicTags])].slice(0, 24);
-    this.filter = { kinds: [1], "#t": tags, limit: 60 };
-    for (const r of RELAYS) this.connect(r);
+    this.filter = { kinds: [1], "#t": tags, limit: 40 };
+    for (const r of STREAM_RELAYS) this.connect(r);
   }
 
   stop() {
@@ -113,7 +123,7 @@ class NostrService {
 
   /** Open (and keep open, auto-reconnecting) a streaming connection to one relay. */
   private connect(relay: string) {
-    if (!this.started || !this.filter) return;
+    if (!this.started || this.capped || !this.filter) return;
     const existing = this.sockets.get(relay);
     if (existing && (existing.readyState === WebSocket.OPEN || existing.readyState === WebSocket.CONNECTING)) return;
     let w: WebSocket;
@@ -126,7 +136,7 @@ class NostrService {
     w.onerror = () => { try { w.close(); } catch {} };
     w.onclose = () => {
       if (this.sockets.get(relay) === w) this.sockets.delete(relay);
-      if (this.started) setTimeout(() => this.connect(relay), 4000 + Math.random() * 4000); // reconnect with jitter
+      if (this.started && !this.capped) setTimeout(() => this.connect(relay), 4000 + Math.random() * 4000); // reconnect with jitter
     };
   }
 
@@ -167,7 +177,8 @@ class NostrService {
   }
 
   private async onNote(e: NostrEvent) {
-    if (!e || e.kind !== 1 || this.seen.has(e.id)) return;
+    if (this.capped || !e || e.kind !== 1 || this.seen.has(e.id)) return;
+    if (this.seen.size > 8000) this.seen.clear();   // bound memory on very long sessions
     this.seen.add(e.id);
     try { if (!verifyEvent(e)) return; } catch { return; }   // drop unverifiable notes
     const post = this.toPost(e);
@@ -179,6 +190,12 @@ class NostrService {
     }
     await feedService.ingest(post);
     this.ensureProfile(e.pubkey);
+    // Hit the session cap → stop the firehose (close streaming sockets).
+    if (++this.ingested >= NOSTR_SESSION_CAP) {
+      this.capped = true;
+      for (const w of this.sockets.values()) { try { w.close(); } catch {} }
+      this.sockets.clear();
+    }
   }
 
   private toPost(e: NostrEvent): Post {

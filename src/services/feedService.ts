@@ -373,7 +373,12 @@ class FeedService {
 
     // Sort by score, then newest-first as the tiebreaker.
     scored.sort((a, b) => b.score - a.score || b.p.createdAt - a.p.createdAt);
-    return { posts: scored.map((s) => s.p), reasons, verdicts, replies };
+    // Artificially balance the two timelines: interleave Ledger and Nostr posts
+    // 1:1 (each keeping its own ranked order) so the feed stays ~50/50 and you can
+    // never scroll through more than half of either source. If only one source has
+    // posts, it's shown in full (nothing to mix).
+    const ranked = balanceSources(scored.map((s) => s.p));
+    return { posts: ranked, reasons, verdicts, replies };
   }
 
   interestVector() { return this.profile.vector(); }
@@ -381,6 +386,21 @@ class FeedService {
 
 function extractTags(text: string): string[] {
   return [...new Set((text.match(/#[a-z0-9_]+/gi) ?? []).map((t) => t.slice(1).toLowerCase()))];
+}
+
+/** Interleave Ledger and Nostr posts 1:1 (each keeping its ranked order) so the
+ *  feed is an even mix and neither source ever exceeds ~50% — you can't scroll
+ *  through more than half of one. Capped at 2×min, so the larger firehose's
+ *  surplus is trimmed rather than dominating; if only one source is present, it's
+ *  returned untouched (nothing to balance). */
+function balanceSources(posts: Post[]): Post[] {
+  const nostr = posts.filter((p) => p.source === "nostr");
+  const ledger = posts.filter((p) => p.source !== "nostr");
+  if (!nostr.length || !ledger.length) return posts;
+  const n = Math.min(nostr.length, ledger.length);
+  const out: Post[] = [];
+  for (let i = 0; i < n; i++) { out.push(ledger[i], nostr[i]); }
+  return out;
 }
 
 export const feedService = new FeedService();
