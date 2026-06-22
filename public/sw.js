@@ -11,7 +11,7 @@
  * The scope is derived from this file's location, so it works unchanged whether
  * served from a domain root, a GitHub Pages subpath, IPFS, or a USB stick.
  */
-const VERSION = "zb-v1";
+const VERSION = "zb-v2"; // bump → activate() purges every old cache, forcing all clients onto the fresh build
 const SCOPE = new URL("./", self.location).pathname;
 const SHELL = SCOPE; // start_url / index.html
 

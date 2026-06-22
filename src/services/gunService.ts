@@ -89,47 +89,56 @@ class GunService {
     try {
       gun = (Gun as any)({ peers: PEERS, localStorage: false });
 
-      // Incoming feed posts (human + bot) → QUEUE, then drain in yielding batches
-      // (see drainPostQueue) so the relay's full-graph replay can't freeze the UI.
-      gun.get(ROOT).get("posts").map().on((d: any) => {
-        if (d?.json) enqueuePost(d.json);
-      });
-      // Incoming Swarm Lounge messages → store + surface.
-      gun.get(ROOT).get("swarm").map().on((d: any) => {
-        if (!d?.json) return;
-        try {
-          const m: ChatMessage = JSON.parse(d.json);
-          if (!m.id || seenSwarm.has(m.id)) return;
-          seenSwarm.add(m.id);
-          storage.putMessage(m);
-          bus.emit("chat:message", m);
-        } catch {}
-      });
-
-      // Incoming public profiles → cache for viewing others' pages.
-      gun.get(ROOT).get("profiles").map().on((d: any) => {
-        if (d?.json) { try { profileService.ingest(JSON.parse(d.json) as Profile); } catch {} }
-      });
-      // Incoming marketplace listings.
-      gun.get(ROOT).get("market").map().on((d: any) => {
-        if (d?.json) { try { marketplaceService.ingest(JSON.parse(d.json) as Listing); } catch {} }
-      });
-      // Incoming web-of-trust edges.
-      gun.get(ROOT).get("trust").map().on((d: any) => {
-        if (d?.json) { try { trustService.ingest(JSON.parse(d.json) as TrustEdge); } catch {} }
-      });
-      // Shared RSS fetch ledger — who fetched which feed, and when, so the work
-      // is distributed: each feed is pulled once an hour by whoever refreshes first.
-      gun.get(ROOT).get("rssfetch").map().on((d: any, key: string) => {
-        if (d && typeof d.at === "number" && d.at > (rssLedger.get(key) ?? 0)) rssLedger.set(key, d.at);
-      });
-
-      // Outgoing: publish whatever the app marks for persistence.
+      // Outgoing publish — register IMMEDIATELY so nothing you create in the first
+      // few seconds (before the deferred incoming sync below) is ever lost.
       bus.on("post:publish", (p) => this.putPost(p));
       bus.on("swarm:publish", (m) => { seenSwarm.add(m.id); this.putSwarm(m); });
       bus.on("profile:publish", (p) => { try { gun?.get(ROOT).get("profiles").get(p.pk).put({ json: JSON.stringify(p) }); } catch {} });
       bus.on("market:publish", (l) => { try { gun?.get(ROOT).get("market").get(l.id).put({ json: JSON.stringify(l) }); } catch {} });
       bus.on("trust:publish", (e) => { try { gun?.get(ROOT).get("trust").get(`${e.from}|${e.to}|${e.community ?? ""}`).put({ json: JSON.stringify(e) }); } catch {} });
+
+      // Incoming subscriptions replay the relay's ENTIRE graph on connect (Gun warns
+      // "syncing 1K+ records a second") — processing that dump as it arrives is what
+      // froze the initial load. So DEFER subscribing until the app has painted and
+      // gone idle: the feed already fills from the local IndexedDB cache, and once
+      // subscribed, posts batch in through the yielding queue (drainPostQueue) instead
+      // of all at once. This is the difference between a usable first paint and a
+      // frozen tab.
+      const subscribeIncoming = () => {
+        if (!gun) return;
+        // Feed posts (human + bot) → queue, drained in yielding batches.
+        gun.get(ROOT).get("posts").map().on((d: any) => { if (d?.json) enqueuePost(d.json); });
+        // Swarm Lounge messages → store + surface.
+        gun.get(ROOT).get("swarm").map().on((d: any) => {
+          if (!d?.json) return;
+          try {
+            const m: ChatMessage = JSON.parse(d.json);
+            if (!m.id || seenSwarm.has(m.id)) return;
+            seenSwarm.add(m.id);
+            storage.putMessage(m);
+            bus.emit("chat:message", m);
+          } catch {}
+        });
+        // Public profiles → cache for viewing others' pages.
+        gun.get(ROOT).get("profiles").map().on((d: any) => {
+          if (d?.json) { try { profileService.ingest(JSON.parse(d.json) as Profile); } catch {} }
+        });
+        // Marketplace listings.
+        gun.get(ROOT).get("market").map().on((d: any) => {
+          if (d?.json) { try { marketplaceService.ingest(JSON.parse(d.json) as Listing); } catch {} }
+        });
+        // Web-of-trust edges.
+        gun.get(ROOT).get("trust").map().on((d: any) => {
+          if (d?.json) { try { trustService.ingest(JSON.parse(d.json) as TrustEdge); } catch {} }
+        });
+        // Shared RSS fetch ledger (distributes who pulls which feed each hour).
+        gun.get(ROOT).get("rssfetch").map().on((d: any, key: string) => {
+          if (d && typeof d.at === "number" && d.at > (rssLedger.get(key) ?? 0)) rssLedger.set(key, d.at);
+        });
+      };
+      const ric = (globalThis as any).requestIdleCallback;
+      if (typeof ric === "function") ric(subscribeIncoming, { timeout: 4000 });
+      else setTimeout(subscribeIncoming, 2500);
     } catch (e) {
       console.warn("[gun] disabled (init failed)", e);
       gun = null;
