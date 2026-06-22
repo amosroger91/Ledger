@@ -1,0 +1,40 @@
+# ── Render Blueprint — deploy the Ledger server on the FREE tier ──────────
+# In Render: New ▸ Blueprint ▸ pick this repo. Render reads this file and
+# provisions the service. The frontend stays on GitHub Pages; this is only
+# the persistence relay + RSS aggregator.
+services:
+  - type: web
+    name: ledger-server
+    runtime: node
+    plan: free
+    rootDir: server # the backend lives in /server within the ZuccBook repo
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: GUN_ROOT
+        value: zuccbook-v1
+      - key: GUN_DATA_DIR
+        value: ./data
+      - key: RSS_REFRESH_MS
+        value: "600000"
+      - key: CORS_ORIGIN
+        value: "*"
+#
+# ⚠️  FREE-TIER REALITY:
+#   • The filesystem is EPHEMERAL and the service spins down after ~15 min idle.
+#     Gun re-syncs from the public peers on wake, so the graph isn't lost forever,
+#     but local radisk state is. For real durability, attach a Render Disk and set
+#     GUN_DATA_DIR to its mount path (Disks require a paid instance type):
+#
+#         disk:
+#           name: ledger-gun-data
+#           mountPath: /var/data
+#           sizeGB: 1
+#       # then set env GUN_DATA_DIR=/var/data
+#
+#   • To keep the instance warm, point an uptime pinger (e.g. cron-job.org) at
+#     POST https://<your-app>.onrender.com/api/refresh every ~10 minutes.

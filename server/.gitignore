@@ -1,0 +1,6 @@
+node_modules/
+# Gun radisk persistence (local dev); on Render this lives on the instance/disk
+data/
+radata/
+.env
+*.log

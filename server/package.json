@@ -1,0 +1,20 @@
+{
+  "name": "ledger-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Ledger hybrid persistence + aggregation server: a 24/7 read-only Gun.js relay (persists the global feed, creator posts, NFT metadata) plus an RSS aggregator that merges any feed (YouTube, Twitch-via-RSSHub, blogs, podcasts) into one unified timeline API.",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "gun": "^0.2020.1241",
+    "rss-parser": "^3.13.0"
+  }
+}
