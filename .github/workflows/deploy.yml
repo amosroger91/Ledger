@@ -30,7 +30,11 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - run: npm ci
+      # Use `npm install`, not `npm ci`: the repo is developed on Windows, whose
+      # lockfile omits the Linux-specific optional native deps (esbuild/rollup),
+      # which makes the strict `npm ci` fail here. `npm install` resolves the
+      # right platform binaries on Linux and still respects the lock.
+      - run: npm install --no-audit --no-fund
       - run: npm run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
