@@ -128,7 +128,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       {/* nav rail — full height, stays put while the content column scrolls */}
       <Box sx={{ borderRight: "1px solid var(--bl-line)", p: 1, display: "flex", flexDirection: "column", gap: 0.25, height: "100%", overflowY: "auto", background: "linear-gradient(180deg, var(--bl-tasks-1), var(--bl-tasks-2))" }}>
         <Stack direction="row" alignItems="center" spacing={1} sx={{ px: 1, py: 1.5 }}>
-          <Box sx={{ width: 28, height: 28, borderRadius: "8px", background: "linear-gradient(135deg,#3f97ff,#1668e0,#0a55cf)", boxShadow: "0 0 18px rgba(58,155,240,.5)" }} />
+          <Box component="img" src={`${import.meta.env.BASE_URL}logo.png`} alt="Ledger" sx={{ width: 30, height: 30, borderRadius: "8px", display: "block", boxShadow: "0 0 18px rgba(58,155,240,.35)" }} />
           {!compact && <Typography variant="h6" sx={{ background: "linear-gradient(90deg,#3f97ff,#1668e0)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>Ledger</Typography>}
         </Stack>
 

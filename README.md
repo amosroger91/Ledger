@@ -1,6 +1,10 @@
-# 📒 Ledger
+<p align="center">
+  <img src="public/logo.png" alt="Ledger logo" width="140" height="140" />
+</p>
 
-### A social network that no company owns — not even a little.
+<h1 align="center">Ledger</h1>
+
+<p align="center"><b>A social network that no company owns — not even a little.</b></p>
 
 Stop and think about how strange this is for a second:
 

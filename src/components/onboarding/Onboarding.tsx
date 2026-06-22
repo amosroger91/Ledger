@@ -53,9 +53,12 @@ export default function Onboarding() {
   return (
     <Box sx={{ position: "relative", zIndex: 1, minHeight: "100vh", display: "grid", placeItems: "center", p: 2 }}>
       <GlassCard sx={{ p: 4, maxWidth: 480, width: "100%" }}>
-        <Typography variant="h3" sx={{ background: "linear-gradient(90deg,#3f97ff,#1668e0,#0a55cf)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>
-          Ledger
-        </Typography>
+        <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 0.5 }}>
+          <Box component="img" src={`${import.meta.env.BASE_URL}logo.png`} alt="Ledger" sx={{ width: 56, height: 56, borderRadius: "14px", display: "block" }} />
+          <Typography variant="h3" sx={{ background: "linear-gradient(90deg,#3f97ff,#1668e0,#0a55cf)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>
+            Ledger
+          </Typography>
+        </Stack>
         <Typography variant="body1" color="text.secondary" sx={{ mt: 1, mb: 3 }}>
           The local-first social universe. No accounts, no email, no servers — you generate a cryptographic identity that you own. Every action you take is signed by it.
         </Typography>
