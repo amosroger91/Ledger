@@ -447,6 +447,26 @@ function ModInfo({ verdict }: { verdict: ModerationVerdict }) {
   );
 }
 
+// Hashtags — understated inline links. Caps at 10 with a "show more" toggle so a
+// note carrying dozens of tags (common on Nostr) doesn't flood the card.
+const HASHTAG_MAX = 10;
+function Hashtags({ tags }: { tags: string[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const shown = expanded ? tags : tags.slice(0, HASHTAG_MAX);
+  const extra = tags.length - HASHTAG_MAX;
+  return (
+    <Box sx={{ mt: 0.75, display: "flex", flexWrap: "wrap", gap: 1, alignItems: "center" }}>
+      {shown.map((t) => <Typography key={t} component="span" variant="body2" sx={{ color: "#3f7bd0", fontWeight: 600, cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>#{t}</Typography>)}
+      {extra > 0 && (
+        <Typography component="span" variant="body2" onClick={() => setExpanded((v) => !v)}
+          sx={{ color: "text.secondary", fontWeight: 700, cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>
+          {expanded ? "show less" : `+${extra} more`}
+        </Typography>
+      )}
+    </Box>
+  );
+}
+
 export default function PostCard({ post, reason, replies = [], replyMap, verdict }: { post: Post; reason?: RecommendationReason; replies?: Post[]; replyMap?: Map<string, Post[]>; verdict?: ModerationVerdict }) {
   const me = useStore((s) => s.me);
   const mePk = me?.publicKey ?? "";
@@ -616,12 +636,8 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
             </Stack>
           )}
 
-          {/* hashtags — understated inline links, not loud chips */}
-          {post.author !== "rss-bot" && post.tags.length > 0 && (
-            <Box sx={{ mt: 0.75, display: "flex", flexWrap: "wrap", gap: 1 }}>
-              {post.tags.map((t) => <Typography key={t} component="span" variant="body2" sx={{ color: "#3f7bd0", fontWeight: 600, cursor: "pointer", "&:hover": { textDecoration: "underline" } }}>#{t}</Typography>)}
-            </Box>
-          )}
+          {/* hashtags — understated inline links, capped with a "show more" */}
+          {post.author !== "rss-bot" && post.tags.length > 0 && <Hashtags tags={post.tags} />}
 
           </>)}
         </Box>
