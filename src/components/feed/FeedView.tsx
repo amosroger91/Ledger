@@ -41,7 +41,7 @@ const FILTERS: { id: ContentFilter; label: string }[] = [
 export default function FeedView() {
   const settings = useStore((s) => s.settings);
   const setSettings = useStore((s) => s.setSettings);
-  const compact = useMediaQuery("(max-width:1100px)");
+  const compact = useMediaQuery((theme) => theme.breakpoints.down("md"));
   const [posts, setPosts] = useState<Post[]>([]);
   const [reasons, setReasons] = useState<Map<string, RecommendationReason>>(new Map());
   const [refreshing, setRefreshing] = useState(false);
@@ -186,7 +186,7 @@ export default function FeedView() {
   }, [doRefresh]);
 
   return (
-    <Box sx={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "minmax(0,1fr) 340px", gap: 3, maxWidth: 1800, mx: "auto" }}>
+    <Box sx={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "minmax(0,1fr) 360px", gap: { xs: 2, md: 3 }, maxWidth: 1800, mx: "auto", px: { xs: 1, sm: 2, md: 0 } }}>
       <Box sx={{ minWidth: 0 }}>
         {/* pull / scroll-to-refresh indicator */}
         {pull > 0 && (
@@ -203,17 +203,17 @@ export default function FeedView() {
             <Button size="small" startIcon={<ClearRoundedIcon />} onClick={() => nav("/")}>Clear</Button>
           </GlassCard>
         )}
-        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2, flexWrap: "wrap", gap: 1 }}>
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2, flexWrap: "wrap", gap: { xs: 1, md: 1 } }}>
           <ToggleButtonGroup
             exclusive size="small" value={algo}
             onChange={(_, v) => v && setSettings({ feedAlgorithm: v })}
-            sx={{ flexWrap: "wrap", "& .MuiToggleButton-root": { border: "1px solid rgba(58,155,240,0.18)", color: "text.secondary", "&.Mui-selected": { background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#ffffff" } } }}
+            sx={{ flexWrap: "wrap", "& .MuiToggleButton-root": { border: "1px solid rgba(58,155,240,0.18)", color: "text.secondary", fontSize: { xs: "0.75rem", sm: "0.875rem" }, px: { xs: 0.75, sm: 1 }, "&.Mui-selected": { background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#ffffff" } } }}
           >
             {ALGOS.map((a) => <ToggleButton key={a.id} value={a.id}>{a.label}</ToggleButton>)}
           </ToggleButtonGroup>
           <Box sx={{ flex: 1 }} />
-          <Button size="small" variant="outlined" startIcon={<RefreshRoundedIcon sx={{ animation: refreshing ? "zbspin 1s linear infinite" : "none", "@keyframes zbspin": { to: { transform: "rotate(360deg)" } } }} />} onClick={doRefresh} disabled={refreshing} sx={{ textTransform: "none", fontWeight: 600, flex: "0 0 auto" }}>
-            {refreshing ? "Refreshing…" : "Refresh feed"}
+          <Button size="small" variant="outlined" startIcon={<RefreshRoundedIcon sx={{ animation: refreshing ? "zbspin 1s linear infinite" : "none", "@keyframes zbspin": { to: { transform: "rotate(360deg)" } } }} />} onClick={doRefresh} disabled={refreshing} sx={{ textTransform: "none", fontWeight: 600, flex: { xs: "1 1 auto", sm: "0 0 auto" }, minWidth: { xs: 0, sm: "auto" }, fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
+            {refreshing ? "Refreshing…" : "Refresh"}
           </Button>
         </Stack>
 

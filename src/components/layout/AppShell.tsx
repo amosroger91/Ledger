@@ -120,16 +120,16 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const me = useStore((s) => s.me);
   const onlineCount = useStore((s) => s.onlineCount);
   const status = useStore((s) => s.settings.presenceStatus);
-  const compact = useMediaQuery("(max-width:900px)");
+  const compact = useMediaQuery((theme) => theme.breakpoints.down("md"));
 
   return (
-    <Box sx={{ position: "relative", zIndex: 1, height: "100vh", overflow: "hidden", p: { xs: 0, md: 2 } }}>
-    <Box sx={{ display: "grid", gridTemplateColumns: compact ? "64px 1fr" : "230px 1fr", height: { xs: "100vh", md: "calc(100vh - 32px)" }, bgcolor: "var(--bl-face)", border: "1px solid var(--bl-edge-frame)", borderRadius: { xs: 0, md: "8px" }, overflow: "hidden", boxShadow: "0 12px 44px rgba(0,0,0,0.4)" }}>
+    <Box sx={{ position: "relative", zIndex: 1, height: "100vh", overflow: "hidden", p: { xs: 0, sm: 1, md: 2 } }}>
+    <Box sx={{ display: "grid", gridTemplateColumns: compact ? "56px 1fr" : "230px 1fr", height: { xs: "100vh", md: "calc(100vh - 32px)" }, bgcolor: "var(--bl-face)", border: "1px solid var(--bl-edge-frame)", borderRadius: { xs: 0, md: "8px" }, overflow: "hidden", boxShadow: "0 12px 44px rgba(0,0,0,0.4)" }}>
       {/* nav rail — full height, stays put while the content column scrolls */}
-      <Box sx={{ borderRight: "1px solid var(--bl-line)", p: 1, display: "flex", flexDirection: "column", gap: 0.25, height: "100%", overflowY: "auto", background: "linear-gradient(180deg, var(--bl-tasks-1), var(--bl-tasks-2))" }}>
+      <Box sx={{ borderRight: "1px solid var(--bl-line)", p: { xs: 0.75, sm: 1 }, display: "flex", flexDirection: "column", gap: 0.25, height: "100%", overflowY: "auto", background: "linear-gradient(180deg, var(--bl-tasks-1), var(--bl-tasks-2))" }}>
         <Stack direction="row" alignItems="center" spacing={1} onClick={() => nav("/")} role="button" aria-label="Go to home feed"
-          sx={{ px: 1, py: 1.5, cursor: "pointer", borderRadius: 2, "&:hover": { opacity: 0.85 } }}>
-          <Box component="img" src={`${import.meta.env.BASE_URL}logo.png`} alt="Ledger" sx={{ width: 30, height: 30, borderRadius: "8px", display: "block", boxShadow: "0 0 18px rgba(58,155,240,.35)" }} />
+          sx={{ px: { xs: 0.5, sm: 1 }, py: 1.5, cursor: "pointer", borderRadius: 2, "&:hover": { opacity: 0.85 } }}>
+          <Box component="img" src={`${import.meta.env.BASE_URL}logo.png`} alt="Ledger" sx={{ width: { xs: 28, sm: 30 }, height: { xs: 28, sm: 30 }, borderRadius: "8px", display: "block", boxShadow: "0 0 18px rgba(58,155,240,.35)", flexShrink: 0 }} />
           {!compact && <Typography variant="h6" sx={{ background: "linear-gradient(90deg,#3f97ff,#1668e0)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>Ledger</Typography>}
         </Stack>
 
@@ -141,12 +141,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
               <Box
                 onClick={() => nav(item.to)}
                 sx={{
-                  display: "flex", alignItems: "center", gap: 1.5, px: 1.5, py: 1.1, borderRadius: 2, cursor: "pointer",
+                  display: "flex", alignItems: "center", gap: 1.5, px: { xs: 0.5, sm: 1.5 }, py: 1.1, borderRadius: 2, cursor: "pointer",
                   color: active ? "#ffffff" : "text.secondary",
                   background: active ? "linear-gradient(135deg,#3f97ff,#1668e0)" : "transparent",
                   boxShadow: active ? "0 6px 18px rgba(58,155,240,.3)" : "none",
                   "&:hover": { background: active ? undefined : "rgba(58,155,240,0.08)", color: active ? undefined : "text.primary" },
                   justifyContent: compact ? "center" : "flex-start",
+                  minHeight: "48px",
                 }}
               >
                 {item.icon}
@@ -168,15 +169,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <Box
             component="a" href="https://buymeacoffee.com/amosroger91" target="_blank" rel="noopener noreferrer"
             sx={{
-              display: "flex", alignItems: "center", gap: 1.5, px: 1.5, py: 1.1, borderRadius: 2, cursor: "pointer",
+              display: "flex", alignItems: "center", gap: 1.5, px: { xs: 0.5, sm: 1.5 }, py: 1.1, borderRadius: 2, cursor: "pointer",
               textDecoration: "none", color: "#5a3a12",
               background: "linear-gradient(135deg,#ffe08a,#ffce5a)", border: "1px solid #f6b73c",
-              boxShadow: "0 4px 12px rgba(246,183,60,.3)", mb: 0.5,
+              boxShadow: "0 4px 12px rgba(246,183,60,.3)", mb: 0.5, minHeight: "48px",
               "&:hover": { background: "linear-gradient(135deg,#ffe9a8,#ffd877)" },
               justifyContent: compact ? "center" : "flex-start",
             }}
           >
-            <LocalCafeRoundedIcon />
+            <LocalCafeRoundedIcon fontSize={compact ? "small" : "medium"} />
             {!compact && <Typography sx={{ fontWeight: 800 }}>Support the project</Typography>}
           </Box>
         </Tooltip>

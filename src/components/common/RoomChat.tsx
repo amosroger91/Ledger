@@ -84,7 +84,7 @@ export default function RoomChat({ roomId, title = "Room chat", media = true, he
           return (
             <Stack key={m.id} direction="row" spacing={0.75} justifyContent={mine ? "flex-end" : "flex-start"}>
               {!mine && <UserAvatar pk={m.author} name={m.authorName} avatar={m.authorAvatar} size={22} />}
-              <Box sx={{ maxWidth: "78%", px: 1, py: 0.6, borderRadius: 2, background: mine ? "linear-gradient(135deg,#3f97ff,#1668e0)" : "#fff", color: mine ? "#fff" : "text.primary" }}>
+              <Box sx={{ maxWidth: { xs: "85%", sm: "78%" }, px: 1, py: 0.6, borderRadius: 2, background: mine ? "linear-gradient(135deg,#3f97ff,#1668e0)" : "#fff", color: mine ? "#fff" : "text.primary" }}>
                 {!mine && <Typography variant="caption" sx={{ fontWeight: 700 }}>{m.authorName}</Typography>}
                 {m.text && <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.text}</Typography>}
                 {m.media?.map((md, i) => md.type === "image" ? <Box key={i} component="img" src={md.url} sx={{ mt: 0.5, maxWidth: "100%", borderRadius: 1 }} /> : null)}

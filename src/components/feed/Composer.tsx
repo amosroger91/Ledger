@@ -79,7 +79,7 @@ export default function Composer({ community }: { community?: string }) {
               {media.map((m, i) => (
                 m.type === "audio"
                   ? <Chip key={i} icon={<AudiotrackRoundedIcon />} label={m.alt || "audio"} onDelete={() => setMedia((x) => x.filter((_, j) => j !== i))} sx={{ bgcolor: "rgba(124,92,255,0.12)" }} />
-                  : <Box key={i} component="img" src={m.url} sx={{ width: 84, height: 84, objectFit: "cover", borderRadius: 2, border: "1px solid rgba(58,155,240,0.2)", cursor: "pointer" }} onClick={() => setMedia((x) => x.filter((_, j) => j !== i))} />
+                  : <Box key={i} component=\"img\" src={m.url} sx={{ width: { xs: 72, sm: 84 }, height: { xs: 72, sm: 84 }, objectFit: \"cover\", borderRadius: 2, border: \"1px solid rgba(58,155,240,0.2)\", cursor: \"pointer\" }} onClick={() => setMedia((x) => x.filter((_, j) => j !== i))} />
               ))}
             </Stack>
           )}

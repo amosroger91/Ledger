@@ -22,6 +22,15 @@ const TITLE = '"Trebuchet MS", "Segoe UI", Tahoma, system-ui, sans-serif';
 const sheen = "linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.04) 46%, rgba(0,0,0,0.06) 54%, rgba(0,0,0,0.18) 100%)";
 
 export const theme = createTheme({
+  breakpoints: {
+    values: {
+      xs: 0,
+      sm: 640,   // mobile portrait / tablet boundary
+      md: 1024,  // tablet / desktop boundary
+      lg: 1280,
+      xl: 1920,
+    },
+  },
   palette: {
     mode: "light",
     primary: { main: BL.blue500, light: BL.blue400, dark: BL.blue700, contrastText: "#fff" },
@@ -35,9 +44,14 @@ export const theme = createTheme({
   typography: {
     fontFamily: UI,
     fontSize: 13,
-    h1: { fontFamily: TITLE, fontWeight: 700 }, h2: { fontFamily: TITLE, fontWeight: 700 },
-    h3: { fontFamily: TITLE, fontWeight: 700 }, h4: { fontFamily: TITLE, fontWeight: 700 },
-    h5: { fontFamily: TITLE, fontWeight: 700 }, h6: { fontFamily: TITLE, fontWeight: 700 },
+    h1: { fontFamily: TITLE, fontWeight: 700, fontSize: "clamp(1.5rem, 5vw, 2.5rem)" },
+    h2: { fontFamily: TITLE, fontWeight: 700, fontSize: "clamp(1.2rem, 4vw, 2rem)" },
+    h3: { fontFamily: TITLE, fontWeight: 700, fontSize: "clamp(1rem, 3vw, 1.5rem)" },
+    h4: { fontFamily: TITLE, fontWeight: 700 },
+    h5: { fontFamily: TITLE, fontWeight: 700 },
+    h6: { fontFamily: TITLE, fontWeight: 700, fontSize: "clamp(0.875rem, 2.5vw, 1.1rem)" },
+    body1: { fontSize: "clamp(0.8rem, 1vw, 1rem)" },
+    body2: { fontSize: "clamp(0.75rem, 0.9vw, 0.9375rem)" },
     button: { textTransform: "none", fontWeight: 700 },
     overline: { letterSpacing: "0.08em", fontWeight: 700, color: BL.inkDim },
   },

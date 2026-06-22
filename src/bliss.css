@@ -598,3 +598,39 @@
 @media print {
   .bl-taskbar, .bl-startmenu, .bl-toast-host, .bl-menu { display: none !important; }
 }
+
+/* ---------------------------------------------------------------------
+   21 · MOBILE RESPONSIVENESS
+   --------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  /* Ensure touch targets meet 48px minimum */
+  button, [role="button"], .MuiIconButton-root, .MuiButtonBase-root {
+    min-height: 48px;
+    min-width: 48px;
+  }
+  
+  /* Improve spacing on mobile */
+  .bl-container { padding: 0 var(--bl-space-3); }
+  
+  /* Better text rendering on small screens */
+  body { font-size: 14px; }
+  
+  /* Ensure images scale properly */
+  img, video { max-width: 100%; height: auto; }
+}
+
+/* Landscape orientation on mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+  /* Reduce excess vertical padding for landscape mode */
+  .MuiPaper-root { padding: var(--bl-space-2) !important; }
+}
+
+/* Very small screens (< 360px width) */
+@media (max-width: 360px) {
+  /* Stack layouts more aggressively */
+  .bl-row { flex-direction: column; }
+  
+  /* Reduce font sizes slightly */
+  body { font-size: 13px; }
+  h1, h2, h3 { font-size: clamp(1rem, 4vw, 1.5rem); }
+}
