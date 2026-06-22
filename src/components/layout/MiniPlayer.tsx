@@ -6,7 +6,8 @@ import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import QueueMusicRoundedIcon from "@mui/icons-material/QueueMusicRounded";
 import VolumeUpRoundedIcon from "@mui/icons-material/VolumeUpRounded";
 import { useNavigate } from "react-router-dom";
-import { listenTogetherService } from "@/services/listenTogetherService";
+import { listenTogetherService, flagOf } from "@/services/listenTogetherService";
+import StationLogo from "@/components/common/StationLogo";
 import { bus } from "@/lib/events";
 
 /** Persistent music bar — visible on every screen so playback is always
@@ -14,8 +15,9 @@ import { bus } from "@/lib/events";
  *  keeps playing across route changes. */
 export default function MiniPlayer() {
   const nav = useNavigate();
-  const [state, setState] = useState<{ station: { name: string; genre: string; url: string } | null; playing: boolean }>({
-    station: listenTogetherService.current ? { name: listenTogetherService.current.name, genre: listenTogetherService.current.genre, url: listenTogetherService.current.url } : null,
+  const cur = listenTogetherService.current;
+  const [state, setState] = useState<{ station: { name: string; genre: string; url: string; favicon?: string; flag?: string } | null; playing: boolean }>({
+    station: cur ? { name: cur.name, genre: cur.genre, url: cur.url, favicon: cur.favicon, flag: flagOf(cur.countryCode) } : null,
     playing: listenTogetherService.playing,
   });
   const [vol, setVol] = useState(Math.round(listenTogetherService.volume * 100));
@@ -32,12 +34,11 @@ export default function MiniPlayer() {
       background: "rgba(236,233,216,0.94)", backdropFilter: "blur(18px) saturate(1.3)",
       borderTop: "1px solid rgba(0,0,0,0.14)", boxShadow: "0 -8px 30px rgba(0,0,0,0.4)",
     }}>
-      <Box sx={{ width: 40, height: 40, flex: "0 0 auto", borderRadius: 1.5, display: "grid", placeItems: "center", fontSize: 20, background: "linear-gradient(135deg,#3f97ff,#1668e0)" }}>
-        {state.playing ? "🎶" : "🎧"}
-      </Box>
+      <StationLogo src={state.station.favicon} size={40} fallback={state.playing ? "🎶" : "🎧"} />
       <Box sx={{ minWidth: 0, flex: 1 }}>
         <Typography noWrap sx={{ fontWeight: 700, fontSize: 14 }}>{state.station.name}</Typography>
         <Stack direction="row" spacing={0.5} alignItems="center">
+          {state.station.flag && <Typography component="span" sx={{ fontSize: 13, lineHeight: 1 }}>{state.station.flag}</Typography>}
           <Chip size="small" label={state.station.genre} sx={{ height: 16, fontSize: 10, bgcolor: "rgba(58,123,240,0.18)", color: "#0a55cf" }} />
           <Typography variant="caption" color="text.secondary">{state.playing ? "live" : "paused"}</Typography>
         </Stack>

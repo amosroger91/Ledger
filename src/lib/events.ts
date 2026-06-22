@@ -29,7 +29,7 @@ export interface LedgerEvents {
   "peer:connected": { pk: string };
   "peer:disconnected": { pk: string };
   "listen:state": ListenRoom;
-  "listen:now": { station: { name: string; genre: string; url: string } | null; playing: boolean };
+  "listen:now": { station: { name: string; genre: string; url: string; favicon?: string; flag?: string } | null; playing: boolean };
   "stage:in": WatchPartyState;   // a watch-party update arrived from a peer
   "stage:out": WatchPartyState;  // local watch-party change to broadcast
   "watch:start": { videoId: string };  // start/replace the watch-party video (current room)

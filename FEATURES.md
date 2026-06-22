@@ -193,8 +193,13 @@ nothing needs a company‑owned computer in the middle.
 
 ## 13. Radio & the Jukebox
 
-- **Radio:** stream internet stations; each station has its own **listeners' chat**
-  — tune in and listen together.
+- **Radio:** browse ~58k live stations from the community-run
+  [Radio Browser](https://www.radio-browser.info/) directory — **search by name**,
+  filter by **genre** and **country**, and sort by **Popular** or **Trending**.
+  Cards show the station logo, country flag, codec/bitrate and vote count. Each
+  station has its own **listeners' chat** (keyed to the station's stable id) — tune
+  in and listen together. Server mirrors are discovered live (no hardcoded hosts),
+  and tuning in registers a click so the directory's popularity stats stay honest.
 - **Jukebox room:** drop in mp3s to build an **up‑next queue** that plays through
   the persistent bottom audio bar, with a shared room chat.
 - **How:** A single `<audio>` singleton (`audioPlayerService`) with a queue; the
