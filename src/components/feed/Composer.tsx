@@ -75,8 +75,8 @@ export default function Composer({ community }: { community?: string }) {
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Broadcast to the swarm…  (#tags work, every post is signed)"
-            fullWidth multiline minRows={2} maxRows={8} variant="standard"
-            InputProps={{ disableUnderline: true, sx: { fontSize: 18 } }}
+            fullWidth multiline minRows={3} maxRows={10} variant="standard"
+            InputProps={{ disableUnderline: true, sx: { fontSize: 18, pt: 0.6, pb: 0.6 } }}
           />
           {media.length > 0 && (
             <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: "wrap", alignItems: "center" }}>
@@ -98,13 +98,13 @@ export default function Composer({ community }: { community?: string }) {
             <Button variant="contained" onClick={post} disabled={!text.trim() && !media.length} sx={{ ml: "auto" }}>Post</Button>
           </Stack>
           {showPermanentWarning && (
-            <Box role="status" aria-live="polite" sx={{ mt: 1, mb: 0, display: 'flex', alignItems: 'flex-start', gap: 1, p: 1, borderRadius: 1, bgcolor: 'rgba(255,243,205,0.98)', border: '1px solid rgba(255,235,59,0.32)' }}>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="caption" color="text.primary" component="p" sx={{ lineHeight: 1.35 }}>
+            <Box role="status" aria-live="polite" sx={{ mt: 0, mb: 0, display: 'flex', alignItems: 'center', gap: 1, p: 0, borderRadius: 0, bgcolor: 'rgba(255,243,205,0.98)', borderTop: '1px solid rgba(255,235,59,0.32)' }}>
+              <Box sx={{ flex: 1, px: 1, py: 0.6 }}>
+                <Typography variant="caption" color="text.primary" component="p" sx={{ lineHeight: 1.2 }}>
                   🔗 Posting is <b>permanent</b> — once it's out, it spreads across the network and can't be unsent or deleted. Post like it's forever, because it is.
                 </Typography>
               </Box>
-              <IconButton size="small" aria-label="Dismiss permanent posting warning" onClick={() => { try { localStorage.setItem("composer:permanentWarningDismissed", "1"); } catch {} setShowPermanentWarning(false); }}>
+              <IconButton size="small" aria-label="Dismiss permanent posting warning" onClick={() => { try { localStorage.setItem("composer:permanentWarningDismissed", "1"); } catch {} setShowPermanentWarning(false); }} sx={{ mr: 0.5 }}>
                 <CloseRoundedIcon fontSize="small" />
               </IconButton>
             </Box>
