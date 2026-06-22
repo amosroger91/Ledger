@@ -116,20 +116,20 @@ export const storage = {
       all.sort((a, b) => b.createdAt - a.createdAt);
       return all.slice(0, limit);
     }
-    // Stream newest-first with a cursor (incremental — never one huge deserialize),
-    // keeping every human/self post and capping the rss-bot + nostr firehose at
-    // `limit`, over a bounded window — so per-render cost stays ~constant no matter
-    // how large the global corpus grows.
+    // ONE bulk read (a single IDB round-trip) then window in memory. A reverse cursor
+    // that awaits continue() per post does thousands of round-trips and was the feed's
+    // freeze on a large corpus. byTime is ascending, so we walk from the end (newest
+    // first) over the newest window, keeping every human/self post and capping the
+    // rss-bot + nostr firehose at `limit`.
+    const all = await d.getAllFromIndex("posts", "byTime");
     const scanCap = Math.max(limit * 4, 3000);
+    const start = Math.max(0, all.length - scanCap);
     const out: Post[] = [];
-    let firehose = 0, scanned = 0;
-    let cur = await d.transaction("posts").store.index("byTime").openCursor(null, "prev"); // newest first
-    while (cur && scanned < scanCap) {
-      scanned++;
-      const p = cur.value;
+    let firehose = 0;
+    for (let i = all.length - 1; i >= start; i--) {
+      const p = all[i];
       if (p.author === "rss-bot" || p.source === "nostr") { if (firehose < limit) { out.push(p); firehose++; } } // rss-bot + nostr = the firehose
       else out.push(p); // humans, your posts, changelog — always kept within the window
-      cur = await cur.continue();
     }
     return out;
   },

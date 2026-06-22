@@ -88,7 +88,7 @@ export default function FeedView() {
   // (media, embeds, link-preview fetches), so rendering hundreds at once is what
   // makes the first paint and scrolling slow. This is purely a render-time
   // window — no extra network; we're just deferring DOM/work, not data.
-  const PAGE = 12;
+  const PAGE = 8;
   const [visibleCount, setVisibleCount] = useState(PAGE);
   // Reset the window when the feed's identity changes (algorithm/filter/search/group).
   useEffect(() => { setVisibleCount(PAGE); }, [algo, filter, community]);
@@ -113,7 +113,7 @@ export default function FeedView() {
   // the background reconcile below.
   const generateFeed = useCallback(async () => {
     const cfg = await rssService.config();
-    return feedService.generate(algo, { moderation: settings.moderationProfile, subscribedTopics: cfg.topics, mutedTopics: cfg.mutedTopics, mutedFeeds: cfg.mutedFeeds, includeNostr: settings.nostrEnabled !== false, community: community ?? undefined });
+    return feedService.generate(algo, { moderation: settings.moderationProfile, subscribedTopics: cfg.topics, mutedTopics: cfg.mutedTopics, mutedFeeds: cfg.mutedFeeds, includeNostr: settings.nostrEnabled !== false, community: community ?? undefined, limit: 400 });
   }, [algo, settings.moderationProfile, settings.nostrEnabled, community]);
 
   // Latest displayed posts + the held ranking, for the async background reconcile
@@ -166,7 +166,7 @@ export default function FeedView() {
   // at once, a burst coalesces to ≤1 reconcile per GAP, and it never starves.
   useEffect(() => {
     refresh();
-    const GAP = 400;
+    const GAP = 1200;   // coalesce the relay/Nostr firehose hard — re-ranking every 400ms while it floods pinned the thread
     const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
     let timer: ReturnType<typeof setTimeout> | null = null;
     let last = 0;

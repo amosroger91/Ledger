@@ -73,14 +73,13 @@ export async function boot(): Promise<BootResult> {
     gunService.start();   // durable cross-user persistence + sync (posts, swarm, profiles)
     peerService.start();
     profileService.publishSelf().catch(() => {}); // share my public profile
-    // ONE unified timeline. Nostr streams live (nostrService.start below); RSS /
-    // Reddit / YouTube / podcasts are pulled client-side here so they actually
-    // mingle into the same feed — even when the always-on relay isn't seeding
-    // them over Gun. Fetching is distributed + throttled (per-feed 1-hour TTL
-    // shared via Gun), so this only pulls feeds nobody has refreshed recently.
-    // seedDefaults first so the refresh uses the default topic subscriptions.
-    rssService.seedDefaults().then(() => rssService.refresh()).catch(() => {});
-    setInterval(() => rssService.refresh().catch(() => {}), 15 * 60 * 1000); // keep new stories flowing in
+    // The feed loads from the MESH: the always-on relay fetches RSS and seeds it into
+    // the Gun graph, and we receive it via gunService — so a fresh node loads what the
+    // network already has (instantly, if anyone fetched in the last hour) instead of
+    // re-fetching ~85 feeds itself, which is what froze "building a new feed". We only
+    // seed the default topic SUBSCRIPTIONS here (for the Topics UI + the "For You"
+    // filter); the sole client-side fetch is the manual "Refresh" button in Topics.
+    rssService.seedDefaults().catch(() => {});
     changelogService.refresh().catch(() => {}); // repo commits → timeline activity
     if (settings.showFactChecks) factCheckService.refresh().catch(() => {}); // PolitiFact index
     if (settings.nostrEnabled !== false) nostrService.start().catch(() => {}); // stream Nostr notes for your topics
@@ -94,8 +93,7 @@ export async function onOnboarded() {
   await communityService.seedDefaults();
   gunService.start();
   peerService.start();
-  rssService.seedDefaults().then(() => rssService.refresh()).catch(() => {}); // pull RSS/Reddit into the unified timeline
-  setInterval(() => rssService.refresh().catch(() => {}), 15 * 60 * 1000);
+  rssService.seedDefaults().catch(() => {}); // feed loads from the mesh (relay-seeded Gun), not a client refetch
   changelogService.refresh().catch(() => {});
   nostrService.start().catch(() => {}); // stream Nostr notes (on by default for new accounts)
 }
@@ -103,7 +101,11 @@ export async function onOnboarded() {
 // Earlier builds seeded sample posts; strip them so the feed only ever shows
 // real content from you and other people on the network.
 async function purgeSeededPosts() {
+  // ONE-TIME: demo/cache posts only existed in old builds. Scanning EVERY post on
+  // every boot froze startup once the corpus grew — do it once, then never again.
+  if (await storage.kvGet("purgedSeeds")) return;
   for (const p of await storage.allPosts()) {
     if (p.author.startsWith("demo_") || p.source === "cache") await storage.deletePost(p.id);
   }
+  await storage.kvSet("purgedSeeds", true);
 }
