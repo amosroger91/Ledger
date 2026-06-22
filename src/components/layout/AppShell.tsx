@@ -29,7 +29,7 @@ const NAV = [
   { to: "/", label: "Feed", icon: <HomeRoundedIcon /> },
   { to: "/communities", label: "Groups", icon: <GroupsRoundedIcon /> },
   { to: "/messages", label: "Town Square", icon: <ChatRoundedIcon /> },
-  { to: "/listen", label: "Watch with friends", icon: <LiveTvRoundedIcon /> },
+  { to: "/listen", label: "Watch and listen", icon: <LiveTvRoundedIcon /> },
   { to: "/network", label: "Network", icon: <HubRoundedIcon /> },
   { to: "/companion", label: "Companion", icon: <AutoAwesomeRoundedIcon /> },
   { to: "/topics", label: "Topics", icon: <RssFeedRoundedIcon /> },

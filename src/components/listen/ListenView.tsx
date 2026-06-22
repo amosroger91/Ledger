@@ -88,7 +88,7 @@ export default function ListenView() {
 
   return (
     <Box sx={{ maxWidth: 1000, mx: "auto" }}>
-      <Typography variant="h5">🍿 Watch with friends</Typography>
+      <Typography variant="h5">🍿 Watch and listen</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         Synchronized rooms — like chatrooms, but for watching together. Join the public Lobby, a named room, or a private one, and everyone shares the same moment (synced over the peer relay). Or tune in to live internet radio — tens of thousands of stations worldwide, with a chat room for every one.
       </Typography>

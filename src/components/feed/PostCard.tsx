@@ -184,7 +184,7 @@ function YouTubeCard({ id }: { id: string }) {
     bus.emit("watch:start", { videoId: id });             // start it in that room
     bus.emit("media:play", { id: "watch" });              // pause the feed player
     setActive(false);
-    window.location.hash = "#/listen";                    // open Watch with friends
+    window.location.hash = "#/listen";                    // open Watch and listen
     toast("Opened a watch room — share it so friends can join 🍿", "success");
   };
   return (
@@ -205,7 +205,7 @@ function YouTubeCard({ id }: { id: string }) {
         )}
       </Box>
       <Button size="small" startIcon={<span style={{ fontSize: 15 }}>🍿</span>} onClick={watchTogether} sx={{ mt: 0.5, color: "text.secondary" }}>
-        Watch with friends
+        Watch and listen
       </Button>
     </Box>
   );
