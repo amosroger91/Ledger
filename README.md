@@ -4,48 +4,56 @@
 
 <h1 align="center">Ledger</h1>
 
-<p align="center"><b>A social network that no company owns — not even a little.</b></p>
+<p align="center"><b>A social network you own — peer-to-peer at the core, minimally centralized by design.</b></p>
 
 Stop and think about how strange this is for a second:
 
-**This app has no server.** There's no company in the middle. When you post, chat,
-or talk here, it doesn't travel to a Facebook data center to be stored, scanned,
-profiled, sold, or "moderated" by someone you'll never meet. Your identity, your
-posts, and your messages live **on your own device**, and you talk to other people
-**directly, browser-to-browser**. There is no central database — so there's nothing
-for a tech billionaire to mine, nothing to leak, nothing to subpoena, and nothing
-anyone can flip a switch to take away. The AI that powers your feed and your
-companion runs **on your own computer**, not in someone's cloud.
+**The social core runs with no company-owned backend.** Your identity, your posts,
+and your messages live **on your own device**, and you talk to other people
+**directly, browser-to-browser**. When you post or chat here, it doesn't travel to a
+corporate data center to be scanned, profiled, sold, or "moderated" by someone you'll
+never meet. There's no company-owned database in the middle — nothing for a tech
+giant to mine, profile, or flip a switch to take away. The AI that powers your feed
+and your companion runs **on your own computer**, not in someone's cloud.
+
+To be precise (because this is easy to oversell): Ledger is **minimally
+centralized**, not zero-infrastructure. The peer-to-peer core needs no backend, but
+it does lean on **shared, swappable relays** — public WebRTC/Gun peers for sync, and
+an **optional** persistence + RSS-aggregation node ([`server/`](./server), described
+below). None of them own your data or hold authority over you, they only pass along
+signed records anyone can verify, and the app keeps working if they disappear. In
+short: **core social functionality is peer-to-peer; optional relay services improve
+persistence and discovery.**
 
 And here's the part that's honestly just *very cool*: **the GitHub repository you're
-reading right now is also what hosts the live app — for free.** The same code is
-both the product *and* the server. GitHub Pages serves these static files to the
-whole world at $0/month. No hosting bill. No backend to run. No infrastructure to
-own. A complete social platform that fits in a folder and costs nothing to keep
-alive. (The name fits what it is: every post is a **signed entry in an open
-record** that no company keeps the books on — your social life as a public
-ledger that *you* own, not them.) 😄
+reading right now is also what serves the live app — for free.** GitHub Pages serves
+these static files to the whole world at $0/month, with **no required backend** of
+your own. A complete social platform that fits in a folder. (The name fits what it
+is: every post is a **signed entry in an open record** that no company keeps the
+books on — your social life as a public ledger that *you* own, not them.) 😄
 
 > **In plain terms:** normally a social app = your data sitting on a corporation's
 > computers, under their rules. Ledger flips it: *your* computer is the computer,
 > *you* own your account (it's literally a file), and the "website" is just free,
-> public, static code anyone can read, fork, or re-host. Decentralization, for real.
+> public, static code anyone can read, fork, or re-host. Decentralization where it
+> counts — and honest about the shared relays where it doesn't.
 
 ## This is radical ownership as a tech consumer
 
 Ledger is what it looks like to **own your software instead of renting it from a
 platform.** You own your identity (a keypair on your device), your data (in your
 browser, not a data center), the AI (it runs on your own GPU), your money (a
-self-custody wallet whose key never leaves you), and even *what you trust* — there
-is no company in the middle deciding any of it. Nobody can mine you, profile you,
-sell you, shadow‑ban you, or flip a switch to take it away, because there is no
-"them": just your device, talking directly to other people's devices, over free
-and open code. You are not the product. You are the owner.
+self-custody wallet whose key never leaves you), and even *what you trust* — no
+company in the middle decides any of it. The relays Ledger syncs through can't mine
+you, profile you, sell you, shadow‑ban you, or memory-hole you: they only pass along
+**signed** records anyone can verify, and you can point at different ones or run your
+own. You are not the product. You are the owner.
 
 ## 🔗 Live app: https://amosroger91.github.io/Ledger/
 
 > Open it in **two browser windows** to watch presence, chatrooms, and the post
-> relay connect peer-to-peer with no server in between.
+> relay connect peer-to-peer — through free public relays, with no company-owned
+> backend in between.
 
 ---
 
@@ -63,7 +71,8 @@ and open code. You are not the product. You are the owner.
   from memory on later visits). Private by construction — your prompts never leave
   your machine. Falls back to a fast offline engine when there's no WebGPU.
 - **Chatrooms** — live peer-to-peer rooms: text chat, presence, reactions, image
-  sharing, and **voice/video** (WebRTC mesh), all with no server.
+  sharing, and **voice/video** (WebRTC mesh), all browser-to-browser through a free
+  public broker.
 - **Direct & swarm messages** — DMs and a global "Swarm Lounge".
 - **Watch & Listen Together** — internet radio *and* YouTube, with a **persistent
   mini-player** docked at the bottom of every screen (play/pause, station, volume).
@@ -84,12 +93,25 @@ and open code. You are not the product. You are the owner.
 - **Layered local moderation** — an explainable on-device agent (allow → warn →
   reduce → review → flag) with a contextual **web of trust**, not a corporate
   ban-hammer. You decide what you see, and every verdict shows its reasoning.
+- **On-device adult-content filter** — optional NSFW filtering that runs **entirely
+  in your browser**: explicit images are classified by a local neural net
+  ([nsfwjs](https://github.com/infinitered/nsfwjs) / TensorFlow.js — the picture
+  never leaves your device) and blurred behind a tap, and posts with explicit
+  language are gated. A separate **profanity censor** can mask cuss words inline
+  (f\*\*k). On by default, toggleable in Settings, fails open so it never breaks the feed.
 - **AI-driven fact-checking** — a **"Fact-check this"** button uses your **own
   device's LLM** to derive keywords from a headline, searches **PolitiFact**, and
   links a real fact-check if one exists (with an **"Is this in error?"** re-check
   on each result). You donate a moment of your own compute to the platform's
   integrity — no fact-check server, no third party deciding truth for you.
 - **Live online count** + rich presence (online/idle/away/dnd + activity).
+- **Notifications** — an in-app bell for replies, reactions, DMs and watch-party
+  invites; tap one to jump straight to the post.
+- **Live changelog in your feed** — the app's own GitHub commits stream into the
+  timeline as "Ledger Dev 🛠️", so you watch it evolve from inside the app.
+- **Run a node, earn network points** — anyone can run the optional persistence
+  node (below) and earn points on a transparent contribution leaderboard
+  (uptime + items served). No company decides who counts.
 - **Offline-first** — everything lives in your browser (IndexedDB); the UI is the
   **Bliss / Luna** glass design system (a Windows-XP homage).
 
@@ -123,11 +145,13 @@ yours, assembled from the whole open web, on your terms — not a corporation's.
 
 ---
 
-## Distributed fetching — the readers *are* the server
+## Distributed fetching — readers share the load
 
-Pulling RSS still costs *some* compute — somebody has to actually hit each feed.
-A normal app pays a server farm to poll thousands of feeds around the clock.
-Ledger does something stranger: **the readers do it, together, exactly once.**
+Pulling RSS costs *some* compute — somebody has to actually hit each feed. The
+optional relay node does this routinely server-side, so feeds stay fresh even when
+no one's around. But Ledger also has a **client-side** trick for when *you* hit
+"Refresh now," so the news layer doesn't *depend* on the relay: the readers share
+the work, together, exactly once.
 
 Every feed carries a tiny **shared "last-fetched" stamp** on the
 [Gun.js](https://gun.eco/) graph. When you refresh, your device looks at only the
@@ -139,49 +163,51 @@ already fresh, so they only pull 4.
 
 The result is genuinely cool:
 
-- **No server polls anything** — the work is spread across the exact people who
-  care about each feed, so nobody pays to fetch the whole internet, only the
-  slivers real humans actually read.
+- **No duplicated work** — the load spreads across the exact people who care about
+  each feed, so nobody fetches the whole internet, only the slivers real humans
+  actually read.
 - **It self-balances** — the more readers a feed has, the less often any one of
   them has to do the pull.
-- **The "you're contributing compute" line is literally true** — when the feed
-  refreshes, your device is doing a real, relevant, un-duplicated piece of work on
-  behalf of everyone who follows those same feeds.
+- **"You're contributing compute" is literally true** — on a manual refresh your
+  device does a real, relevant, un-duplicated piece of work on behalf of everyone
+  who follows those same feeds.
 
-The whole app's news layer runs on borrowed slices of its readers' laptops and
-phones — no cron job, no cloud, no bill.
+So even with the relay switched off, the news layer keeps running on borrowed slices
+of its readers' devices — no cron job required, no per-user cloud bill.
 
 ---
 
 ## Emergent collective memory
 
-Here's the part that feels almost alive. With no server, where does the *history*
-live? **In the swarm — and it heals itself.**
+Here's the part that feels almost alive. With no *required* server, where does the
+*history* live? **In the swarm — and it heals itself.**
 
 When any two people connect peer-to-peer, their apps quietly **reconcile their
 timelines**: each one tells the other which posts it already has, and they
 **backfill each other's gaps** — never deleting, never duplicating, only filling in
 what's missing. Combined with the durable [Gun.js](https://gun.eco/) graph that
-persists posts across sessions, this means the network's memory isn't stored in one
-place — it's **smeared across everyone who's ever been online**, and every new
-connection makes it more complete.
+persists posts across sessions (and the optional always-on node, if one is running),
+this means the network's memory isn't stored in one company-owned place — it's
+**smeared across everyone who's ever been online**, and every new connection makes
+it more complete.
 
 So picture it: someone's been on the network for months, posting and collecting a
 deep timeline. You sign up today. The moment you're both online, your app and
 theirs shake hands and sync — and **you can scroll back through everything they
-could see, as if you'd been here the whole time.** Nobody "uploaded the database."
-There is no database. The history simply *emerges* from people meeting, the same way
-a rumor spreads through a town until everyone knows it — except here it's exact,
-signed, and lossless.
+could see, as if you'd been here the whole time.** Nobody "uploaded the database" to
+a company — the history simply *emerges* from people meeting, the same way a rumor
+spreads through a town until everyone knows it (and an always-on node, if present,
+just makes sure it's always there) — except here it's exact, signed, and lossless.
 
-No central archive. No "you had to be there." Just a collective memory that
-**reassembles itself out of the people who hold it.**
+No company-owned archive. No "you had to be there." Just a collective memory that
+**reassembles itself out of the people who hold it** — and, optionally, a node that
+keeps a copy always reachable.
 
 ---
 
 ## Posting is permanent — by design
 
-There's a flip side to having no central server: **there's no central server to delete from.**
+There's a flip side to a company-free core: **there's no single database to delete from.**
 When you post on Ledger, it doesn't sit in one company's database where a "delete"
 button can wipe it. It's **signed by your key and replicated** — across the durable
 [Gun.js](https://gun.eco/) graph, across the peers who received it, and into the
@@ -189,16 +215,69 @@ local storage of everyone who's already seen it. The same architecture that mean
 **nobody can censor or memory-hole your posts** also means **you can't un-ring the
 bell.** Once something is out, it's out.
 
-This is the honest trade of real decentralization, and the app says so right in the
+This is the honest trade of decentralization, and the app says so right in the
 composer: *posting is permanent — once it's out, it spreads across the network and
 can't be unsent or deleted. Post like it's forever, because it is.* Treat it like
 speaking in public, not like a draft you can quietly take back.
 
 ---
 
-## How it works (genuinely no backend)
+## Have your cake and eat it too — the optional persistence node
 
-GitHub Pages only serves static files, so Ledger is pure browser tech:
+Pure peer-to-peer has one honest weakness: if nobody who holds a post is currently
+online, that post is temporarily unreachable until someone who has it reconnects.
+Big platforms "solve" this with a data center that *owns* everything. Ledger takes a
+middle path that keeps the ownership story completely intact: **one optional node
+that is just another peer.**
+
+The [`server/`](./server) directory is a tiny Node.js process (Express + Gun.js,
+~four dependencies) that does three things:
+
+- **Durable persistence** — it joins the *same* Gun graph every browser uses (its
+  `GUN_ROOT` must match the client's `zuccbook-v1`) and writes everything to disk
+  (Gun's radisk). Because it's online 24/7, the global feed, profiles, listings,
+  trust edges and the network-points ledger survive even when **zero humans** are
+  online. Someone who signs up today syncs the full history in seconds instead of
+  waiting for a peer who happens to hold it.
+- **Server-side RSS aggregation** — it polls the whole topic catalog every ~10
+  minutes and seeds the stories into the shared feed, so your device never has to
+  fetch them (see ["Distributed fetching"](#distributed-fetching--the-readers-are-the-server) above).
+- **A network-points ledger** — it tallies contribution (uptime + items published)
+  for anyone running a node, exposed at `/api/leaderboard` and `/api/points/:pk`.
+
+**Why this is cake, eaten:** the node has **no special authority.** It's *read-only*
+— it never originates content, can't sign as you, can't censor, can't delete, and
+holds no data that isn't already public and replicated across every peer. It is one
+more voice in the swarm that simply never sleeps.
+
+**And if it stops, nothing breaks.** Pull the plug and the app keeps working exactly
+as before: clients still talk browser-to-browser over PeerJS, still sync over the
+other public Gun relays, still keep everything in local IndexedDB, and still backfill
+each other's gaps on every connection. You lose the *convenience* of always-available
+history and server-side RSS — not your identity, your posts, your messages, or your
+ability to use the app. The node is a **luxury, not a dependency.** That's the entire
+trick: the reliability of a server with none of the lock-in.
+
+Run your own — it's four commands:
+
+```bash
+cd server
+cp .env.example .env        # set GUN_ROOT to match the client (zuccbook-v1)
+npm install && npm start    # :8787 — /gun is the relay, /api/* the read API
+# or with Docker:
+# docker build -t ledger-server . && docker run -p 8787:8787 -v ledger-data:/data ledger-server
+```
+
+The live app lists one such node (`ledger.wellspringstudiollc.com/gun`) **alongside**
+the public Gun relays in `src/services/gunService.ts` — but it sits there as just
+another peer. Delete that line and the app is unchanged.
+
+---
+
+## How it works (genuinely no required backend)
+
+GitHub Pages only serves static files, so the Ledger *app* is pure browser tech and
+needs nothing else to run:
 
 - **[PeerJS](https://peerjs.com/) / WebRTC** — direct browser-to-browser data &
   media through a free public broker. Chatrooms and the post relay use a **star
@@ -210,7 +289,11 @@ GitHub Pages only serves static files, so Ledger is pure browser tech:
 - **[Gun.js](https://gun.eco/)** — a decentralized graph database that syncs over
   public relay peers, so posts (human **and** RSS-Bot) and the public Swarm Lounge
   **persist and reach people who were offline** — still with no database you own or pay for.
-- **No accounts, no auth server, no central database, no hosting cost.**
+- **An optional persistence node** — a tiny Node.js + Gun relay we keep online 24/7
+  for durable history and server-side RSS. It's just another peer with **no
+  authority**, and the app works fine without it — see
+  [Have your cake and eat it too](#have-your-cake-and-eat-it-too--the-optional-persistence-node) above.
+- **No accounts, no auth server, no central database you're locked into, no required hosting cost.**
 
 See **[ARCHITECTURE.md](./ARCHITECTURE.md)** for the full design, storage schema,
 service/AI/P2P layers, and the Phase 2 / Phase 3 roadmap.
@@ -256,6 +339,12 @@ financial advice.** Only use small amounts you can afford to lose.
 - True background posting while the tab is closed needs a Service Worker; today the
   feed backfills "missed" stories on return and tops up while open.
 - The on-device LLM needs WebGPU and a one-time model download (then it's cached).
+- The on-device adult-content filter is best-effort: image classification (nsfwjs)
+  isn't perfect and lazy-loads a model on first use (one-time ~MB download), and the
+  text filter is wordlist-based, so it catches explicit terms but not context. It
+  fails open — a check that errors never blocks content.
+- The persistence node is genuinely **optional**; on a free hosting tier its disk can
+  be ephemeral, so for truly durable 24/7 history mount a real volume (`GUN_DATA_DIR`).
 
 ## Full feature atlas
 
@@ -266,8 +355,11 @@ moderation philosophy in **[MODERATION.md](MODERATION.md)**.
 
 ## Tech
 
-React · TypeScript · Vite · Material UI (Bliss/Luna theme) · Zustand · IndexedDB (`idb`)
-· Gun.js · PeerJS (WebRTC) · Web Crypto · WebLLM (WebGPU) · ethers.js (Polygon).
+**App:** React · TypeScript · Vite · Material UI (Bliss/Luna theme) · Zustand · IndexedDB (`idb`)
+· Gun.js · PeerJS (WebRTC) · Web Crypto · WebLLM (WebGPU) · ethers.js (Polygon) ·
+nsfwjs + TensorFlow.js & obscenity (on-device content filtering).
+
+**Optional node:** Node.js · Express · Gun.js · rss-parser (see [`server/`](./server)).
 
 MIT. *Independent and unaffiliated — there's no company behind Ledger. You own
 the ledger, not us.*

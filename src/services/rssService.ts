@@ -24,9 +24,18 @@ export interface RssConfig {
   topics: string[];
   custom: { topic: string; url: string; name: string; kind?: FeedKind }[];
   disabled: string[];
+  // Per-device opt-out: topic slugs whose RSS-Bot / network-feed stories you've
+  // hidden from YOUR feed (in every algorithm). Empty = show everything.
+  mutedTopics: string[];
+  // Per-device opt-out for individual network feeds, by feed id. Lets you hide a
+  // single shared feed from your own timeline without touching it for everyone.
+  mutedFeeds: string[];
   seen: string[];
   lastRun: number;
 }
+
+/** Normalize a topic name to the slug used as a post's first tag (tags[0]). */
+export const topicSlug = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "");
 
 const gnews = (q: string) => `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`;
 const reddit = (sub: string, name: string): Feed => ({ url: `https://www.reddit.com/r/${sub}/.rss`, name });
@@ -154,7 +163,7 @@ export const DEFAULT_TOPICS = [
   "Daily Verse",
   "TikTok · News & Politics", "TikTok · Guns & Coffee", "TikTok · Faith", "TikTok · Creators",
 ];
-const DEFAULT: RssConfig = { topics: [...DEFAULT_TOPICS], custom: [], disabled: [], seen: [], lastRun: 0 };
+const DEFAULT: RssConfig = { topics: [...DEFAULT_TOPICS], custom: [], disabled: [], mutedTopics: [], mutedFeeds: [], seen: [], lastRun: 0 };
 
 function hash(s: string): string { let h = 0; for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0; return Math.abs(h).toString(36); }
 function stripHtml(s: string): string { return decodeEntities(s.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim(); }
@@ -227,6 +236,22 @@ class RssService {
     c.topics = on ? [...new Set([...c.topics, topic])] : c.topics.filter((t) => t !== topic);
     await this.save(c);
     if (on) this.refresh(true);
+  }
+  /** Personal show/hide for a topic's stories (network + curated RSS-Bot posts)
+   *  in your own feed. `topic` may be a display name or a slug — normalized here. */
+  async muteTopic(topic: string, muted: boolean) {
+    const slug = topicSlug(topic);
+    const c = await this.config();
+    const cur = c.mutedTopics ?? [];
+    c.mutedTopics = muted ? [...new Set([...cur, slug])] : cur.filter((t) => t !== slug);
+    await this.save(c);
+  }
+  /** Personal show/hide for a single network feed (by feed id) in your own feed. */
+  async muteFeed(feedId: string, muted: boolean) {
+    const c = await this.config();
+    const cur = c.mutedFeeds ?? [];
+    c.mutedFeeds = muted ? [...new Set([...cur, feedId])] : cur.filter((f) => f !== feedId);
+    await this.save(c);
   }
   async toggleFeed(url: string, enabled: boolean) {
     const c = await this.config();

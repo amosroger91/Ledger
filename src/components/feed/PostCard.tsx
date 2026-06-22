@@ -18,7 +18,6 @@ import { linkPreviewService, type Preview } from "@/services/linkPreviewService"
 import { trustService } from "@/services/trustService";
 import { audioPlayerService } from "@/services/audioPlayerService";
 import { watchRoomService } from "@/services/watchRoomService";
-import { companionService } from "@/services/companionService";
 import { factCheckService, type FactCheck } from "@/services/factCheckService";
 import FactCheckRoundedIcon from "@mui/icons-material/FactCheckRounded";
 import ReportProblemRoundedIcon from "@mui/icons-material/ReportProblemRounded";
@@ -99,16 +98,15 @@ const RULING_COLOR: Record<string, string> = {
   "true": "#2f9e44", "mostly true": "#5cb85c", "half true": "#e8920c",
   "mostly false": "#e8590c", "barely true": "#e8590c", "false": "#d23b2f", "pants on fire": "#a8071a",
 };
-function FactCheckCard({ fc, postId, title, onChange }: { fc: FactCheck; postId: string; title: string; onChange: (fc: FactCheck | null) => void }) {
+function FactCheckCard({ fc, postId, text, onChange }: { fc: FactCheck; postId: string; text: string; onChange: (fc: FactCheck | null) => void }) {
   const [checking, setChecking] = useState(false);
   const color = (fc.ruling && RULING_COLOR[fc.ruling]) || "#51606e";
-  // "Is this in error?" — re-derive keywords on the user's device and re-search
-  // PolitiFact. Same article → keep; a closer one → update; nothing → remove.
+  // "Is this in error?" — re-run the on-device algorithmic match against the
+  // latest PolitiFact index. Same article → keep; a closer one → update; nothing → remove.
   async function recheck() {
     setChecking(true);
-    toast("Re-checking on your device ⚡ (thanks for the compute!)", "info");
-    const { keywords } = await companionService.keywords(title);
-    const found = factCheckService.searchByKeywords(keywords);
+    toast("Re-checking on your device ⚡ (local match — no AI)", "info");
+    const found = await factCheckService.checkPost(text);
     setChecking(false);
     if (found) { await factCheckService.setFor(postId, found); onChange(found); toast(found.link === fc.link ? "Confirmed — still the best match." : "Updated to a closer fact-check.", "success"); }
     else { await factCheckService.removeFor(postId); onChange(null); toast("No current PolitiFact match — removed.", "info"); }
@@ -419,7 +417,6 @@ function ModInfo({ verdict }: { verdict: ModerationVerdict }) {
 export default function PostCard({ post, reason, replies = [], replyMap, verdict }: { post: Post; reason?: RecommendationReason; replies?: Post[]; replyMap?: Map<string, Post[]>; verdict?: ModerationVerdict }) {
   const me = useStore((s) => s.me);
   const mePk = me?.publicKey ?? "";
-  const showFactChecks = useStore((s) => s.settings.showFactChecks);
   const filterNsfw = useStore((s) => s.settings.filterNsfw);
   const censorProfanity = useStore((s) => s.settings.censorProfanity);
   const nav = useNavigate();
@@ -439,15 +436,15 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
   const gated = restricted || textNsfw;
   const childMap = replyMap ?? new Map<string, Post[]>();
 
-  // User-triggered fact-check: derive keywords on-device (their compute), search PolitiFact.
+  // User-triggered fact-check: purely algorithmic, on-device. We extract the
+  // post's salient terms and rank PolitiFact's recent claims by IDF-weighted
+  // lexical overlap — no AI involved; it links you to PolitiFact's own wording.
   async function runFactCheck() {
     setFcBusy(true);
-    const headline = (post.text ?? "").split("\n")[0] || (post.text ?? "");
-    toast("Deriving keywords on your device & checking PolitiFact ⚡", "info");
-    const { keywords, usedLLM } = await companionService.keywords(headline);
-    const found = factCheckService.searchByKeywords(keywords);
+    toast("Checking PolitiFact on your device ⚡ (local keyword match — no AI)", "info");
+    const found = await factCheckService.checkPost(post.text ?? "");
     setFcBusy(false);
-    if (found) { await factCheckService.setFor(post.id, found); setFactCheck(found); toast(`Fact-check linked${usedLLM ? " (AI-assisted)" : ""}. Thanks for contributing compute!`, "success"); }
+    if (found) { await factCheckService.setFor(post.id, found); setFactCheck(found); toast("Fact-check linked — matched locally against PolitiFact.", "success"); }
     else toast("No relevant PolitiFact fact-check found.", "info");
   }
 
@@ -543,7 +540,7 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
 
           {post.media?.filter((m) => m.type === "audio").map((m, i) => <AudioCard key={i} url={m.url} title={m.alt || "Audio track"} />)}
 
-          {showFactChecks && factCheck && <FactCheckCard fc={factCheck} postId={post.id} title={(post.text ?? "").split("\n")[0]} onChange={setFactCheck} />}
+          {factCheck && <FactCheckCard fc={factCheck} postId={post.id} text={post.text ?? ""} onChange={setFactCheck} />}
 
           {post.poll && (
             <Stack spacing={0.5} sx={{ mt: 1 }}>
@@ -611,7 +608,7 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
       )}
 
       <Menu open={!!authMenu} anchorEl={authMenu} onClose={() => setAuthMenu(null)}>
-        {showFactChecks && !factCheck && <MenuItem disabled={fcBusy} onClick={() => { setAuthMenu(null); runFactCheck(); }}>🔎 {fcBusy ? "Checking…" : "Fact-check this"}</MenuItem>}
+        {!!post.text?.trim() && !factCheck && <MenuItem disabled={fcBusy} onClick={() => { setAuthMenu(null); runFactCheck(); }}>🔎 {fcBusy ? "Checking…" : "Fact-check this"}</MenuItem>}
         {canVisit && <MenuItem onClick={() => trust("vouch")}>🤝 Vouch for {post.authorName}</MenuItem>}
         {canVisit && <MenuItem onClick={() => trust("report")}>🚩 Report</MenuItem>}
         {canVisit && <MenuItem onClick={() => trust("mute")}>🔇 Mute — hide from your feed</MenuItem>}

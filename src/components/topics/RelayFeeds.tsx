@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Box, Stack, Typography, TextField, Select, MenuItem, Button, Chip } from "@mui/material";
-import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import { Box, Stack, Typography, TextField, Select, MenuItem, Button, Switch, FormControlLabel, Divider } from "@mui/material";
 import PublicRoundedIcon from "@mui/icons-material/PublicRounded";
 import GlassCard from "@/components/common/GlassCard";
 import { relayService, type NetworkFeed } from "@/services/relayService";
-import { toast } from "@/lib/events";
+import { rssService } from "@/services/rssService";
+import { bus, toast } from "@/lib/events";
 
 // Anything can be a feed. Each source maps to a relay /api/feeds payload.
 const SOURCES = [
@@ -25,11 +25,29 @@ export default function RelayFeeds() {
   const [val, setVal] = useState("");
   const [topic, setTopic] = useState("");
   const [busy, setBusy] = useState(false);
+  const [mutedFeeds, setMutedFeeds] = useState<string[]>([]);   // feed ids hidden from MY feed
 
   const meta = SOURCES.find((s) => s.id === src)!;
   const load = () =>
     relayService.listFeeds().then((r) => { setFeeds(r.feeds); setOffline(false); }).catch(() => setOffline(true));
-  useEffect(() => { load(); }, []);
+  const loadMuted = () => rssService.config().then((c) => setMutedFeeds(c.mutedFeeds ?? []));
+  useEffect(() => { load(); loadMuted(); }, []);
+
+  // Personal show/hide for a single network feed — toggling controls whether its
+  // stories appear in MY feed (every algorithm); it doesn't touch the shared list.
+  async function toggleFeed(feedId: string, on: boolean) {
+    await rssService.muteFeed(feedId, !on);   // on → not muted
+    await loadMuted();
+    bus.emit("feed:updated", undefined);      // re-rank the feed if it's open
+  }
+
+  // Group the shared network feeds by topic so they read like the topic cards below.
+  const grouped = Object.entries(
+    (feeds ?? []).reduce<Record<string, NetworkFeed[]>>((acc, f) => {
+      (acc[f.topic || "other"] ??= []).push(f);
+      return acc;
+    }, {}),
+  ).sort((a, b) => a[0].localeCompare(b[0]));
 
   async function add() {
     const v = val.trim();
@@ -53,7 +71,6 @@ export default function RelayFeeds() {
       setBusy(false);
     }
   }
-  async function remove(id: string) { try { await relayService.removeFeed(id); load(); } catch {} }
 
   return (
     <GlassCard sx={{ mb: 2, border: "1px solid rgba(58,155,240,0.30)" }}>
@@ -84,10 +101,28 @@ export default function RelayFeeds() {
         </Typography>
       ) : feeds && (
         <Box sx={{ mt: 1.5 }}>
-          <Typography variant="overline" color="text.secondary">{feeds.length} network feed{feeds.length === 1 ? "" : "s"} live</Typography>
-          <Stack direction="row" sx={{ flexWrap: "wrap", gap: 0.5, mt: 0.5 }}>
-            {feeds.map((f) => (
-              <Chip key={f.id} size="small" variant="outlined" label={`${f.title} · ${f.topic}`} onDelete={() => remove(f.id)} deleteIcon={<DeleteOutlineRoundedIcon />} />
+          <Typography variant="overline" color="text.secondary">{feeds.length} network feed{feeds.length === 1 ? "" : "s"} live · grouped by topic</Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+            Shared by the whole network. Toggle any feed to show or hide it in <b>your</b> timeline — it stays live for everyone else.
+          </Typography>
+          <Stack divider={<Divider />} spacing={0.5}>
+            {grouped.map(([t, items]) => (
+              <Box key={t} sx={{ pt: 0.75 }}>
+                <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 700 }}>{t}</Typography>
+                <Stack sx={{ mt: 0.25 }}>
+                  {items.map((f) => {
+                    const on = !mutedFeeds.includes(f.id);
+                    return (
+                      <FormControlLabel key={f.id}
+                        control={<Switch size="small" checked={on} onChange={(e) => toggleFeed(f.id, e.target.checked)} />}
+                        label={f.title}
+                        sx={{ ml: 0, justifyContent: "space-between", "& .MuiFormControlLabel-label": { fontSize: 14, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }}
+                        labelPlacement="start"
+                      />
+                    );
+                  })}
+                </Stack>
+              </Box>
             ))}
           </Stack>
         </Box>

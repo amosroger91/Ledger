@@ -112,17 +112,22 @@ nothing needs a company‑owned computer in the middle.
 - **How:** The agent is a local function combining content lexicons, reputation,
   account history, similarity, community rules and your trust graph — all on device.
 
-## 7. AI‑driven fact‑checking
+## 7. Algorithmic fact‑checking
 
-- **What:** Per‑post **"Fact‑check this"** button. It derives keywords from the
-  headline using the **on‑device LLM** (falling back to local term extraction),
-  searches **PolitiFact**, and links a result only if found. Each PolitiFact box
-  has an **"Is this in error?"** button that re‑derives keywords and re‑searches —
-  same article → keep, closer one → update, none → remove. User‑triggered, so
-  people **donate their own compute** to the platform's integrity.
+- **What:** Per‑post **"Fact‑check this"** button, always available from a post's ⋯
+  menu. It matches the post against **PolitiFact** and links a result only if one
+  qualifies. Each PolitiFact box has an **"Is this in error?"** button that re‑runs
+  the match — same article → keep, closer one → update, none → remove.
+  **Deliberately no AI in this path:** the most an algorithm can honestly do is rank
+  PolitiFact's own claims by lexical evidence, so that's all it does — it links you
+  to PolitiFact's wording, it never invents a verdict.
 - **How:** PolitiFact's public RSS is pulled through a CORS proxy and indexed
-  locally; keyword extraction is `companionService.keywords()` (LLM or fallback);
-  links persist per‑post in IndexedDB. No fact‑check server.
+  locally (lazily on first use). Matching is a pure, unit‑tested function
+  ([`src/lib/factMatch.ts`](src/lib/factMatch.ts)): extract the post's salient
+  tokens, adjacent bigrams and multi‑word entities, then rank claims by
+  **IDF‑weighted overlap** with phrase/entity bonuses, accepting a match only above
+  a score threshold backed by ≥2 distinct hits (or a phrase hit). Links persist
+  per‑post in IndexedDB. No fact‑check server, no model.
 
 ## 8. The Companion (on‑device AI)
 

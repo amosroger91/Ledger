@@ -25,7 +25,8 @@ export function publishNewRssToGun() {
   for (const item of store.rss.values()) {
     if (published.has(item.id)) continue;
     published.add(item.id);
-    const { feedId, feedTitle, link, ...post } = item; // drop API-only provenance
+    // keep feedId so clients can show/hide individual network feeds; drop the rest.
+    const { feedTitle, link, ...post } = item;
     try {
       posts.get(post.id).put({ json: JSON.stringify(post) });
       count++;

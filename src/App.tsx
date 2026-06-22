@@ -30,6 +30,7 @@ import GlobalWatchPlayer from "@/components/layout/GlobalWatchPlayer";
 import GlobalFeedVideo from "@/components/layout/GlobalFeedVideo";
 import GlobalSpotify from "@/components/layout/GlobalSpotify";
 import FloatingDocks from "@/components/layout/FloatingDocks";
+import AiSplash from "@/components/layout/AiSplash";
 
 export default function App() {
   const { ready, onboarded, setReady, setPresence, setOnlineCount } = useStore();
@@ -58,6 +59,7 @@ export default function App() {
   return (
     <Box sx={{ minHeight: "100vh", position: "relative" }}>
       <Background />
+      <AiSplash />{/* full-screen launch overlay until the on-device AI is 30% downloaded (self-gating) */}
       {ready && deviceLink && <DeviceLinkReceiver code={deviceLink.code} secret={deviceLink.secret} />}
       {ready && !deviceLink && !onboarded && <Onboarding />}
       {ready && !deviceLink && onboarded && (

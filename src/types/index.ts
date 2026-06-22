@@ -112,6 +112,9 @@ export interface Post {
   // detached ECDSA signature over the authored content (see lib/records.ts).
   // Verified at every ingest boundary; a forged post fails and is dropped.
   sig?: string;
+  // for relay/RSS-bot posts: which network feed produced this (enables per-feed
+  // personal show/hide). Not part of the signed payload.
+  feedId?: string;
 }
 
 export type AlertKind = "reply" | "reaction" | "dm" | "watch" | "info";

@@ -111,7 +111,7 @@ export default function FeedView() {
 
   const refresh = useCallback(async () => {
     const cfg = await rssService.config();
-    const { posts, reasons, verdicts } = await feedService.generate(algo, { moderation: settings.moderationProfile, subscribedTopics: cfg.topics, mutedTopics: cfg.mutedTopics });
+    const { posts, reasons, verdicts } = await feedService.generate(algo, { moderation: settings.moderationProfile, subscribedTopics: cfg.topics, mutedTopics: cfg.mutedTopics, mutedFeeds: cfg.mutedFeeds });
     setPosts(posts);
     setReasons(reasons);
     setVerdicts(verdicts);

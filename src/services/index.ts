@@ -4,7 +4,7 @@
 //  intentionally empty until real posts arrive from you or peers —
 //  no sample/AI-generated content is injected.
 // ============================================================
-import { storage, DEFAULT_SETTINGS } from "./storage";
+import { storage, DEFAULT_SETTINGS, requestPersistentStorage } from "./storage";
 import { identityService } from "./identityService";
 import { feedService } from "./feedService";
 import { companionService } from "./companionService";
@@ -25,6 +25,9 @@ import type { AppSettings } from "@/types";
 export interface BootResult { onboarded: boolean; settings: AppSettings }
 
 export async function boot(): Promise<BootResult> {
+  // Make storage durable so an installed PWA keeps you signed in across launches
+  // (prevents the browser from evicting the IndexedDB that holds your identity).
+  void requestPersistentStorage();
   const settings: AppSettings = { ...DEFAULT_SETTINGS, ...(await storage.loadSettings()) };
   // Auto-enable the on-device LLM on WebGPU-capable devices (unless the user
   // explicitly opted out in Settings) — the model downloads automatically.

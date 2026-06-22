@@ -8,6 +8,7 @@
 // ============================================================
 import { bus } from "@/lib/events";
 import { storage } from "./storage";
+import { rankFactChecks } from "@/lib/factMatch";
 
 export interface FactCheck { claim: string; link: string; ruling?: string; published: number; }
 
@@ -16,14 +17,8 @@ const FEEDS = [
   "https://www.politifact.com/rss/all/",
 ];
 const PROXIES = ["https://api.allorigins.win/raw?url=", "https://corsproxy.io/?url="];
-const STOP = new Set(
-  "this that with from have has had will would about into over after their they your you our are was were been being not but and the for there here what when where which while also more most some such than then them then says said report new news".split(" "),
-);
 const RULINGS = ["pants on fire", "mostly true", "mostly false", "half true", "barely true", "true", "false"];
 
-function tokens(s: string): Set<string> {
-  return new Set((s.toLowerCase().match(/[a-z0-9]{4,}/g) ?? []).filter((t) => !STOP.has(t)));
-}
 function detectRuling(s: string): string | undefined {
   const l = s.toLowerCase();
   // longest match first ("mostly true" before "true")
@@ -71,6 +66,25 @@ class FactCheckService {
 
   get ready() { return loaded && index.length > 0; }
 
+  /** Make sure the PolitiFact index is loaded (lazily, once) before a check, so
+   *  "Fact-check this" works even if it wasn't pre-loaded at boot. */
+  private loading: Promise<void> | null = null;
+  async ensureIndex(): Promise<boolean> {
+    if (this.ready) return true;
+    if (!this.loading) this.loading = this.refresh().finally(() => { this.loading = null; });
+    await this.loading;
+    return this.ready;
+  }
+
+  /** Algorithmically match a post against PolitiFact — no AI. Loads the index on
+   *  demand, then ranks claims by IDF-weighted lexical overlap. Returns the best
+   *  qualifying fact-check or null. */
+  async checkPost(text: string): Promise<FactCheck | null> {
+    if (!text?.trim()) return null;
+    await this.ensureIndex();
+    return rankFactChecks(text.slice(0, 1200), index)?.item ?? null;
+  }
+
   // ---- user-triggered, per-post fact-check links (the LLM-driven flow) ----
   async loadLinks() {
     const saved = await storage.kvGet<Record<string, FactCheck>>("factcheck:byPost");
@@ -82,21 +96,6 @@ class FactCheckService {
   async removeFor(postId: string) { byPost.delete(postId); await this.persistLinks(); }
   /** Cleanse: drop every linked fact-check (used once to clear the old auto-matched data). */
   async clearLinks() { byPost.clear(); await this.persistLinks(); }
-
-  /** Find the best PolitiFact match for a set of (LLM-derived) keywords. Each
-   *  keyword is matched as a substring of a fact-check claim; needs ≥2 hits. */
-  searchByKeywords(keywords: string[]): FactCheck | null {
-    if (!index.length || !keywords.length) return null;
-    const kws = keywords.map((k) => k.toLowerCase().trim()).filter((k) => k.length > 2);
-    let best: FactCheck | null = null, bestScore = 0;
-    for (const fc of index) {
-      const hay = fc.claim.toLowerCase();
-      let score = 0;
-      for (const k of kws) if (hay.includes(k)) score++;
-      if (score > bestScore) { bestScore = score; best = fc; }
-    }
-    return bestScore >= 2 ? best : null;
-  }
 }
 
 export const factCheckService = new FactCheckService();

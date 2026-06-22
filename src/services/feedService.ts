@@ -191,7 +191,7 @@ class FeedService {
   /* ---------- feed generation ---------- */
   async generate(
     algorithm: FeedAlgorithm,
-    opts: { moderation: ModerationProfile; friends?: string[]; community?: string; subscribedTopics?: string[]; values?: CommunityValues } = { moderation: "discovery" },
+    opts: { moderation: ModerationProfile; friends?: string[]; community?: string; subscribedTopics?: string[]; mutedTopics?: string[]; mutedFeeds?: string[]; values?: CommunityValues } = { moderation: "discovery" },
   ): Promise<{ posts: Post[]; reasons: Map<string, RecommendationReason>; verdicts: Map<string, ModerationVerdict> }> {
     let posts = (await storage.allPosts()).filter((p) => !p.replyTo); // top-level only
     const meId = identityService.pk;
@@ -228,6 +228,19 @@ class FeedService {
       verdicts.set(p.id, v);
       return v.action !== "hide";
     });
+
+    // Personal opt-out: hide RSS-Bot / network-feed stories from topics you've
+    // muted in Topics. Applies to EVERY algorithm — it's your "show/hide" over
+    // the global relay feeds (and curated RSS), keyed on the post's topic tag.
+    if (opts.mutedTopics?.length) {
+      const muted = new Set(opts.mutedTopics);
+      posts = posts.filter((p) => p.author !== "rss-bot" || !(p.tags[0] && muted.has(p.tags[0])));
+    }
+    // Per-feed opt-out: hide individual network feeds you've toggled off (by feed id).
+    if (opts.mutedFeeds?.length) {
+      const mutedF = new Set(opts.mutedFeeds);
+      posts = posts.filter((p) => !(p.feedId && mutedF.has(p.feedId)));
+    }
 
     // "For You" = real human activity + RSS Bot posts only from topics you
     // subscribed to. No LLM / interest-embedding curation involved.
