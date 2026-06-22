@@ -2,8 +2,10 @@ import { useState } from "react";
 import { Box, Stack, Typography, Select, MenuItem, Switch, FormControlLabel, Divider, Button } from "@mui/material";
 import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
+import InstallMobileRoundedIcon from "@mui/icons-material/InstallMobileRounded";
 import GlassCard from "@/components/common/GlassCard";
 import DeviceLoginDialog from "@/components/profile/DeviceLoginDialog";
+import InstallHelpDialog from "@/components/layout/InstallHelpDialog";
 import { useStore } from "@/store/useStore";
 import { factCheckService } from "@/services/factCheckService";
 import { identityService } from "@/services/identityService";
@@ -19,6 +21,7 @@ export default function SettingsView() {
   const settings = useStore((s) => s.settings);
   const setSettings = useStore((s) => s.setSettings);
   const [deviceLogin, setDeviceLogin] = useState(false);
+  const [install, setInstall] = useState(false);
 
   function row(label: string, hint: string, control: React.ReactNode) {
     return (
@@ -73,12 +76,16 @@ export default function SettingsView() {
 
       <GlassCard sx={{ mb: 2 }}>
         <Typography variant="overline" color="text.secondary">Account & devices</Typography>
+        {row("Install on your phone", "Add Ledger to your home screen — opens full-screen like a native app and works offline. Scan a QR to jump to it on your phone, with iOS & Android steps.",
+          <Button variant="outlined" startIcon={<InstallMobileRoundedIcon />} onClick={() => setInstall(true)}>Download on phone</Button>)}
+        <Divider />
         {row("Log in on another device", "Show a QR / link that copies your whole account to another device — peer-to-peer, nothing on a server.",
           <Button variant="outlined" startIcon={<QrCode2RoundedIcon />} onClick={() => setDeviceLogin(true)}>Log in on another device</Button>)}
         <Divider />
         {row("Download profile data", "Save your full account (keys, avatar, bio, custom page) as a file you can import on another device.",
           <Button variant="outlined" startIcon={<DownloadRoundedIcon />} onClick={() => { identityService.exportFile(); toast("Profile data downloaded", "success"); }}>Download profile data</Button>)}
         <DeviceLoginDialog open={deviceLogin} onClose={() => setDeviceLogin(false)} />
+        <InstallHelpDialog open={install} onClose={() => setInstall(false)} />
       </GlassCard>
 
       <GlassCard>
