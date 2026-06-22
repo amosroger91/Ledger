@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Fragment, type ReactNode } from "react";
 import { Stack, Box, Typography, IconButton, Chip, Popover, Tooltip, TextField, Button } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material";
 import AddReactionRoundedIcon from "@mui/icons-material/AddReactionRounded";
@@ -304,12 +304,58 @@ function renderText(text: string, censor: boolean) {
   });
 }
 
+// Nostr notes (and long-form) commonly use markdown-style formatting. We render
+// a safe subset as React nodes (text is escaped by React, never injected as
+// HTML): **bold**/__bold__, *italic*/_italic_, ~~strike~~, `code`, [text](url),
+// bare URLs/images, #hashtags and nostr: references, plus headings, bullet/
+// numbered lists and blockquotes at the start of a line.
+const RICH_RE = /(\*\*|__)([^\n]+?)\1|(\*|_)(\S(?:[^*_\n]*\S)?)\3|~~([^\n]+?)~~|`([^`\n]+)`|\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)|(https?:\/\/[^\s]+)|(#[A-Za-z0-9_]+)|nostr:((?:npub|note|nevent|nprofile|naddr)1[a-z0-9]+)/g;
+const CODE_SX = { fontFamily: "ui-monospace, Menlo, Consolas, monospace", bgcolor: "rgba(0,0,0,0.06)", borderRadius: "4px", px: 0.5, fontSize: "0.92em" } as const;
+
+function richInline(str: string, censor: boolean): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  const txt = (s: string) => emojify(censor ? nsfwService.censorText(s) : s);
+  let last = 0;
+  let m: RegExpExecArray | null;
+  RICH_RE.lastIndex = 0;
+  while ((m = RICH_RE.exec(str))) {
+    if (m.index > last) nodes.push(<Fragment key={nodes.length}>{txt(str.slice(last, m.index))}</Fragment>);
+    if (m[1]) nodes.push(<strong key={nodes.length}>{richInline(m[2], censor)}</strong>);
+    else if (m[3]) nodes.push(<em key={nodes.length}>{richInline(m[4], censor)}</em>);
+    else if (m[5] !== undefined) nodes.push(<s key={nodes.length}>{richInline(m[5], censor)}</s>);
+    else if (m[6] !== undefined) nodes.push(<Box key={nodes.length} component="code" sx={CODE_SX}>{m[6]}</Box>);
+    else if (m[7] !== undefined) nodes.push(<a key={nodes.length} href={m[8]} target="_blank" rel="noopener noreferrer" style={{ color: "#0a55cf" }}>{richInline(m[7], censor)}</a>);
+    else if (m[9] !== undefined) nodes.push(IMG_RE.test(m[9])
+      ? <SafeImage key={nodes.length} src={m[9]} sx={{ display: "block", mt: 0.5, maxWidth: "100%", maxHeight: 320, borderRadius: 1.5, border: "1px solid var(--bl-line)" }} />
+      : <a key={nodes.length} href={m[9]} target="_blank" rel="noopener noreferrer" style={{ color: "#0a55cf", wordBreak: "break-all" }}>{m[9]}</a>);
+    else if (m[10] !== undefined) nodes.push(<span key={nodes.length} style={{ color: "#1668e0", fontWeight: 600 }}>{m[10]}</span>);
+    else if (m[11] !== undefined) nodes.push(<a key={nodes.length} href={`https://njump.me/${m[11]}`} target="_blank" rel="noopener noreferrer" style={{ color: "#0a55cf" }}>@{m[11].slice(0, 10)}…</a>);
+    last = RICH_RE.lastIndex;
+    if (RICH_RE.lastIndex === m.index) RICH_RE.lastIndex++;   // never loop on a zero-width match
+  }
+  if (last < str.length) nodes.push(<Fragment key={nodes.length}>{txt(str.slice(last))}</Fragment>);
+  return nodes;
+}
+
+function renderRichText(text: string, censor: boolean) {
+  return decodeEntities(text).split("\n").map((line, i) => {
+    let mm: RegExpMatchArray | null;
+    let content: ReactNode;
+    if ((mm = line.match(/^(#{1,3})\s+(.+)$/))) content = <Box component="span" sx={{ fontWeight: 800, fontSize: mm[1].length === 1 ? "1.12em" : "1.04em" }}>{richInline(mm[2], censor)}</Box>;
+    else if ((mm = line.match(/^\s*[-*•]\s+(.+)$/))) content = <>{"•  "}{richInline(mm[1], censor)}</>;
+    else if ((mm = line.match(/^\s*(\d+)\.\s+(.+)$/))) content = <>{mm[1] + ".  "}{richInline(mm[2], censor)}</>;
+    else if ((mm = line.match(/^>\s?(.*)$/))) content = <Box component="span" sx={{ fontStyle: "italic", color: "text.secondary" }}>{richInline(mm[1], censor)}</Box>;
+    else content = <>{richInline(line, censor)}</>;
+    return <Fragment key={i}>{i > 0 ? "\n" : null}{content}</Fragment>;
+  });
+}
+
 // Post body with a "See more"/"See less" toggle for very long posts. When
 // collapsed it clamps to a max height and fades out via a CSS mask (so it blends
 // with any card background). Short posts render exactly as before, no button.
 const LONG_THRESHOLD = 900;       // chars — "super super long"
 const COLLAPSED_MAX = 340;        // px
-function PostText({ text, censor }: { text: string; censor: boolean }) {
+function PostText({ text, censor, rich }: { text: string; censor: boolean; rich?: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const long = text.length > LONG_THRESHOLD || (text.match(/\n/g)?.length ?? 0) > 14;
   const clamp = long && !expanded;
@@ -323,7 +369,7 @@ function PostText({ text, censor }: { text: string; censor: boolean }) {
           ...(clamp ? { maxHeight: COLLAPSED_MAX, overflow: "hidden", maskImage: fade, WebkitMaskImage: fade } : {}),
         }}
       >
-        {renderText(text, censor)}
+        {rich ? renderRichText(text, censor) : renderText(text, censor)}
       </Typography>
       {long && (
         <Button size="small" disableRipple onClick={() => setExpanded((v) => !v)}
@@ -388,7 +434,7 @@ function ReplyNode({ reply, replyMap, mePk, onReact, depth }: { reply: Post; rep
             <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>{reply.authorName}</Typography>
             <Typography variant="caption" color="text.secondary">· {relativeTime(reply.createdAt)}</Typography>
           </Stack>
-          {reply.text && <Typography component="div" variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{renderText(reply.text, censor)}</Typography>}
+          {reply.text && <Typography component="div" variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{reply.source === "nostr" ? renderRichText(reply.text, censor) : renderText(reply.text, censor)}</Typography>}
           {reply.media?.map((m, i) => m.type === "image"
             ? <SafeImage key={i} src={m.url} sx={{ mt: 0.5, maxWidth: "100%", maxHeight: 240, borderRadius: 1.5, border: "1px solid var(--bl-line)" }} />
             : m.type === "audio" ? <AudioCard key={i} url={m.url} title={m.alt || "Audio track"} /> : null)}
@@ -479,6 +525,9 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
   const [showReplies, setShowReplies] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [authMenu, setAuthMenu] = useState<HTMLElement | null>(null);
+  // When you mute/block/hide from this card, we collapse just THIS one in place
+  // (with an Undo) instead of re-ranking the whole feed — so your scroll stays put.
+  const [dismissed, setDismissed] = useState<null | { kind: "muted" | "blocked" | "hidden" }>(null);
   const [factCheck, setFactCheck] = useState<FactCheck | null>(() => factCheckService.getFor(post.id));
   const [fcBusy, setFcBusy] = useState(false);
   const restricted = !!verdict && (verdict.action === "reduce" || verdict.action === "review" || verdict.action === "flag");
@@ -540,20 +589,39 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
 
   async function trust(kind: "vouch" | "report" | "mute" | "block") {
     setAuthMenu(null);
-    await trustService[kind](post.author);
-    const msg = kind === "vouch" ? `Vouched for ${post.authorName}`
-      : kind === "mute" ? `Muted ${post.authorName}`
-      : kind === "block" ? `Blocked ${post.authorName} — undo in Settings`
-      : `Reported ${post.authorName}`;
-    toast(msg, kind === "vouch" ? "success" : "info");
-    bus.emit("feed:updated", undefined); // re-evaluate the feed with the new trust signal
+    await trustService[kind](post.author);   // works for Nostr too (author = "nostr:<pubkey>")
+    // Mute/block: collapse this card in place (you won't see their other posts
+    // either, once the feed next re-ranks). Vouch/report: just confirm.
+    if (kind === "mute" || kind === "block") { setDismissed({ kind: kind === "mute" ? "muted" : "blocked" }); return; }
+    toast(kind === "vouch" ? `Vouched for ${post.authorName}` : `Reported ${post.authorName}`, kind === "vouch" ? "success" : "info");
   }
 
-  // "Hide this post" — a per-device hide; the post stays hidden from your feed.
+  // "Hide this post" — a per-device hide; collapse this one card (silent, no feed re-rank).
   async function hideThis() {
     setAuthMenu(null);
-    await feedService.hidePost(post.id);
-    toast("Post hidden — manage hidden posts in Settings", "info");
+    await feedService.hidePost(post.id, true);
+    setDismissed({ kind: "hidden" });
+  }
+
+  async function undoDismiss() {
+    if (dismissed?.kind === "hidden") await feedService.unhidePost(post.id, true);
+    else await trustService.clear(post.author);
+    setDismissed(null);
+  }
+
+  if (dismissed) {
+    const txt = dismissed.kind === "hidden" ? "Post hidden"
+      : dismissed.kind === "blocked" ? `Blocked ${post.authorName} — you won't see their posts`
+      : `Muted ${post.authorName} — you won't see their posts`;
+    const icon = dismissed.kind === "hidden" ? "🙈" : dismissed.kind === "blocked" ? "🚫" : "🔇";
+    return (
+      <GlassCard id={`post-${post.id}`} sx={{ mb: 1.5, px: 2, py: 1, opacity: 0.72 }}>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <Typography variant="body2" color="text.secondary" sx={{ flex: 1, minWidth: 0 }} noWrap>{icon} {txt}</Typography>
+          <Button size="small" onClick={undoDismiss} sx={{ flex: "0 0 auto" }}>Undo</Button>
+        </Stack>
+      </GlassCard>
+    );
   }
 
   return (
@@ -604,7 +672,7 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
           ))}
 
           {(!gated || revealed) && (<>
-          {post.text && <PostText text={post.text} censor={censorProfanity} />}
+          {post.text && <PostText text={post.text} censor={censorProfanity} rich={post.source === "nostr"} />}
 
           {post.html && <HtmlCard html={post.html} />}
 

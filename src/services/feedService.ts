@@ -38,8 +38,10 @@ class FeedService {
   isHidden(id: string): boolean { return this.hidden.has(id); }
   hiddenCount(): number { return this.hidden.size; }
   private async persistHidden() { await storage.kvSet("hiddenPosts", [...this.hidden]); }
-  async hidePost(id: string) { this.hidden.add(id); await this.persistHidden(); bus.emit("feed:updated", undefined); }
-  async unhidePost(id: string) { this.hidden.delete(id); await this.persistHidden(); bus.emit("feed:updated", undefined); }
+  // `silent` skips the feed re-rank — the caller collapses just the one card in
+  // place, so the rest of the timeline (and your scroll position) doesn't move.
+  async hidePost(id: string, silent = false) { this.hidden.add(id); await this.persistHidden(); if (!silent) bus.emit("feed:updated", undefined); }
+  async unhidePost(id: string, silent = false) { this.hidden.delete(id); await this.persistHidden(); if (!silent) bus.emit("feed:updated", undefined); }
   async clearHidden() { this.hidden.clear(); await this.persistHidden(); bus.emit("feed:updated", undefined); }
 
   /* ---------- authoring ---------- */
