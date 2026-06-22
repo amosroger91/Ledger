@@ -14,8 +14,7 @@ import { parseLink } from "@/services/deviceTransferService";
 import AppShell from "@/components/layout/AppShell";
 import FeedView from "@/components/feed/FeedView";
 import CommunitiesView from "@/components/communities/CommunitiesView";
-import MessagesView from "@/components/messages/MessagesView";
-import ChatroomView from "@/components/chatroom/ChatroomView";
+import TownSquareView from "@/components/messages/TownSquareView";
 import ListenView from "@/components/listen/ListenView";
 import CompanionView from "@/components/companion/CompanionView";
 import ProfileView from "@/components/profile/ProfileView";
@@ -24,6 +23,7 @@ import AboutView from "@/components/about/AboutView";
 import TopicsView from "@/components/topics/TopicsView";
 import MarketView from "@/components/market/MarketView";
 import WalletView from "@/components/wallet/WalletView";
+import NetworkView from "@/components/network/NetworkView";
 import MiniPlayer from "@/components/layout/MiniPlayer";
 import AudioMiniPlayer from "@/components/layout/AudioMiniPlayer";
 import GlobalWatchPlayer from "@/components/layout/GlobalWatchPlayer";
@@ -65,13 +65,14 @@ export default function App() {
           <Routes>
             <Route path="/" element={<FeedView />} />
             <Route path="/communities" element={<CommunitiesView />} />
-            <Route path="/messages" element={<MessagesView />} />
-            <Route path="/chatroom" element={<ChatroomView />} />
+            <Route path="/messages" element={<TownSquareView />} />
+            <Route path="/chatroom" element={<TownSquareView />} />
             <Route path="/listen" element={<ListenView />} />
             <Route path="/companion" element={<CompanionView />} />
             <Route path="/topics" element={<TopicsView />} />
             <Route path="/market" element={<MarketView />} />
             <Route path="/wallet" element={<WalletView />} />
+            <Route path="/network" element={<NetworkView />} />
             <Route path="/profile" element={<ProfileView />} />
             <Route path="/u/:pk" element={<ProfileView />} />
             <Route path="/settings" element={<SettingsView />} />

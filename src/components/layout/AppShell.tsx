@@ -10,7 +10,6 @@ import type { Alert } from "@/types";
 import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
 import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import ChatRoundedIcon from "@mui/icons-material/ChatRounded";
-import ForumRoundedIcon from "@mui/icons-material/ForumRounded";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import LiveTvRoundedIcon from "@mui/icons-material/LiveTvRounded";
 import RssFeedRoundedIcon from "@mui/icons-material/RssFeedRounded";
@@ -19,6 +18,7 @@ import AccountBalanceWalletRoundedIcon from "@mui/icons-material/AccountBalanceW
 import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import InfoRoundedIcon from "@mui/icons-material/InfoRounded";
+import HubRoundedIcon from "@mui/icons-material/HubRounded";
 import LocalCafeRoundedIcon from "@mui/icons-material/LocalCafeRounded";
 import { useStore } from "@/store/useStore";
 import UserAvatar from "@/components/common/UserAvatar";
@@ -29,8 +29,8 @@ const NAV = [
   { to: "/", label: "Feed", icon: <HomeRoundedIcon /> },
   { to: "/communities", label: "Groups", icon: <GroupsRoundedIcon /> },
   { to: "/messages", label: "Town Square", icon: <ChatRoundedIcon /> },
-  { to: "/chatroom", label: "Chatroom", icon: <ForumRoundedIcon /> },
   { to: "/listen", label: "Watch with friends", icon: <LiveTvRoundedIcon /> },
+  { to: "/network", label: "Network", icon: <HubRoundedIcon /> },
   { to: "/companion", label: "Companion", icon: <AutoAwesomeRoundedIcon /> },
   { to: "/topics", label: "Topics", icon: <RssFeedRoundedIcon /> },
   { to: "/market", label: "Market", icon: <StorefrontRoundedIcon /> },
@@ -134,7 +134,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </Stack>
 
         {NAV.map((item) => {
-          const active = pathname === item.to;
+          // /chatroom is the "Live Rooms" tab of the combined Town Square page.
+          const active = pathname === item.to || (item.to === "/messages" && pathname.startsWith("/chatroom"));
           return (
             <Tooltip key={item.to} title={compact ? item.label : ""} placement="right">
               <Box
@@ -189,7 +190,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <Box sx={{ display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, overflow: "hidden", bgcolor: "var(--bl-face)" }}>
         {/* Luna title bar */}
         <Stack direction="row" alignItems="center" spacing={1.5} sx={{ px: 2, py: 1, position: "sticky", top: 0, zIndex: 5, color: "#fff", borderBottom: "1px solid var(--bl-title-edge)", background: "var(--bl-gloss-title), linear-gradient(180deg, var(--bl-title-hi), var(--bl-title-low))", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)" }}>
-          <Typography variant="h6" sx={{ flex: 1, color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.4)" }}>{NAV.find((n) => n.to === pathname)?.label ?? "Ledger"}</Typography>
+          <Typography variant="h6" sx={{ flex: 1, color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.4)" }}>{NAV.find((n) => n.to === pathname)?.label ?? (pathname.startsWith("/chatroom") ? "Town Square" : "Ledger")}</Typography>
           <ModelStatusChip />
           <AlertsBell />
           <Chip size="small" label={`${onlineCount} online`} sx={{ bgcolor: "rgba(255,255,255,0.92)", color: "var(--bl-green-600)", border: "none", "& .MuiChip-label": { fontWeight: 700 } }} icon={<Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#4ca325", ml: 1 }} />} />
