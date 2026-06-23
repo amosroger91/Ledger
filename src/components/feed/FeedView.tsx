@@ -17,6 +17,7 @@ import { changelogService } from "@/services/changelogService";
 import { storage } from "@/services/storage";
 import { useStore } from "@/store/useStore";
 import { bus } from "@/lib/events";
+import { diag } from "@/lib/diag";
 import { matchesFilter, type ContentFilter } from "@/lib/postType";
 import type { Post, RecommendationReason, FeedAlgorithm } from "@/types";
 
@@ -93,6 +94,7 @@ export default function FeedView() {
   // Reset the window when the feed's identity changes (algorithm/filter/search/group).
   useEffect(() => { setVisibleCount(PAGE); }, [algo, filter, community]);
   const visiblePosts = useMemo(() => shown.slice(0, visibleCount), [shown, visibleCount]);
+  useEffect(() => { diag("FeedView: cards committed", visiblePosts.length); }, [visiblePosts]);
   const hasMore = visibleCount < shown.length;
   // Latest `shown` for non-reactive handlers (e.g. deep-link focus below).
   const shownRef = useRef(shown);

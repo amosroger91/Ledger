@@ -19,6 +19,7 @@ import { profileService } from "./profileService";
 import { marketplaceService } from "./marketplaceService";
 import { trustService } from "./trustService";
 import { storage } from "./storage";
+import { diag } from "@/lib/diag";
 import type { ChatMessage, Post, Profile, Listing, TrustEdge } from "@/types";
 
 // Public Gun relay peers (best-effort; Gun also keeps a local copy and
@@ -53,6 +54,7 @@ let draining = false;
 async function drainPostQueue() {
   if (draining) return;
   draining = true;
+  let drained = 0;
   try {
     while (postQueue.length) {
       const batch: Post[] = [];
@@ -60,8 +62,10 @@ async function drainPostQueue() {
         try { batch.push(JSON.parse(j)); } catch { /* skip malformed */ }
       }
       if (batch.length) { try { await feedService.absorbMany(batch); } catch { /* keep draining */ } }
+      drained += batch.length;
       await new Promise((r) => setTimeout(r, 0)); // yield — let rendering + input run between batches
     }
+    diag("gun: drain done", drained);
   } finally { draining = false; }
 }
 function enqueuePost(json: string) {
@@ -111,6 +115,7 @@ class GunService {
       // frozen tab.
       const subscribeIncoming = () => {
         if (!gun) return;
+        diag("gun: subscribe fired");
         // Feed posts (human + bot) → queue, drained in yielding batches.
         gun.get(ROOT).get("posts").map().on((d: any) => { if (d?.json) enqueuePost(d.json); });
         // Swarm Lounge messages → store + surface.

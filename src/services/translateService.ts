@@ -36,12 +36,17 @@ const EN_STOPWORDS = new Set(
    "who get me my just so im its our has would could been more not what's i'm").split(" "),
 );
 export function probablyNotEnglish(text: string): boolean {
-  const t = (text || "").replace(/https?:\/\/\S+/g, " ").replace(/[#@][\w-]+/g, " ");
+  // Sample the head only. Language is detectable from a snippet, and this runs once per
+  // VISIBLE card on the FULL text — over a long Nostr note (10–80KB) that was a per-card
+  // killer. A few thousand chars is plenty to classify.
+  const t = (text || "").slice(0, 2000).replace(/https?:\/\/\S+/g, " ").replace(/[#@][\w-]+/g, " ");
   const letters = t.replace(/[^\p{L}]/gu, "");
   if (letters.length < 8) return false;
-  // Non-Latin scripts (CJK, Cyrillic, Arabic, etc.) → clearly not English.
-  const nonLatin = (letters.match(/\p{L}/gu) || []).filter((c) => !/\p{Script=Latin}/u.test(c)).length;
-  if (nonLatin / letters.length > 0.2) return true;
+  // Count Latin letters in ONE pass. The old code regex-tested EVERY character
+  // (`/\p{Script=Latin}/u.test(c)` per letter) — millions of regex runs across the
+  // visible cards — which is what froze the feed on an account full of long notes.
+  const latin = (letters.match(/\p{Script=Latin}/gu) || []).length;
+  if ((letters.length - latin) / letters.length > 0.2) return true;   // mostly non-Latin (CJK, Cyrillic, Arabic…) → not English
   // Latin script: very low English function-word density → likely another language.
   const words = (t.toLowerCase().match(/[a-z']{2,}/g) || []);
   if (words.length < 5) return false;

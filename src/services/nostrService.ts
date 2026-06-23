@@ -20,6 +20,7 @@ import { storage } from "./storage";
 import { feedService } from "./feedService";
 import { rssService, topicSlug } from "./rssService";
 import { bus } from "@/lib/events";
+import { diag } from "@/lib/diag";
 import type { Post, Profile } from "@/types";
 
 const RELAYS = [
@@ -41,6 +42,7 @@ const NOSTR_SESSION_CAP = 400;
 
 const hexToBytes = (hex: string) => { const a = new Uint8Array(hex.length / 2); for (let i = 0; i < a.length; i++) a[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16); return a; };
 const bytesToHex = (b: Uint8Array) => [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+let nostrNoteN = 0;   // [diag] count incoming Nostr events to spot a flood-driven stall
 const shortNpub = (pubkey: string) => { try { return nip19.npubEncode(pubkey).slice(0, 12) + "…"; } catch { return pubkey.slice(0, 10) + "…"; } };
 const rid = () => Math.random().toString(36).slice(2, 10);
 
@@ -111,6 +113,7 @@ class NostrService {
     try { const cfg = await rssService.config(); topicTags = (cfg.topics ?? []).map(topicSlug).filter((t) => t.length > 2); } catch {}
     const tags = [...new Set([...POPULAR_TAGS, ...topicTags])].slice(0, 24);
     this.filter = { kinds: [1], "#t": tags, limit: 40 };
+    diag("nostr: start (tags=" + tags.length + ")");
     for (const r of STREAM_RELAYS) this.connect(r);
   }
 
@@ -131,7 +134,7 @@ class NostrService {
     this.sockets.set(relay, w);
     w.onopen = () => { try { w.send(JSON.stringify(["REQ", this.subId, this.filter])); } catch {} };
     w.onmessage = (m) => {
-      try { const d = JSON.parse(typeof m.data === "string" ? m.data : ""); if (d[0] === "EVENT" && d[1] === this.subId) this.onNote(d[2]); } catch {}
+      try { const d = JSON.parse(typeof m.data === "string" ? m.data : ""); if (d[0] === "EVENT" && d[1] === this.subId) { if (++nostrNoteN % 15 === 0) diag("nostr: note #" + nostrNoteN); this.onNote(d[2]); } } catch {}
     };
     w.onerror = () => { try { w.close(); } catch {} };
     w.onclose = () => {
