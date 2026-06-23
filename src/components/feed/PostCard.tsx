@@ -359,6 +359,41 @@ function renderRichText(text: string, censor: boolean) {
   });
 }
 
+// A fenced ``` code block (GitHub-style). A line of ``` — optionally with a
+// language tag, e.g. ```js — opens it; the next line that is just ``` closes it
+// (an unclosed fence runs to the end of the post). The block renders VERBATIM in a
+// scrollable monospace box; its contents are never parsed for markdown/links and
+// never censored. Handled here, not in RICH_RE, because a fence spans multiple
+// lines — and applied to EVERY post (below) so code blocks work on your own posts,
+// not just Nostr markdown.
+const CODE_BLOCK_SX = {
+  my: 1, p: 1.25, borderRadius: 1.5, overflowX: "auto",
+  bgcolor: "rgba(0,0,0,0.06)", border: "1px solid var(--bl-line)",
+  fontFamily: "ui-monospace, Menlo, Consolas, monospace",
+  fontSize: "0.84em", lineHeight: 1.5, whiteSpace: "pre", tabSize: 2,
+} as const;
+
+function renderBody(text: string, censor: boolean, rich: boolean): ReactNode {
+  const prose = (s: string) => (rich ? renderRichText(s, censor) : renderText(s, censor));
+  if (!text.includes("```")) return prose(text); // fast path — the vast majority of posts
+  const lines = text.split("\n");
+  const out: ReactNode[] = [];
+  let buf: string[] = [];
+  const flush = () => { if (buf.length) { out.push(<Fragment key={`p${out.length}`}>{prose(buf.join("\n"))}</Fragment>); buf = []; } };
+  for (let i = 0; i < lines.length; ) {
+    if (/^[ \t]*```/.test(lines[i])) {
+      flush();
+      i++; // consume the opening fence (and drop any language tag on it)
+      const code: string[] = [];
+      while (i < lines.length && !/^[ \t]*```[ \t]*$/.test(lines[i])) { code.push(lines[i]); i++; }
+      i++; // consume the closing fence (or step past EOF for an unclosed block)
+      out.push(<Box component="pre" key={`c${out.length}`} sx={CODE_BLOCK_SX}>{decodeEntities(code.join("\n"))}</Box>);
+    } else { buf.push(lines[i]); i++; }
+  }
+  flush();
+  return out;
+}
+
 // Post body with a "See more"/"See less" toggle for very long posts. When
 // collapsed it clamps to a max height and fades out via a CSS mask (so it blends
 // with any card background). Short posts render exactly as before, no button.
@@ -431,7 +466,7 @@ function PostText({ text, censor, rich }: { text: string; censor: boolean; rich?
           ...(clamp ? { maxHeight: COLLAPSED_MAX, overflow: "hidden", maskImage: fade, WebkitMaskImage: fade } : {}),
         }}
       >
-        {isOff("body") ? null : rich ? renderRichText(shownBody, censor) : renderText(shownBody, censor)}
+        {isOff("body") ? null : renderBody(shownBody, censor, !!rich)}
       </Typography>
       <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flexWrap: "wrap" }}>
         {long && (
@@ -511,7 +546,7 @@ function ReplyNode({ reply, replyMap, mePk, onReact, depth }: { reply: Post; rep
             <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>{reply.authorName}</Typography>
             <Typography variant="caption" color="text.secondary">· {relativeTime(reply.createdAt)}</Typography>
           </Stack>
-          {reply.text && <Typography component="div" variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{reply.source === "nostr" ? renderRichText(reply.text, censor) : renderText(reply.text, censor)}</Typography>}
+          {reply.text && <Typography component="div" variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{renderBody(reply.text, censor, reply.source === "nostr")}</Typography>}
           {reply.media?.map((m, i) => m.type === "image"
             ? <SafeImage key={i} src={m.url} sx={{ mt: 0.5, maxWidth: "100%", maxHeight: 240, borderRadius: 1.5, border: "1px solid var(--bl-line)" }} />
             : m.type === "audio" ? <AudioCard key={i} url={m.url} title={m.alt || "Audio track"} /> : null)}
