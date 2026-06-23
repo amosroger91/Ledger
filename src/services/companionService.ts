@@ -229,7 +229,11 @@ class CompanionService {
       count: posts.length,
       people: new Set(real.map((p) => p.authorName)).size,
       reactions,
-      themes: topTerms(posts.map((p) => p.text ?? "").join(" "), 5),
+      // Cap each post's text contribution. This runs on EVERY feed change; without the
+      // cap, a feed full of long Nostr notes (20–80KB each) joins into multiple MB and
+      // topTerms' regex/split chokes the main thread for seconds — re-fired through the
+      // relay flood, that froze the feed. A short excerpt is plenty for theme keywords.
+      themes: topTerms(posts.map((p) => (p.text ?? "").slice(0, 240)).join(" "), 5),
       top: posts.length ? [...posts].sort((a, b) => react(b) - react(a))[0] : null,
     };
   }
@@ -237,7 +241,7 @@ class CompanionService {
   /* ---------- fast offline tools (no model download needed) ---------- */
   summarizeFeed(posts: Post[]): string {
     if (!posts.length) return "Your feed is quiet right now — be the first to post something ✦";
-    const terms = topTerms(posts.map((p) => p.text ?? "").join(" "), 6);
+    const terms = topTerms(posts.map((p) => (p.text ?? "").slice(0, 240)).join(" "), 6);
     const authors = new Set(posts.map((p) => p.authorName)).size;
     const top = [...posts].sort((a, b) => react(b) - react(a))[0];
     return [

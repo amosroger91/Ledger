@@ -397,6 +397,12 @@ function PostText({ text, censor, rich }: { text: string; censor: boolean; rich?
   const long = body.length > LONG_THRESHOLD || (body.match(/\n/g)?.length ?? 0) > 14;
   const clamp = long && !expanded;
   const fade = "linear-gradient(to bottom, #000 78%, transparent)";
+  // Parse ONLY the text we actually show. A collapsed long post is CSS-clamped to
+  // COLLAPSED_MAX px, but renderRichText still turned the ENTIRE body into React nodes
+  // first — a long Nostr note (10–80KB) becomes thousands of MUI-styled nodes, and a few
+  // of them in the first screenful froze the render for tens of seconds. The clamped
+  // slice fills the collapsed height with room to spare; the full body renders on expand.
+  const shownBody = clamp ? body.slice(0, 1600) : body;
 
   return (
     <Box>
@@ -418,7 +424,7 @@ function PostText({ text, censor, rich }: { text: string; censor: boolean; rich?
           ...(clamp ? { maxHeight: COLLAPSED_MAX, overflow: "hidden", maskImage: fade, WebkitMaskImage: fade } : {}),
         }}
       >
-        {rich ? renderRichText(body, censor) : renderText(body, censor)}
+        {rich ? renderRichText(shownBody, censor) : renderText(shownBody, censor)}
       </Typography>
       <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flexWrap: "wrap" }}>
         {long && (

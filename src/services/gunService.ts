@@ -65,6 +65,7 @@ async function drainPostQueue() {
   } finally { draining = false; }
 }
 function enqueuePost(json: string) {
+  if (json.length > 1_500_000) return;         // skip an abusively-large post (e.g. a 6MB inline base64 audio/image) — parsing + absorbing it stalls the thread
   if (seenPostJson.has(json)) return;          // identical record already queued/processed
   seenPostJson.add(json);
   if (seenPostJson.size > 20000) seenPostJson.clear(); // bound memory on very long sessions
@@ -150,7 +151,13 @@ class GunService {
     }
   }
 
-  putPost(p: Post) { try { gun?.get(ROOT).get("posts").get(p.id).put({ json: JSON.stringify(p) }); } catch {} }
+  putPost(p: Post) {
+    // Don't publish a post with huge inline media (a 6MB base64 audio/image) to the graph
+    // — it chokes Gun and stalls every peer that syncs it. It stays in your local store;
+    // big media should ride as a blob/URL ref, not inline (TODO).
+    if ((p.media ?? []).reduce((a, m) => a + (m.url?.length ?? 0), 0) > 1_500_000) return;
+    try { gun?.get(ROOT).get("posts").get(p.id).put({ json: JSON.stringify(p) }); } catch {}
+  }
   putSwarm(m: ChatMessage) { try { gun?.get(ROOT).get("swarm").get(m.id).put({ json: JSON.stringify(m) }); } catch {} }
 }
 
