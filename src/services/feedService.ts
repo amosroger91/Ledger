@@ -16,6 +16,7 @@ import { trustService } from "./trustService";
 import { embed, cosine, topTerms, InterestProfile } from "@/lib/embeddings";
 import { signPost, postIsAuthentic } from "@/lib/records";
 import { bus } from "@/lib/events";
+import { diag } from "@/lib/diag";
 import { newId } from "@/lib/id";
 import type { ModerationProfile } from "@/types";
 
@@ -244,9 +245,11 @@ class FeedService {
     algorithm: FeedAlgorithm,
     opts: { moderation: ModerationProfile; friends?: string[]; community?: string; subscribedTopics?: string[]; mutedTopics?: string[]; mutedFeeds?: string[]; includeNostr?: boolean; limit?: number; values?: CommunityValues } = { moderation: "discovery" },
   ): Promise<{ posts: Post[]; reasons: Map<string, RecommendationReason>; verdicts: Map<string, ModerationVerdict>; replies: Map<string, Post[]> }> {
+    const _t = (typeof performance !== "undefined" ? performance.now() : Date.now());
     // Bounded working set: rank only the newest window (storage.recentPosts keeps
     // it O(1) regardless of total corpus size — the key to staying fast at scale).
     const recent = await storage.recentPosts(opts.limit ?? 800, opts.community);
+    diag("generate: recentPosts returned", recent.length);
     // Build the reply tree from the SAME bounded read (a reply is recent when its
     // parent is), so refresh() never has to scan the whole store a second time.
     const replies = new Map<string, Post[]>();
@@ -378,6 +381,7 @@ class FeedService {
     // never scroll through more than half of either source. If only one source has
     // posts, it's shown in full (nothing to mix).
     const ranked = balanceSources(scored.map((s) => s.p));
+    diag(`generate: done (ranked ${ranked.length}, scored ${scored.length})`, Math.round((typeof performance !== "undefined" ? performance.now() : Date.now()) - _t) + "ms");
     return { posts: ranked, reasons, verdicts, replies };
   }
 

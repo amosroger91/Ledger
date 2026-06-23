@@ -19,6 +19,7 @@ import { profileService } from "./profileService";
 import { marketplaceService } from "./marketplaceService";
 import { trustService } from "./trustService";
 import { storage } from "./storage";
+import { diag } from "@/lib/diag";
 import type { ChatMessage, Post, Profile, Listing, TrustEdge } from "@/types";
 
 // Public Gun relay peers (best-effort; Gun also keeps a local copy and
@@ -54,14 +55,18 @@ async function drainPostQueue() {
   if (draining) return;
   draining = true;
   try {
+    let drained = 0;
     while (postQueue.length) {
       const batch: Post[] = [];
       for (const j of postQueue.splice(0, 12)) {
         try { batch.push(JSON.parse(j)); } catch { /* skip malformed */ }
       }
       if (batch.length) { try { await feedService.absorbMany(batch); } catch { /* keep draining */ } }
+      drained += batch.length;
+      if (drained % 120 === 0) diag(`drain: ${drained} absorbed, ${postQueue.length} queued`);
       await new Promise((r) => setTimeout(r, 0)); // yield — let rendering + input run between batches
     }
+    diag("drain: finished", drained);
   } finally { draining = false; }
 }
 function enqueuePost(json: string) {

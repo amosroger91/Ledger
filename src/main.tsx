@@ -8,6 +8,7 @@ import "@/bliss.js";    // Bliss behavior layer (window.Bliss); harmless for our
 import App from "@/App";
 import { identityService } from "@/services/identityService";
 import { registerServiceWorker } from "@/lib/pwa";
+import { DIAG, armHeartbeat } from "@/lib/diag";
 
 // Swallow noisy, non-fatal WebGPU/WebLLM rejections (e.g. "device lost",
 // "Instance dropped in popErrorScope") so a GPU hiccup while the on-device model
@@ -19,6 +20,23 @@ window.addEventListener("unhandledrejection", (e) => {
 });
 
 async function start() {
+  // Support/recovery escape hatch: /?reset wipes this device's local database and
+  // service worker, then stops (no app boot). A local-first app can be bricked by
+  // a corrupt or oversized IndexedDB — this is the clean-slate recovery path.
+  // Query-gated, so it never runs for a normal visitor.
+  if (new URLSearchParams(location.search).has("reset")) {
+    await new Promise<void>((res) => { const r = indexedDB.deleteDatabase("nebula"); r.onsuccess = r.onerror = (r as any).onblocked = () => res(); });
+    try { localStorage.clear(); } catch { /* ignore */ }
+    if ("serviceWorker" in navigator) {
+      try { for (const reg of await navigator.serviceWorker.getRegistrations()) await reg.unregister(); } catch { /* ignore */ }
+    }
+    document.body.innerHTML = "<div style='font:15px system-ui;padding:40px;color:#bfe'>Local data cleared. <a href='./' style='color:#7bf;font-weight:700'>Open Ledger →</a></div>";
+    return;
+  }
+  // ?diag — arm the main-thread stall heartbeat before anything else runs, so a
+  // freeze during boot is still captured (see lib/diag.ts).
+  if (DIAG) armHeartbeat();
+
   // "Log in on another device": #/login?k=<token> imports the identity, then
   // drops to the feed (so the token never lingers in the address bar).
   const login = location.hash.match(/^#\/login\?k=([^&]+)/);

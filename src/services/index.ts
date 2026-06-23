@@ -56,7 +56,11 @@ export async function boot(): Promise<BootResult> {
   await trustService.load();           // load my web-of-trust edges
   await profileService.loadCache();    // warm cached peer profiles (viewable offline)
   await purgeSeededPosts();            // remove demo posts left by earlier builds
-  storage.pruneEphemeralPosts().catch(() => {});  // cap the RSS/Nostr cache so storage + ranking stay bounded
+  // Prune the RSS/Nostr cache for storage hygiene — but OFF the boot critical path.
+  // recentPosts() now bounds its own read, so an oversized cache no longer slows the
+  // feed; running prune's full-store scan during first paint + the relay flood only
+  // stole main-thread time from the initial load. Defer it past the opening burst.
+  setTimeout(() => storage.pruneEphemeralPosts().catch(() => {}), 15000);
   const me = await identityService.load();
   companionService.configure(settings.useWebLLM, settings.llmModel);
   // "Just download it" — start fetching the model immediately (best-effort,

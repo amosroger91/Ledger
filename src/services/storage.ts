@@ -4,7 +4,7 @@
 //  used only for tiny hot values (current settings); everything
 //  substantial lives in IndexedDB so the app works fully offline.
 // ============================================================
-import { openDB, type DBSchema, type IDBPDatabase } from "idb";
+import { openDB, unwrap, type DBSchema, type IDBPDatabase } from "idb";
 import type {
   SecretIdentity, Post, ChatMessage, Community,
   ReputationLedgerEntry, CompanionMessage, AppSettings, Profile,
@@ -116,18 +116,31 @@ export const storage = {
       all.sort((a, b) => b.createdAt - a.createdAt);
       return all.slice(0, limit);
     }
-    // ONE bulk read (a single IDB round-trip) then window in memory. A reverse cursor
-    // that awaits continue() per post does thousands of round-trips and was the feed's
-    // freeze on a large corpus. byTime is ascending, so we walk from the end (newest
-    // first) over the newest window, keeping every human/self post and capping the
-    // rss-bot + nostr firehose at `limit`.
-    const all = await d.getAllFromIndex("posts", "byTime");
-    const scanCap = Math.max(limit * 4, 3000);
-    const start = Math.max(0, all.length - scanCap);
+    // Read ONLY the newest `scanCap` posts (newest-first) via a raw IndexedDB cursor.
+    // Bounding the read is the whole game at scale. The previous getAllFromIndex loaded
+    // the ENTIRE posts store — thousands of records each carrying a 256-float embedding —
+    // into memory on EVERY feed refresh; that single bulk deserialize cost ~2s on a large
+    // corpus and, fired back-to-back as the relay/Nostr firehose streamed in, pinned the
+    // main thread ("page unresponsive"). A *raw* cursor (no per-item await — the await was
+    // the slow part of the earlier cursor attempt) walks just the newest window and stops,
+    // so feed cost is constant no matter how large the global corpus grows.
+    const scanCap = Math.max(limit * 2, 1200);
+    const raw = unwrap(d) as unknown as IDBDatabase;
+    const newest = await new Promise<Post[]>((resolve, reject) => {
+      const acc: Post[] = [];
+      const req = raw.transaction("posts", "readonly").objectStore("posts").index("byTime").openCursor(null, "prev");
+      req.onsuccess = () => {
+        const cur = req.result;
+        if (cur && acc.length < scanCap) { acc.push(cur.value as Post); cur.continue(); }
+        else resolve(acc);
+      };
+      req.onerror = () => reject(req.error);
+    });
+    // `newest` is already newest-first: keep every human/self/changelog post and cap the
+    // rss-bot + nostr firehose at `limit`, so per-render cost stays constant.
     const out: Post[] = [];
     let firehose = 0;
-    for (let i = all.length - 1; i >= start; i--) {
-      const p = all[i];
+    for (const p of newest) {
       if (p.author === "rss-bot" || p.source === "nostr") { if (firehose < limit) { out.push(p); firehose++; } } // rss-bot + nostr = the firehose
       else out.push(p); // humans, your posts, changelog — always kept within the window
     }
