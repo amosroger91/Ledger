@@ -76,24 +76,51 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-// Cache verdicts by URL so scrolling / re-renders never re-run the model, and
-// dedupe in-flight checks for the same image.
+// Cache verdicts by URL so scrolling / re-renders never re-run the model.
 const verdicts = new Map<string, boolean>();
-const inflight = new Map<string, Promise<boolean>>();
+// A SINGLE-FLIGHT, idle-yielding queue. An image-heavy feed mounts dozens of images
+// at once; classifying them all eagerly loaded tfjs (~MBs) AND ran MobileNetV2 inference
+// on the MAIN THREAD back-to-back — which froze the whole app ("page unresponsive").
+// So we process at most ONE image at a time and yield to the browser between each, and
+// only START once the page is idle — the feed paints and stays interactive while
+// verdicts trickle in (and any flagged image blurs a moment later).
+const waiters = new Map<string, ((bad: boolean) => void)[]>();
+const queue: string[] = [];
+let pumping = false;
+const onIdle: (fn: () => void) => void =
+  typeof (globalThis as any).requestIdleCallback === "function"
+    ? (fn) => (globalThis as any).requestIdleCallback(fn, { timeout: 2000 })
+    : (fn) => setTimeout(fn, 60);
 
-/** Resolve true if the image is likely adult. Fails open (false) on any error
- *  — e.g. a cross-origin host that taints the canvas and can't be read. */
+function pump() {
+  if (pumping) return;
+  pumping = true;
+  const step = () => {
+    const src = queue.shift();
+    if (!src) { pumping = false; return; }
+    classify(src)
+      .then((bad) => {
+        verdicts.set(src, bad);
+        const list = waiters.get(src); waiters.delete(src);
+        list?.forEach((r) => { try { r(bad); } catch { /* ignore */ } });
+      })
+      .catch(() => {})
+      .finally(() => onIdle(step)); // yield between images so the UI never blocks
+  };
+  onIdle(step);
+}
+
+/** Resolve true if the image is likely adult. Fails open (false) on any error.
+ *  Never blocks the UI — the actual classification runs through the idle queue above. */
 export function isAdultImage(src: string): Promise<boolean> {
   if (verdicts.has(src)) return Promise.resolve(verdicts.get(src)!);
-  const existing = inflight.get(src);
-  if (existing) return existing;
-  const p = classify(src).then((bad) => {
-    verdicts.set(src, bad);
-    inflight.delete(src);
-    return bad;
+  return new Promise<boolean>((resolve) => {
+    const list = waiters.get(src);
+    if (list) { list.push(resolve); return; } // already queued — piggyback
+    waiters.set(src, [resolve]);
+    queue.push(src);
+    pump();
   });
-  inflight.set(src, p);
-  return p;
 }
 
 async function classify(src: string): Promise<boolean> {
