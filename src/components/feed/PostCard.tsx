@@ -264,7 +264,7 @@ function LinkCard({ url }: { url: string }) {
 // by nsfwjs and kept blurred until it's cleared — or, if flagged, until the
 // viewer taps "view". The classification runs locally; the image never leaves
 // the device. With the filter off it's just a plain image.
-function SafeImage({ src, alt, sx }: { src: string; alt?: string; sx?: SxProps<Theme> }) {
+export function SafeImage({ src, alt, sx }: { src: string; alt?: string; sx?: SxProps<Theme> }) {
   const filter = useStore((s) => s.settings.filterNsfw);
   const [status, setStatus] = useState<"ok" | "checking" | "nsfw">(filter ? "checking" : "ok");
   const [revealed, setRevealed] = useState(false);
@@ -373,7 +373,7 @@ const CODE_BLOCK_SX = {
   fontSize: "0.84em", lineHeight: 1.5, whiteSpace: "pre", tabSize: 2,
 } as const;
 
-function renderBody(text: string, censor: boolean, rich: boolean): ReactNode {
+export function renderBody(text: string, censor: boolean, rich: boolean): ReactNode {
   const prose = (s: string) => (rich ? renderRichText(s, censor) : renderText(s, censor));
   if (!text.includes("```")) return prose(text); // fast path — the vast majority of posts
   const lines = text.split("\n");
