@@ -12,11 +12,14 @@ import { finalizeEvent, verifyEvent, nip19, type Event as NostrEvent } from "nos
 import { nostrService } from "./nostrService";
 import type { ChatMessage } from "@/types";
 
-// The kind-40 channel "Ledger Global Chat" (created + published once; see
-// ledger-e2e/create-channel.mjs). Everyone subscribes to this id. `?gc=<64-hex>`
-// overrides it — used by the e2e harness so tests post to a throwaway channel and
-// never pollute the real one.
-const DEFAULT_CHANNEL_ID = "05f7c17c1085d8c5ef1a09f001863ba83443ba2e5f1c928eb017c4e503f6735d";
+// "Global Chat" points at an EXISTING, already-active public Nostr channel so it's
+// populated from day one (a brand-new room would just be empty). This is "Amethyst
+// Users" — the busiest public NIP-28 channel as of 2026-06 (a popular Nostr client's
+// room that became a general hangout: ~55 people, hundreds of recent messages). To
+// re-point at a different/busier room, run ledger-e2e/find-active-channels.mjs and
+// drop in the winner. `?gc=<64-hex>` overrides it (the e2e harness uses a throwaway
+// channel so automated tests never post into the real room).
+const DEFAULT_CHANNEL_ID = "42224859763652914db53052103f0b744df79dfc4efef7e950fc0802fc3df3c5";
 const channelOverride = (() => { try { const g = new URLSearchParams(location.search).get("gc"); return g && /^[0-9a-f]{64}$/i.test(g) ? g.toLowerCase() : null; } catch { return null; } })();
 export const GLOBAL_CHANNEL_ID = channelOverride || DEFAULT_CHANNEL_ID;
 
