@@ -23,6 +23,10 @@ import type { ModerationProfile } from "@/types";
 // Positive reactions double as a soft "vouch" for the author (web of trust),
 // so genuine positive interactions raise contextual trust. 👀 is neutral.
 const POSITIVE_REACTIONS = new Set(["⭐", "🔥", "🚀", "💜", "😂", "❤️", "👍", "🙂", "😄", "🙌", "💯", "😮", "💀", "🏳️‍🌈"]);
+// Nostr only has "like" (a kind-7 reaction). Any react on OUR side maps to a Nostr
+// like EXCEPT these negative ones — an angry/thumbs-down reaction stays local only
+// and must never like the post upstream.
+const NEGATIVE_REACTIONS = new Set(["👎", "😠", "😡", "🤬", "💩", "🤮", "👿", "🖕", "💔"]);
 
 class FeedService {
   private profile = new InterestProfile();
@@ -224,7 +228,13 @@ class FeedService {
     const updated = await storage.getPost(postId);
     if (!updated) return;
     if (updated.source === "nostr") {
-      import("./nostrService").then((m) => m.nostrService.reactToNote(updated, emoji)).catch(() => {});
+      // Any NON-negative reaction = a "like" on Nostr (kind 7). A negative one
+      // (angry, thumbs-down) stays local — it must NOT like the post. And only on
+      // ADD (applyReaction toggles), never when you un-react.
+      const added = (updated.reactions[emoji] ?? []).includes(identityService.pk);
+      if (added && !NEGATIVE_REACTIONS.has(emoji)) {
+        import("./nostrService").then((m) => m.nostrService.reactToNote(updated, emoji)).catch(() => {});
+      }
     } else {
       bus.emit("post:publish", updated);   // Ledger posts persist/sync over Gun (Nostr ones don't)
     }
