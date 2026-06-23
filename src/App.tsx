@@ -30,6 +30,7 @@ import MiniPlayer from "@/components/layout/MiniPlayer";
 import AudioMiniPlayer from "@/components/layout/AudioMiniPlayer";
 import GlobalWatchPlayer from "@/components/layout/GlobalWatchPlayer";
 import GlobalFeedVideo from "@/components/layout/GlobalFeedVideo";
+import ReloadGuardDialog from "@/components/layout/ReloadGuardDialog";
 import GlobalSpotify from "@/components/layout/GlobalSpotify";
 import FloatingDocks from "@/components/layout/FloatingDocks";
 import GeoConsent from "@/components/layout/GeoConsent";
@@ -91,6 +92,7 @@ export default function App() {
         <>
           <GlobalWatchPlayer />
           <GlobalFeedVideo />
+          <ReloadGuardDialog />
           <GlobalSpotify />
           <MiniPlayer />
           <AudioMiniPlayer />

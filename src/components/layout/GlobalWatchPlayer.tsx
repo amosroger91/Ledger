@@ -10,7 +10,7 @@ import { peerService } from "@/services/peerService";
 import { presenceService } from "@/services/presenceService";
 import { profileService } from "@/services/profileService";
 import { watchRoomService } from "@/services/watchRoomService";
-import { setUnloadGuard } from "@/lib/unloadGuard";
+import { setActiveVideo } from "@/lib/watchGuard";
 import { openOnYouTube } from "@/lib/youtube";
 import { bus } from "@/lib/events";
 import { useStore } from "@/store/useStore";
@@ -133,11 +133,17 @@ export default function GlobalWatchPlayer() {
 
   const active = !!stage?.videoId && closedId.current !== stage?.videoId;
 
-  // While a video is loaded, warn before an accidental refresh / tab-close that
-  // would lose it (in-app navigation keeps the mini player, so it's safe).
+  // While a video is loaded, register it so a refresh/close warns first (in-app
+  // navigation keeps the mini player, so it's safe). The dialog reads title +
+  // time live via these accessors.
   useEffect(() => {
-    setUnloadGuard("watch", active);
-    return () => setUnloadGuard("watch", false);
+    setActiveVideo("watch", active ? {
+      getVideoId: () => vid.current ?? stage?.videoId ?? null,
+      getTime: () => { try { return player.current?.getCurrentTime?.() ?? 0; } catch { return 0; } },
+      getTitle: () => { try { return player.current?.getVideoData?.()?.title ?? ""; } catch { return ""; } },
+    } : null);
+    return () => setActiveVideo("watch", null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
   // Pop the current video out to youtube.com at the exact moment you're watching.

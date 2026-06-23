@@ -10,14 +10,20 @@
  *  the "open it on YouTube at the current time" escape hatch lives on the player
  *  UI itself (see GlobalWatchPlayer / GlobalFeedVideo), not in this dialog. */
 const activeKeys = new Set<string>();
+let bypass = false;
 
 function onBeforeUnload(e: BeforeUnloadEvent) {
-  if (activeKeys.size === 0) return;
+  if (bypass || activeKeys.size === 0) return;
   // The two lines below are the cross-browser incantation to trigger the prompt.
   e.preventDefault();
   e.returnValue = "";
   return "";
 }
+
+/** Suspend the guard for one intentional, programmatic reload/navigation (e.g.
+ *  the "Reload anyway" button) so the native prompt doesn't stack on top of our
+ *  own confirmation. The flag resets naturally when the fresh page loads. */
+export function bypassUnloadGuard() { bypass = true; }
 
 /** Add (active=true) or remove (active=false) a guard for `key`. The window
  *  listener is attached only while at least one key is active. */

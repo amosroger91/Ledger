@@ -5,7 +5,7 @@ import PauseRoundedIcon from "@mui/icons-material/PauseRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import YouTubeIcon from "@mui/icons-material/YouTube";
 import { bus } from "@/lib/events";
-import { setUnloadGuard } from "@/lib/unloadGuard";
+import { setActiveVideo } from "@/lib/watchGuard";
 import { openOnYouTube } from "@/lib/youtube";
 
 // Shared YouTube IFrame API loader (one script for the whole app).
@@ -98,10 +98,14 @@ export default function GlobalFeedVideo() {
     return () => cancelAnimationFrame(raf);
   }, [active, floating]);
 
-  // Warn before an accidental refresh / tab-close loses the video you're watching.
+  // Register the playing video so a refresh/close warns first (with title + time).
   useEffect(() => {
-    setUnloadGuard("feedvideo", active);
-    return () => setUnloadGuard("feedvideo", false);
+    setActiveVideo("feedvideo", active ? {
+      getVideoId: () => vid.current,
+      getTime: () => { try { return player.current?.getCurrentTime?.() ?? 0; } catch { return 0; } },
+      getTitle: () => { try { return player.current?.getVideoData?.()?.title ?? ""; } catch { return ""; } },
+    } : null);
+    return () => setActiveVideo("feedvideo", null);
   }, [active]);
 
   function toggle() {
