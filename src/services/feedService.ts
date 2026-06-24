@@ -387,21 +387,28 @@ class FeedService {
         case "friends":
           score = (friends.has(p.author) ? 10 : 0) + recency;
           factors.push({ label: friends.has(p.author) ? "From someone you follow" : "Not from your circle", weight: friends.has(p.author) ? 10 : 0 });
+          factors.push({ label: "Recency", weight: recency });
           break;
         case "community":
           score = (p.community === opts.community ? 10 : -100) + recency + engagement;
           factors.push({ label: "In this community", weight: p.community === opts.community ? 10 : -100 });
+          factors.push({ label: "Recency", weight: recency });
+          factors.push({ label: "Engagement", weight: engagement, detail: `${engagement} reactions` });
           break;
         case "discovery":
           // surface things slightly outside your bubble but still quality
           score = (1 - affinity) * 3 + engagement + recency * 2 + (p.author !== me ? 1 : -5);
           factors.push({ label: "New to you", weight: (1 - affinity) * 3, detail: `${(affinity * 100).toFixed(0)}% similar to your usual` });
-          factors.push({ label: "Quality signal", weight: engagement });
+          factors.push({ label: "Quality signal", weight: engagement, detail: `${engagement} reactions` });
+          factors.push({ label: "Recency", weight: recency * 2 });
+          factors.push({ label: p.author !== me ? "Outside your usual circle" : "Your own post", weight: p.author !== me ? 1 : -5 });
           break;
         case "ai-curated":
         default:
-          // For You: people + your subscribed topics, newest first (no LLM/embeddings).
-          score = recency * 6 + engagement * 0.5;
+          // For You: a flat base for being human / followed-topic activity, then
+          // recency + engagement (no LLM/embeddings). The base IS the "Human
+          // activity / topic" factor below, so the factor weights sum to the score.
+          score = 6 + recency * 6 + engagement * 0.5;
           factors.push({ label: p.author === "rss-bot" ? "From a topic you follow" : "Human activity", weight: 6 });
           factors.push({ label: "Recency", weight: recency * 6 });
           factors.push({ label: "Engagement", weight: engagement * 0.5, detail: `${engagement} reactions` });

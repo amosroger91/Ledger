@@ -783,7 +783,7 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
                 </Typography>
               </Tooltip>
             </Box>
-            <WhyRecommended reason={reason} />
+            <WhyRecommended reason={reason} post={post} verdict={verdict} onBlock={() => trust("block")} />
             <IconButton size="small" sx={{ mt: -0.25, color: "text.disabled" }} onClick={(e) => setAuthMenu(e.currentTarget)}><MoreVertRoundedIcon fontSize="small" /></IconButton>
           </Stack>
 
