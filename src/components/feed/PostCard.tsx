@@ -379,7 +379,55 @@ const CODE_BLOCK_SX = {
   fontSize: "0.84em", lineHeight: 1.5, whiteSpace: "pre", tabSize: 2,
 } as const;
 
+// Some Nostr clients post raw HTML (RSS bridges especially: <b>…</b>, <p>, <a>,
+// <img>). We render a SAFE subset of it. Detection requires a real closing tag of a
+// known element, or a void <br>/<img>/<hr> — so "a < b" or "<3" never trips it.
+const HTML_RE = /<\/(?:a|b|strong|i|em|u|s|strike|del|p|div|span|li|ul|ol|h[1-6]|blockquote|code|pre|small|font|table|tr|td)>|<(?:br|img|hr)\b[^>]*>/i;
+const safeHref = (u?: string | null): string | null => { const t = (u || "").trim(); return /^(?:https?:|mailto:)/i.test(t) ? t : null; };
+const safeImgSrc = (u?: string | null): string | null => { const t = (u || "").trim(); return /^(?:https?:\/\/|data:image\/)/i.test(t) ? t : null; };
+
+// Walk a parsed, INERT html tree into React nodes. Everything is rendered as escaped
+// React elements (never dangerouslySetInnerHTML); only an allow-list of tags survives
+// and only href/src/alt are kept (sanitized) — no styles, scripts, iframes or handlers.
+function walkHtml(parent: Node, censor: boolean): ReactNode[] {
+  const out: ReactNode[] = [];
+  parent.childNodes.forEach((node, i) => {
+    if (node.nodeType === 3) { const t = node.textContent || ""; if (t) out.push(<Fragment key={i}>{emojify(censor ? nsfwService.censorText(t) : t)}</Fragment>); return; }
+    if (node.nodeType !== 1) return;
+    const el = node as Element;
+    const tag = el.tagName.toLowerCase();
+    const kids = () => walkHtml(el, censor);
+    switch (tag) {
+      case "script": case "style": case "iframe": case "object": case "embed": case "link": case "meta": case "svg": case "form": case "input": case "button": case "textarea": return; // dropped wholesale
+      case "br": out.push(<br key={i} />); return;
+      case "hr": out.push(<Box key={i} component="hr" sx={{ border: 0, borderTop: "1px solid var(--bl-line)", my: 1 }} />); return;
+      case "b": case "strong": out.push(<strong key={i}>{kids()}</strong>); return;
+      case "i": case "em": out.push(<em key={i}>{kids()}</em>); return;
+      case "u": out.push(<u key={i}>{kids()}</u>); return;
+      case "s": case "strike": case "del": out.push(<s key={i}>{kids()}</s>); return;
+      case "code": out.push(<Box key={i} component="code" sx={CODE_SX}>{el.textContent}</Box>); return;
+      case "pre": out.push(<Box key={i} component="pre" sx={CODE_BLOCK_SX}>{el.textContent}</Box>); return;
+      case "a": { const href = safeHref(el.getAttribute("href")); out.push(href ? <a key={i} href={href} target="_blank" rel="noopener noreferrer nofollow" style={{ color: "#0a55cf", wordBreak: "break-word" }}>{kids()}</a> : <Fragment key={i}>{kids()}</Fragment>); return; }
+      case "img": { const src = safeImgSrc(el.getAttribute("src")); if (src) out.push(<SafeImage key={i} src={src} alt={el.getAttribute("alt") || ""} sx={{ display: "block", mt: 0.5, maxWidth: "100%", maxHeight: 360, borderRadius: 1.5, border: "1px solid var(--bl-line)" }} />); return; }
+      case "p": out.push(<Box key={i} sx={{ my: 0.75 }}>{kids()}</Box>); return;
+      case "blockquote": out.push(<Box key={i} component="blockquote" sx={{ borderLeft: "3px solid var(--bl-line)", m: 0, my: 0.75, pl: 1.5, color: "text.secondary" }}>{kids()}</Box>); return;
+      case "h1": case "h2": case "h3": case "h4": case "h5": case "h6": out.push(<Box key={i} sx={{ fontWeight: 800, fontSize: tag === "h1" ? "1.2em" : tag === "h2" ? "1.12em" : "1.04em", mt: 0.75, mb: 0.25 }}>{kids()}</Box>); return;
+      case "ul": out.push(<Box key={i} component="ul" sx={{ pl: 2.5, my: 0.5 }}>{kids()}</Box>); return;
+      case "ol": out.push(<Box key={i} component="ol" sx={{ pl: 2.5, my: 0.5 }}>{kids()}</Box>); return;
+      case "li": out.push(<Box key={i} component="li">{kids()}</Box>); return;
+      default: out.push(<Fragment key={i}>{kids()}</Fragment>); // benign wrapper (div, span, section, font…) → its children
+    }
+  });
+  return out;
+}
+
+function renderHtmlBody(html: string, censor: boolean): ReactNode {
+  try { return <>{walkHtml(new DOMParser().parseFromString(html, "text/html").body, censor)}</>; }
+  catch { return html; }
+}
+
 export function renderBody(text: string, censor: boolean, rich: boolean): ReactNode {
+  if (rich && HTML_RE.test(text)) return renderHtmlBody(text, censor);
   const prose = (s: string) => (rich ? renderRichText(s, censor) : renderText(s, censor));
   if (!text.includes("```")) return prose(text); // fast path — the vast majority of posts
   const lines = text.split("\n");
@@ -854,21 +902,25 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
             </Box>
           )}
 
-          {/* action bar — clean, evenly split, hover-highlighted (Twitter × Facebook) */}
-          <Stack direction="row" spacing={0.5} sx={{ pt: 0.75, borderTop: "1px solid var(--bl-line)" }}>
+          {/* action bar — clean, evenly split, hover-highlighted (Twitter × Facebook).
+              Buttons shrink (minWidth:0) and tighten their icon gap/padding on a phone
+              so React / Comment / Ask AI never collide in a narrow column. */}
+          <Stack direction="row" spacing={{ xs: 0, sm: 0.5 }} sx={{ pt: 0.75, borderTop: "1px solid var(--bl-line)",
+            "& .MuiButton-root": { flex: 1, minWidth: 0, fontWeight: 600, fontSize: { xs: 12.5, sm: 13.5 }, textTransform: "none", py: 0.7, px: { xs: 0.5, sm: 1 }, borderRadius: 2, whiteSpace: "nowrap" },
+            "& .MuiButton-startIcon": { mr: { xs: 0.5, sm: 0.75 } } }}>
             <Button fullWidth disableRipple onClick={(e) => setReact({ el: e.currentTarget, id: post.id })}
               startIcon={<AddReactionOutlinedIcon sx={{ fontSize: 19 }} />}
-              sx={{ flex: 1, color: "text.secondary", fontWeight: 600, fontSize: 13.5, textTransform: "none", py: 0.7, borderRadius: 2, "&:hover": { bgcolor: "rgba(58,155,240,0.09)", color: "#1668e0" } }}>
+              sx={{ color: "text.secondary", "&:hover": { bgcolor: "rgba(58,155,240,0.09)", color: "#1668e0" } }}>
               React
             </Button>
             <Button fullWidth disableRipple onClick={() => setShowReplies((v) => !v)}
               startIcon={<ChatBubbleOutlineRoundedIcon sx={{ fontSize: 18 }} />}
-              sx={{ flex: 1, color: showReplies ? "#1668e0" : "text.secondary", fontWeight: 600, fontSize: 13.5, textTransform: "none", py: 0.7, borderRadius: 2, "&:hover": { bgcolor: "rgba(58,155,240,0.09)", color: "#1668e0" } }}>
+              sx={{ color: showReplies ? "#1668e0" : "text.secondary", "&:hover": { bgcolor: "rgba(58,155,240,0.09)", color: "#1668e0" } }}>
               {replies.length ? `${replies.length} ${replies.length === 1 ? "Comment" : "Comments"}` : "Comment"}
             </Button>
             <Button fullWidth disableRipple onClick={askCompanion}
               startIcon={<AutoAwesomeRoundedIcon sx={{ fontSize: 17 }} />}
-              sx={{ flex: 1, color: "text.secondary", fontWeight: 600, fontSize: 13.5, textTransform: "none", py: 0.7, borderRadius: 2, "&:hover": { bgcolor: "rgba(124,92,255,0.1)", color: "#6a43d8" } }}>
+              sx={{ color: "text.secondary", "&:hover": { bgcolor: "rgba(124,92,255,0.1)", color: "#6a43d8" } }}>
               Ask AI
             </Button>
           </Stack>

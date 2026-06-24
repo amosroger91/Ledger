@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Box, Stack, Typography, IconButton, TextField, Avatar, Tooltip, Badge, CircularProgress, Button } from "@mui/material";
+import { Box, Stack, Typography, IconButton, TextField, Avatar, Tooltip, Badge, CircularProgress, Button, useMediaQuery } from "@mui/material";
+import type { Theme } from "@mui/material";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import ForumRoundedIcon from "@mui/icons-material/ForumRounded";
@@ -260,13 +261,25 @@ export default function FloatingDocks() {
   const toggleChat = () => (chatOpen ? setChatOpen(false) : openChat());
   const toggleGlobal = () => (globalOpen ? setGlobalOpen(false) : openGlobal());
 
+  // On phones/tablets the bubbles live in the top bar instead of floating over the
+  // feed (they'd cover content). The bar emits dock:toggle; we mirror our open/active
+  // state back via dock:state so the bar can show the unread dots.
+  const compact = useMediaQuery((t: Theme) => t.breakpoints.down("md"));
+  useEffect(() => bus.on("dock:toggle", ({ which }) => {
+    if (which === "companion") { setCompanionOpen((o) => !o); setChatOpen(false); setGlobalOpen(false); }
+    else if (which === "chat") { setChatActive(true); setChatOpen((o) => !o); setCompanionOpen(false); setGlobalOpen(false); }
+    else if (which === "global") { setGlobalActive(true); setGlobalOpen((o) => !o); setCompanionOpen(false); setChatOpen(false); }
+  }), []);
+  useEffect(() => { bus.emit("dock:state", { globalActive, chatActive, globalOpen, chatOpen, companionOpen }); },
+    [globalActive, chatActive, globalOpen, chatOpen, companionOpen]);
+
   return (
     // Anchored to the bottom-right corner of the content. A flex column: the
     // button row rides on top, and the open panel docks directly below it toward
     // the corner — so opening a chat pushes the buttons up, and closing it drops
     // them back down into the same spot the panel occupied.
     <Box sx={{ position: "fixed", right: { xs: 14, md: 28 }, bottom: { xs: 14, md: 28 }, zIndex: 1290, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1.25, pointerEvents: "none" }}>
-      <Stack direction="row" spacing={1.25} sx={{ pointerEvents: "auto" }}>
+      <Stack direction="row" spacing={1.25} sx={{ pointerEvents: "auto", display: compact ? "none" : "flex" }}>
         <Tooltip title={globalOpen ? "Hide Global Chat" : "Global Chat (public · Nostr)"} placement="top">
           <Box onClick={toggleGlobal} sx={bubbleSx("linear-gradient(135deg,#2bb673,#159e63)")}>
             <Badge color="error" variant="dot" invisible={!globalActive || globalOpen}><PublicRoundedIcon sx={{ color: "#fff" }} /></Badge>

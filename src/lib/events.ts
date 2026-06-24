@@ -48,6 +48,8 @@ export interface LedgerEvents {
   "companion:thinking": boolean;
   "companion:prompt": { text: string };   // open the companion dock and ask this
   "companion:open": void;                  // just open the companion (AI) mini dock
+  "dock:toggle": { which: "global" | "chat" | "companion" };  // top-bar button toggles a floating dock (mobile)
+  "dock:state": { globalActive: boolean; chatActive: boolean; globalOpen: boolean; chatOpen: boolean; companionOpen: boolean };  // dock open/active state mirrored to the top bar
   "rss:refreshing": boolean;
   "rss:progress": { done: number; total: number; posted: number };  // feed refresh progress
   "factcheck:ready": void;       // PolitiFact index loaded — re-check posts

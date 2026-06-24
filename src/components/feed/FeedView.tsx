@@ -346,18 +346,22 @@ export default function FeedView() {
             next, so they never cram together on a phone. Each row scrolls horizontally
             only if its own content overflows (no nested side-by-side scroll areas). */}
         <Stack direction={{ xs: "column", md: "row" }} spacing={1} alignItems={{ md: "center" }} sx={{ mb: 2 }}>
-          <Box sx={{ overflowX: "auto", WebkitOverflowScrolling: "touch", flexShrink: 0, mx: -0.5, px: 0.5, "& .MuiToggleButton-root": { whiteSpace: "nowrap" } }}>
+          <Box sx={{ overflowX: { xs: "visible", md: "auto" }, WebkitOverflowScrolling: "touch", flexShrink: 0, width: { xs: "100%", md: "auto" }, mx: -0.5, px: 0.5, "& .MuiToggleButton-root": { whiteSpace: "nowrap" } }}>
             <ToggleButtonGroup
               exclusive size="small" value={algo}
               onChange={(_, v) => v && setSettings({ feedAlgorithm: v })}
-              sx={{ display: "inline-flex", flexWrap: "nowrap", "& .MuiToggleButton-root": { border: "1px solid rgba(58,155,240,0.18)", color: "text.secondary", fontSize: { xs: "0.78rem", sm: "0.875rem" }, px: { xs: 1, sm: 1.25 }, py: 0.45, "&.Mui-selected": { background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#ffffff" } } }}
+              // Phone: stretch to a full-width segmented control so all five fit (no
+              // off-screen clipping). Desktop: natural inline width beside the filters.
+              sx={{ display: "flex", width: { xs: "100%", md: "auto" }, flexWrap: "nowrap", "& .MuiToggleButton-root": { flex: { xs: 1, md: "none" }, minWidth: 0, border: "1px solid rgba(58,155,240,0.18)", color: "text.secondary", fontSize: { xs: "0.72rem", sm: "0.875rem" }, px: { xs: 0.5, sm: 1.25 }, py: 0.45, "&.Mui-selected": { background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#ffffff" } } }}
             >
               {ALGOS.map((a) => <ToggleButton key={a.id} value={a.id}>{a.label}</ToggleButton>)}
             </ToggleButtonGroup>
           </Box>
 
           <Stack direction="row" alignItems="center" spacing={1} sx={{ flex: { md: 1 }, minWidth: 0 }}>
-            <Box sx={{ display: "flex", overflowX: "auto", WebkitOverflowScrolling: "touch", gap: 0.5, flex: 1, minWidth: 0, py: 0.25, "& > *": { flex: "0 0 auto" } }}>
+            {/* Phone: wrap the pills so every filter stays visible (scrolling hid
+                Links/Polls off-screen). Desktop: single row, scroll only if it overflows. */}
+            <Box sx={{ display: "flex", flexWrap: { xs: "wrap", md: "nowrap" }, overflowX: { xs: "visible", md: "auto" }, WebkitOverflowScrolling: "touch", gap: 0.5, flex: 1, minWidth: 0, py: 0.25, "& > *": { flex: "0 0 auto" } }}>
               {FILTERS.map((f) => (
                 <Chip key={f.id} label={f.label} size="small" onClick={() => setFilter(f.id)}
                   variant={filter === f.id ? "filled" : "outlined"}

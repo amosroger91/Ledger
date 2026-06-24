@@ -105,18 +105,22 @@ export default function Composer({ community }: { community?: string }) {
             <Tooltip title="Share an mp3"><IconButton size="small" onClick={() => audioRef.current?.click()}><AudiotrackRoundedIcon fontSize="small" /></IconButton></Tooltip>
             <Tooltip title="HTML post / embed (map, game, custom)"><IconButton size="small" onClick={() => setHtmlOpen(true)}><CodeRoundedIcon fontSize="small" /></IconButton></Tooltip>
             <Tooltip title="Companion: draft a fresh post"><IconButton size="small" onClick={async () => { const { posts } = await feedService.generate("trending", { moderation }); setText(companionService.draftPost(posts)); }}><AutoFixHighRoundedIcon fontSize="small" /></IconButton></Tooltip>
-            <Box sx={{ flex: 1, minWidth: 8 }} />
-            {nostrEnabled && (
-              <Tooltip title="Where this post goes">
-                <Select size="small" value={target} onChange={(e) => setTarget(e.target.value as "ledger" | "both" | "nostr")}
-                  sx={{ height: 32, fontSize: 13, "& .MuiSelect-select": { py: 0.4 } }}>
-                  <MenuItem value="ledger">Ledger only</MenuItem>
-                  <MenuItem value="both">Ledger + Nostr</MenuItem>
-                  <MenuItem value="nostr">Nostr only</MenuItem>
-                </Select>
-              </Tooltip>
-            )}
-            <Button variant="contained" onClick={post} disabled={(!text.trim() && !media.length) || (target === "nostr" && !text.trim())} sx={{ ml: 1 }}>Post</Button>
+            {/* Keep the visibility picker + Post button as one unit so they never split
+                across wrapped rows; ml:auto right-aligns the group (it drops onto its
+                own right-aligned row on a phone instead of scattering). */}
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, ml: "auto" }}>
+              {nostrEnabled && (
+                <Tooltip title="Where this post goes">
+                  <Select size="small" value={target} onChange={(e) => setTarget(e.target.value as "ledger" | "both" | "nostr")}
+                    sx={{ height: 32, fontSize: 13, "& .MuiSelect-select": { py: 0.4 } }}>
+                    <MenuItem value="ledger">Ledger only</MenuItem>
+                    <MenuItem value="both">Ledger + Nostr</MenuItem>
+                    <MenuItem value="nostr">Nostr only</MenuItem>
+                  </Select>
+                </Tooltip>
+              )}
+              <Button variant="contained" onClick={post} disabled={(!text.trim() && !media.length) || (target === "nostr" && !text.trim())}>Post</Button>
+            </Box>
           </Stack>
         </Box>
       </Stack>

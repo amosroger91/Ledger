@@ -13,6 +13,8 @@ import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
 import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import ChatRoundedIcon from "@mui/icons-material/ChatRounded";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
+import ForumRoundedIcon from "@mui/icons-material/ForumRounded";
+import PublicRoundedIcon from "@mui/icons-material/PublicRounded";
 import LiveTvRoundedIcon from "@mui/icons-material/LiveTvRounded";
 import RssFeedRoundedIcon from "@mui/icons-material/RssFeedRounded";
 import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded";
@@ -117,14 +119,36 @@ function ModelStatusChip() {
   return null;
 }
 
+// Mobile: the three floating chat docks (Global / Ledger / Companion) ride in the
+// top bar instead of floating over the feed. We emit dock:toggle and mirror the
+// open/active state that FloatingDocks broadcasts back (for the unread dots).
+function DockButtons() {
+  const [st, setSt] = useState({ globalActive: false, chatActive: false, globalOpen: false, chatOpen: false, companionOpen: false });
+  useEffect(() => bus.on("dock:state", setSt), []);
+  const Btn = ({ which, title, icon, open, dot }: { which: "global" | "chat" | "companion"; title: string; icon: ReactNode; open: boolean; dot: boolean }) => (
+    <Tooltip title={title}>
+      <IconButton size="small" aria-label={title} onClick={() => bus.emit("dock:toggle", { which })}
+        sx={{ color: "#fff", bgcolor: open ? "rgba(255,255,255,0.24)" : "transparent", "&:hover": { bgcolor: "rgba(255,255,255,0.18)" } }}>
+        <Badge color="error" variant="dot" invisible={!dot}>{icon}</Badge>
+      </IconButton>
+    </Tooltip>
+  );
+  return (
+    <Stack direction="row" spacing={0.25} sx={{ flexShrink: 0 }}>
+      <Btn which="global" title="Global Chat" icon={<PublicRoundedIcon fontSize="small" />} open={st.globalOpen} dot={st.globalActive && !st.globalOpen} />
+      <Btn which="chat" title="Ledger Chat" icon={<ForumRoundedIcon fontSize="small" />} open={st.chatOpen} dot={st.chatActive && !st.chatOpen} />
+      <Btn which="companion" title="Ask AI" icon={<AutoAwesomeRoundedIcon fontSize="small" />} open={st.companionOpen} dot={false} />
+    </Stack>
+  );
+}
+
 export default function AppShell({ children }: { children: ReactNode }) {
   const nav = useNavigate();
   const { pathname } = useLocation();
   const me = useStore((s) => s.me);
   const onlineCount = useStore((s) => s.onlineCount);
   const status = useStore((s) => s.settings.presenceStatus);
-  const compact = useMediaQuery((theme: Theme) => theme.breakpoints.down("md")); // ≤ md → icon-only rail
-  const phone = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));   // ≤ sm → rail moves into a drawer
+  const compact = useMediaQuery((theme: Theme) => theme.breakpoints.down("md")); // ≤ md → rail collapses into a slide-out drawer; content goes full-width
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Close the drawer whenever the route changes (e.g. a nav tap).
@@ -137,9 +161,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
     setTimeout(() => bus.emit("feed:refresh", undefined), 0);
   };
 
-  // Nav rail contents — shared by the desktop/tablet rail and the phone drawer.
-  // `expanded` shows full labels; collapsed (the ≤md rail) is icon-only.
-  const renderNav = (expanded: boolean) => (
+  // Nav rail contents — shared by the desktop rail and the mobile drawer.
+  // `expanded` shows full labels; `inDrawer` hides the online-presence list (it's
+  // desktop-rail only — on mobile it just adds clutter).
+  const renderNav = (expanded: boolean, inDrawer: boolean) => (
     <>
       <Stack direction="row" alignItems="center" spacing={1} onClick={goHome} role="button" aria-label="Go to home feed and scroll to top"
         sx={{ px: { xs: 0.5, sm: 1 }, py: 1.5, cursor: "pointer", borderRadius: 2, "&:hover": { opacity: 0.85 } }}>
@@ -188,24 +213,26 @@ export default function AppShell({ children }: { children: ReactNode }) {
           {expanded && <Typography sx={{ fontWeight: 800 }}>Support the project</Typography>}
         </Box>
       </Tooltip>
-      {expanded && <Divider sx={{ my: 1 }} />}
-      {expanded && <PresenceList />}
+      {expanded && !inDrawer && <Divider sx={{ my: 1 }} />}
+      {expanded && !inDrawer && <PresenceList />}
     </>
   );
 
   return (
     <Box sx={{ position: "relative", zIndex: 1, height: "100vh", overflow: "hidden", p: { xs: 0, sm: 1, md: 2 } }}>
-    <Box sx={{ display: "grid", gridTemplateColumns: phone ? "1fr" : compact ? "56px 1fr" : "230px 1fr", height: { xs: "100vh", md: "calc(100vh - 32px)" }, bgcolor: "var(--bl-face)", border: "1px solid var(--bl-edge-frame)", borderRadius: { xs: 0, md: "8px" }, overflow: "hidden", boxShadow: "0 12px 44px rgba(0,0,0,0.4)" }}>
-      {/* nav rail — full height on tablet/desktop; on phones it lives in a slide-out drawer */}
-      {!phone && (
-        <Box sx={{ borderRight: "1px solid var(--bl-line)", p: { xs: 0.75, sm: 1 }, display: "flex", flexDirection: "column", gap: 0.25, height: "100%", overflowY: "auto", background: "linear-gradient(180deg, var(--bl-tasks-1), var(--bl-tasks-2))" }}>
-          {renderNav(!compact)}
+    <Box sx={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "230px 1fr", height: { xs: "100vh", md: "calc(100vh - 32px)" }, bgcolor: "var(--bl-face)", border: "1px solid var(--bl-edge-frame)", borderRadius: { xs: 0, md: "8px" }, overflow: "hidden", boxShadow: "0 12px 44px rgba(0,0,0,0.4)" }}>
+      {/* nav rail — full-height on desktop; on phones & tablets it collapses into a
+          slide-out drawer (the hamburger in the title bar opens it) so the content
+          column gets the full width. */}
+      {!compact && (
+        <Box sx={{ borderRight: "1px solid var(--bl-line)", p: 1, display: "flex", flexDirection: "column", gap: 0.25, height: "100%", overflowY: "auto", background: "linear-gradient(180deg, var(--bl-tasks-1), var(--bl-tasks-2))" }}>
+          {renderNav(true, false)}
         </Box>
       )}
-      {phone && (
+      {compact && (
         <Drawer anchor="left" open={drawerOpen} onClose={() => setDrawerOpen(false)}
-          PaperProps={{ sx: { width: 250, maxWidth: "82vw", p: 1, display: "flex", flexDirection: "column", gap: 0.25, background: "linear-gradient(180deg, var(--bl-tasks-1), var(--bl-tasks-2))" } }}>
-          {renderNav(true)}
+          PaperProps={{ sx: { width: 260, maxWidth: "84vw", p: 1, display: "flex", flexDirection: "column", gap: 0.25, background: "linear-gradient(180deg, var(--bl-tasks-1), var(--bl-tasks-2))" } }}>
+          {renderNav(true, true)}
         </Drawer>
       )}
 
@@ -213,11 +240,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <Box sx={{ display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, overflow: "hidden", bgcolor: "var(--bl-face)" }}>
         {/* Luna title bar */}
         <Stack direction="row" alignItems="center" spacing={{ xs: 0.75, sm: 1.5 }} sx={{ px: { xs: 1, sm: 2 }, py: 1, position: "sticky", top: 0, zIndex: 5, color: "#fff", borderBottom: "1px solid var(--bl-title-edge)", background: "var(--bl-gloss-title), linear-gradient(180deg, var(--bl-title-hi), var(--bl-title-low))", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)" }}>
-          {phone && <IconButton onClick={() => setDrawerOpen(true)} aria-label="Open menu" sx={{ color: "#fff", ml: -0.75 }}><MenuRoundedIcon /></IconButton>}
-          {phone && <Box component="img" src={`${import.meta.env.BASE_URL}logo.png`} alt="Ledger" onClick={goHome} sx={{ width: 26, height: 26, borderRadius: "7px", cursor: "pointer", flexShrink: 0 }} />}
+          {compact && <IconButton onClick={() => setDrawerOpen(true)} aria-label="Open menu" sx={{ color: "#fff", ml: -0.75 }}><MenuRoundedIcon /></IconButton>}
+          {compact && <Box component="img" src={`${import.meta.env.BASE_URL}logo.png`} alt="Ledger" onClick={goHome} sx={{ width: 26, height: 26, borderRadius: "7px", cursor: "pointer", flexShrink: 0 }} />}
           <Typography variant="h6" sx={{ color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.4)", display: { xs: "none", md: "block" }, whiteSpace: "nowrap", flex: { md: "0 0 auto" } }}>{NAV.find((n) => n.to === pathname)?.label ?? (pathname.startsWith("/chatroom") ? "Town Square" : "Ledger")}</Typography>
           <Box sx={{ flex: 1, display: "flex", justifyContent: compact ? "flex-end" : "flex-start" }}><GlobalSearch compact={compact} /></Box>
           <ModelStatusChip />
+          {compact && <DockButtons />}
           <AlertsBell />
           <Chip size="small" label={`${onlineCount} online`} sx={{ display: { xs: "none", sm: "inline-flex" }, bgcolor: "rgba(255,255,255,0.92)", color: "var(--bl-green-600)", border: "none", "& .MuiChip-label": { fontWeight: 700 } }} icon={<Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#4ca325", ml: 1 }} />} />
           <Tooltip title={me?.username ?? ""}>
