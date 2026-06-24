@@ -31,7 +31,15 @@ export async function boot(): Promise<BootResult> {
   // Make storage durable so an installed PWA keeps you signed in across launches
   // (prevents the browser from evicting the IndexedDB that holds your identity).
   void requestPersistentStorage();
-  const settings: AppSettings = { ...DEFAULT_SETTINGS, ...(await storage.loadSettings()) };
+  const loaded = await storage.loadSettings();
+  const settings: AppSettings = { ...DEFAULT_SETTINGS, ...loaded };
+  // One-time: migrate the old two-state nsfw/profanity toggles → three-state modes,
+  // preserving each install's effective filtering. Runs only for pre-migration saves.
+  const old = loaded as any;
+  if (old && old.nsfwMode === undefined && (old.filterNsfw !== undefined || old.censorProfanity !== undefined)) {
+    settings.nsfwMode = old.filterNsfw === false ? "show" : "screen";
+    settings.profanityMode = (old.filterNsfw || old.censorProfanity) ? "screen" : "show";
+  }
   // One-time: auto-translate to English is now ON by default (it shipped briefly as
   // off). Flip existing installs once, then respect whatever the user sets after.
   if (!settings.autoTranslateInit) { settings.autoTranslate = true; settings.autoTranslateInit = true; }

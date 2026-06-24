@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box, Stack, Typography, Select, MenuItem, Switch, FormControlLabel, Divider, Button, Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
+import { Box, Stack, Typography, Select, MenuItem, Switch, FormControlLabel, Divider, Button, Dialog, DialogTitle, DialogContent, DialogActions, ToggleButton, ToggleButtonGroup } from "@mui/material";
 import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import InstallMobileRoundedIcon from "@mui/icons-material/InstallMobileRounded";
@@ -14,7 +14,7 @@ import { trustService } from "@/services/trustService";
 import { feedService } from "@/services/feedService";
 import { profileService } from "@/services/profileService";
 import { fingerprint } from "@/lib/crypto";
-import type { FeedAlgorithm, ModerationProfile, CompanionPersona, PresenceStatus } from "@/types";
+import type { FeedAlgorithm, ModerationProfile, CompanionPersona, PresenceStatus, ContentMode } from "@/types";
 import { bus, toast } from "@/lib/events";
 
 const FEED: FeedAlgorithm[] = ["ai-curated", "chronological", "trending", "discovery", "friends", "community"];
@@ -75,11 +75,19 @@ export default function SettingsView() {
         {row("Moderation profile", "Layered local filtering. 'Unfiltered' disables Layer 1.",
           <Select size="small" value={settings.moderationProfile} onChange={(e) => setSettings({ moderationProfile: e.target.value as ModerationProfile })}>{MOD.map((m) => <MenuItem key={m} value={m}>{m}</MenuItem>)}</Select>)}
         <Divider />
-        {row("Filter adult content", "Blur explicit images (classified on-device with nsfwjs — the picture never leaves your device) and hide posts with explicit language behind a tap.",
-          <Switch checked={settings.filterNsfw} onChange={(e) => { setSettings({ filterNsfw: e.target.checked }); toast(e.target.checked ? "Adult content will be filtered on this device" : "Adult-content filter off", "info"); }} />)}
+        {row("Adult content (NSFW)", "Images detected as adult on your device (nsfwjs — the picture never leaves your device) and posts with explicit language. Screen blurs / gates them with a tap to view; Hide keeps them out of your timeline behind a tap to show.",
+          <ToggleButtonGroup exclusive size="small" value={settings.nsfwMode ?? "screen"} onChange={(_, v) => { if (v) { setSettings({ nsfwMode: v as ContentMode }); toast(v === "hide" ? "Adult content hidden from your timeline" : v === "screen" ? "Adult content screened on this device" : "Adult content shown", "info"); } }}>
+            <ToggleButton value="show">Show</ToggleButton>
+            <ToggleButton value="screen">Screen</ToggleButton>
+            <ToggleButton value="hide">Hide</ToggleButton>
+          </ToggleButtonGroup>)}
         <Divider />
-        {row("Censor cuss words", "Mask profanity inline (fuck → f**k) instead of hiding it. Works whether or not the filter above is on.",
-          <Switch checked={settings.censorProfanity} onChange={(e) => setSettings({ censorProfanity: e.target.checked })} />)}
+        {row("Foul language", "Posts containing cuss words. Screen masks them inline (fuck → f**k); Hide keeps them out of your timeline behind a tap to show.",
+          <ToggleButtonGroup exclusive size="small" value={settings.profanityMode ?? "show"} onChange={(_, v) => { if (v) { setSettings({ profanityMode: v as ContentMode }); toast(v === "hide" ? "Foul language hidden from your timeline" : v === "screen" ? "Cuss words masked (f**k)" : "Foul language shown", "info"); } }}>
+            <ToggleButton value="show">Show</ToggleButton>
+            <ToggleButton value="screen">Screen</ToggleButton>
+            <ToggleButton value="hide">Hide</ToggleButton>
+          </ToggleButtonGroup>)}
         <Divider />
         {row("Nostr posts", "Pull notes from the Nostr network (for the topics you follow) into your feed, shown as external 'NOSTR' users you can reply to and react to. Turn off to hide them.",
           <Switch checked={settings.nostrEnabled !== false} onChange={(e) => { setSettings({ nostrEnabled: e.target.checked }); if (e.target.checked) { nostrService.start().catch(() => {}); toast("Nostr posts on — streaming notes for your topics", "info"); } else { nostrService.stop(); toast("Nostr posts hidden", "info"); } }} />)}

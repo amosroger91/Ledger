@@ -4,6 +4,7 @@ import TranslateRoundedIcon from "@mui/icons-material/TranslateRounded";
 import { useStore } from "@/store/useStore";
 import { translateService, langName, probablyNotEnglish } from "@/services/translateService";
 import { renderBody, SafeImage, LinkCard, firstLink } from "@/components/feed/PostCard";
+import { nsfwService } from "@/services/nsfwService";
 import type { MediaRef } from "@/types";
 
 const LONG = 480;           // chars — collapse beyond this (or many lines)
@@ -15,8 +16,12 @@ const COLLAPSED_MAX = 200;  // px
 // messages, imeta (NIP-92) image attachments, a social-style link-preview card,
 // and a "Show more" collapse for very long messages.
 export default function MessageBody({ text = "", media }: { text?: string; media?: MediaRef[] }) {
-  const censor = useStore((s) => s.settings.censorProfanity);
+  const nsfwMode = useStore((s) => s.settings.nsfwMode);
+  const profanityMode = useStore((s) => s.settings.profanityMode);
+  const censor = profanityMode === "screen";
   const autoTranslate = useStore((s) => s.settings.autoTranslate);
+  const [revealed, setRevealed] = useState(false);
+  const hidden = !revealed && (nsfwMode === "hide" || profanityMode === "hide") && nsfwService.isAdultText(text);
   const [trans, setTrans] = useState<{ text: string; src: string } | null>(null);
   const [showOriginal, setShowOriginal] = useState(false);
   const [translating, setTranslating] = useState(false);
@@ -48,6 +53,16 @@ export default function MessageBody({ text = "", media }: { text?: string; media
   const clamp = long && !expanded;
   const fade = "linear-gradient(to bottom, #000 72%, transparent)";
   const shown = clamp ? body.slice(0, 1200) : body;   // only parse what we show (long Nostr notes can be huge)
+
+  // "Hide" mode: collapse the whole message to a slim bar with a tap to reveal.
+  if (hidden) {
+    return (
+      <Stack direction="row" alignItems="center" spacing={1}>
+        <Typography variant="body2" color="text.secondary" sx={{ flex: 1, minWidth: 0 }} noWrap>🙈 Hidden — {profanityMode === "hide" && nsfwMode !== "hide" ? "strong language" : "sensitive content"}</Typography>
+        <Button size="small" onClick={() => setRevealed(true)} sx={{ flex: "0 0 auto" }}>Show</Button>
+      </Stack>
+    );
+  }
 
   return (
     <Box>

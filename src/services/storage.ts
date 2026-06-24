@@ -219,8 +219,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   presenceStatus: "online",
   reducedMotion: false,
   showFactChecks: true,
-  filterNsfw: true,
-  censorProfanity: false,
+  nsfwMode: "screen",      // adult images blurred + explicit posts gated, tap to reveal
+  profanityMode: "show",   // cuss words shown as-is by default
   nostrEnabled: true,
   autoTranslate: true,
   showAds: true,

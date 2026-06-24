@@ -265,17 +265,29 @@ export function LinkCard({ url }: { url: string }) {
 // viewer taps "view". The classification runs locally; the image never leaves
 // the device. With the filter off it's just a plain image.
 export function SafeImage({ src, alt, sx }: { src: string; alt?: string; sx?: SxProps<Theme> }) {
-  const filter = useStore((s) => s.settings.filterNsfw);
-  const [status, setStatus] = useState<"ok" | "checking" | "nsfw">(filter ? "checking" : "ok");
+  const mode = useStore((s) => s.settings.nsfwMode);
+  const active = mode !== "show";
+  const [status, setStatus] = useState<"ok" | "checking" | "nsfw">(active ? "checking" : "ok");
   const [revealed, setRevealed] = useState(false);
   useEffect(() => {
-    if (!filter) { setStatus("ok"); return; }
+    if (!active) { setStatus("ok"); return; }
     let on = true;
     setStatus("checking");
     nsfwService.isAdultImage(src).then((bad) => { if (on) setStatus(bad ? "nsfw" : "ok"); }).catch(() => { if (on) setStatus("ok"); });
     return () => { on = false; };
-  }, [src, filter]);
-  const blurred = filter && !revealed && status !== "ok";
+  }, [src, active]);
+
+  // HIDE: never render the image while unverified or once flagged — a slim bar
+  // stands in (tap to reveal), so an adult image is never flashed pre-classification.
+  if (mode === "hide" && !revealed && status !== "ok") {
+    return (
+      <Box sx={{ mt: 1, px: 1.25, py: 0.75, borderRadius: 1.5, border: "1px solid var(--bl-line)", bgcolor: "rgba(0,0,0,0.04)", display: "flex", alignItems: "center", gap: 1 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>{status === "checking" ? "Checking image…" : "🔞 Adult image hidden"}</Typography>
+        {status === "nsfw" && <Button size="small" onClick={() => setRevealed(true)} sx={{ flex: "0 0 auto" }}>Show</Button>}
+      </Box>
+    );
+  }
+  const blurred = mode === "screen" && !revealed && status !== "ok";
   return (
     <Box sx={{ position: "relative", display: "inline-block", maxWidth: "100%", lineHeight: 0 }}>
       <Box component="img" src={src} alt={alt} loading="lazy" sx={{ ...sx, filter: blurred ? "blur(26px)" : "none", transition: "filter .25s ease" }} />
@@ -535,7 +547,11 @@ function ReplyComposer({ parentId, placeholder, autoFocus, onPosted }: { parentI
 // (reactions) and replying at any depth.
 function ReplyNode({ reply, replyMap, mePk, onReact, depth }: { reply: Post; replyMap: Map<string, Post[]>; mePk: string; onReact: (el: HTMLElement, id: string) => void; depth: number }) {
   const [showBox, setShowBox] = useState(false);
-  const censor = useStore((s) => s.settings.censorProfanity);
+  const nsfwMode = useStore((s) => s.settings.nsfwMode);
+  const profanityMode = useStore((s) => s.settings.profanityMode);
+  const [revealed, setRevealed] = useState(false);
+  const censor = profanityMode === "screen";
+  const hidden = !revealed && (nsfwMode === "hide" || profanityMode === "hide") && nsfwService.isAdultText(reply.text);
   const children = replyMap.get(reply.id) ?? [];
   return (
     <Box sx={{ mb: 1 }}>
@@ -546,10 +562,17 @@ function ReplyNode({ reply, replyMap, mePk, onReact, depth }: { reply: Post; rep
             <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>{reply.authorName}</Typography>
             <Typography variant="caption" color="text.secondary">· {relativeTime(reply.createdAt)}</Typography>
           </Stack>
+          {hidden ? (
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ my: 0.25 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }} noWrap>🙈 Hidden — {profanityMode === "hide" && nsfwMode !== "hide" ? "strong language" : "sensitive content"}</Typography>
+              <Button size="small" onClick={() => setRevealed(true)} sx={{ flex: "0 0 auto" }}>Show</Button>
+            </Stack>
+          ) : (<>
           {reply.text && <Typography component="div" variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{renderBody(reply.text, censor, reply.source === "nostr")}</Typography>}
           {reply.media?.map((m, i) => m.type === "image"
             ? <SafeImage key={i} src={m.url} sx={{ mt: 0.5, maxWidth: "100%", maxHeight: 240, borderRadius: 1.5, border: "1px solid var(--bl-line)" }} />
             : m.type === "audio" ? <AudioCard key={i} url={m.url} title={m.alt || "Audio track"} /> : null)}
+          </>)}
           <Stack direction="row" alignItems="center" spacing={1}>
             <Box sx={{ flex: 1 }}><ReactRow post={reply} me={mePk} onAdd={onReact} /></Box>
             <Button size="small" startIcon={<ReplyRoundedIcon fontSize="small" />} onClick={() => setShowBox((v) => !v)} sx={{ color: "text.secondary", flex: "0 0 auto" }}>
@@ -631,8 +654,8 @@ function Hashtags({ tags }: { tags: string[] }) {
 export default function PostCard({ post, reason, replies = [], replyMap, verdict }: { post: Post; reason?: RecommendationReason; replies?: Post[]; replyMap?: Map<string, Post[]>; verdict?: ModerationVerdict }) {
   const me = useStore((s) => s.me);
   const mePk = me?.publicKey ?? "";
-  const filterNsfw = useStore((s) => s.settings.filterNsfw);
-  const censorProfanity = useStore((s) => s.settings.censorProfanity);
+  const nsfwMode = useStore((s) => s.settings.nsfwMode);
+  const profanityMode = useStore((s) => s.settings.profanityMode);
   const nav = useNavigate();
   const canVisit = !!post.author && post.author !== "rss-bot" && post.author !== "system" && !post.author.startsWith("demo_");
   const visit = () => canVisit && nav(`/u/${post.author}`);
@@ -649,8 +672,14 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
   // On-device adult-content gate for explicit *text*. Images self-gate via
   // <SafeImage>. When either trips (and the post isn't already restricted by the
   // moderation layer) the body is hidden behind a "Show anyway" reveal.
-  const textNsfw = filterNsfw && nsfwService.isAdultText(post.text);
+  const textFlag = nsfwService.isAdultText(post.text);
+  // "Hide" (either category) keeps a flagged post out of the timeline behind a tap.
+  const mustHide = !revealed && (nsfwMode === "hide" || profanityMode === "hide") && textFlag;
+  // "Screen" (nsfw) gates the explicit body behind a "Show anyway" reveal, as before.
+  const textNsfw = nsfwMode === "screen" && textFlag;
   const gated = restricted || textNsfw;
+  // "Screen" (profanity) masks cuss words inline (f**k); hide/show leave text as-is.
+  const censorProfanity = profanityMode === "screen";
   const childMap = replyMap ?? new Map<string, Post[]>();
 
   // User-triggered fact-check: purely algorithmic, on-device. We extract the
@@ -734,6 +763,22 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
         <Stack direction="row" alignItems="center" spacing={1}>
           <Typography variant="body2" color="text.secondary" sx={{ flex: 1, minWidth: 0 }} noWrap>{icon} {txt}</Typography>
           <Button size="small" onClick={undoDismiss} sx={{ flex: "0 0 auto" }}>Undo</Button>
+        </Stack>
+      </GlassCard>
+    );
+  }
+
+  // "Hide" mode: keep the flagged post out of the timeline — just a slim bar with
+  // a tap to reveal it (which renders it in full, honoring any "screen" settings).
+  if (mustHide) {
+    const why = nsfwMode === "hide" && profanityMode !== "hide" ? "adult content"
+      : profanityMode === "hide" && nsfwMode !== "hide" ? "strong language"
+      : "adult content or strong language";
+    return (
+      <GlassCard id={`post-${post.id}`} sx={{ mb: 1.5, px: 2, py: 1, opacity: 0.82 }}>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <Typography variant="body2" color="text.secondary" sx={{ flex: 1, minWidth: 0 }} noWrap>🙈 Hidden — may contain {why}</Typography>
+          <Button size="small" onClick={() => setRevealed(true)} sx={{ flex: "0 0 auto" }}>Show</Button>
         </Stack>
       </GlassCard>
     );

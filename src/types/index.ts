@@ -290,6 +290,11 @@ export interface CompanionMessage {
   at: number;
 }
 
+/** How a content category (NSFW / foul language) is handled in the timeline:
+ *  show it, screen it (blur/mask with a tap to reveal), or hide it entirely
+ *  (out of the timeline behind a "Show" tap). */
+export type ContentMode = "show" | "screen" | "hide";
+
 export interface AppSettings {
   feedAlgorithm: FeedAlgorithm;
   moderationProfile: ModerationProfile;
@@ -301,8 +306,10 @@ export interface AppSettings {
   presenceStatus: PresenceStatus;
   reducedMotion: boolean;
   showFactChecks: boolean;      // surface PolitiFact fact-check cards under RSS posts
-  filterNsfw: boolean;          // hide adult images (on-device nsfwjs) & gate explicit posts
-  censorProfanity: boolean;     // mask cuss words inline (f**k) instead of hiding the post
+  nsfwMode: ContentMode;        // adult images (on-device nsfwjs) + explicit posts: show / screen (blur+reveal) / hide (out of timeline, tap to show)
+  profanityMode: ContentMode;   // cuss words / foul language: show / screen (mask f**k inline) / hide (out of timeline, tap to show)
+  filterNsfw?: boolean;         // @deprecated — migrated to nsfwMode
+  censorProfanity?: boolean;    // @deprecated — migrated to profanityMode
   nostrEnabled: boolean;        // pull Nostr notes into the feed + publish replies/reactions
   autoTranslate: boolean;       // auto-translate non-English feed posts to English (on by default)
   autoTranslateInit?: boolean;  // one-time migration marker for the default-on flip
