@@ -89,6 +89,9 @@ export default function SettingsView() {
             <ToggleButton value="hide">Hide</ToggleButton>
           </ToggleButtonGroup>)}
         <Divider />
+        {row("Hide spam, scams & bots", "On-device AI removes posts it classifies as spam, scams, or automated bot content — filtered out of your timeline entirely, never shown (not hidden-behind-a-tap). Runs a small model (Transformers.js) that downloads once and works fully on your device; off by default.",
+          <Switch checked={settings.hideSpam === true} onChange={(e) => { setSettings({ hideSpam: e.target.checked }); toast(e.target.checked ? "AI spam filter on — spam, scams & bots will be removed (the model loads in the background)" : "AI spam filter off", "info"); }} />)}
+        <Divider />
         {row("Nostr posts", "Pull notes from the Nostr network (for the topics you follow) into your feed, shown as external 'NOSTR' users you can reply to and react to. Turn off to hide them.",
           <Switch checked={settings.nostrEnabled !== false} onChange={(e) => { setSettings({ nostrEnabled: e.target.checked }); if (e.target.checked) { nostrService.start().catch(() => {}); toast("Nostr posts on — streaming notes for your topics", "info"); } else { nostrService.stop(); toast("Nostr posts hidden", "info"); } }} />)}
         <Divider />

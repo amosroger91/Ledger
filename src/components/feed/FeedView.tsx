@@ -184,8 +184,8 @@ export default function FeedView() {
   // the background reconcile below.
   const generateFeed = useCallback(async () => {
     const cfg = await rssService.config();
-    return feedService.generate(algo, { moderation: settings.moderationProfile, subscribedTopics: cfg.topics, mutedTopics: cfg.mutedTopics, mutedFeeds: cfg.mutedFeeds, includeNostr: settings.nostrEnabled !== false, community: community ?? undefined, limit: 400 });
-  }, [algo, settings.moderationProfile, settings.nostrEnabled, community]);
+    return feedService.generate(algo, { moderation: settings.moderationProfile, subscribedTopics: cfg.topics, mutedTopics: cfg.mutedTopics, mutedFeeds: cfg.mutedFeeds, includeNostr: settings.nostrEnabled !== false, community: community ?? undefined, limit: 400, hideJunk: settings.hideSpam === true });
+  }, [algo, settings.moderationProfile, settings.nostrEnabled, settings.hideSpam, community]);
 
   // Latest displayed posts + the held ranking, for the async background reconcile
   // (refs avoid stale closures across awaits).

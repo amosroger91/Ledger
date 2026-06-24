@@ -224,4 +224,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   nostrEnabled: true,
   autoTranslate: true,
   showAds: true,
+  hideSpam: false,
 };

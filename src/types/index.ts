@@ -314,4 +314,5 @@ export interface AppSettings {
   autoTranslate: boolean;       // auto-translate non-English feed posts to English (on by default)
   autoTranslateInit?: boolean;  // one-time migration marker for the default-on flip
   showAds: boolean;             // show the occasional A-ADS slot in the feed — how the project stays free (on by default)
+  hideSpam: boolean;            // on-device AI (Transformers.js) removes spam / scam / bot posts from the timeline (off by default)
 }

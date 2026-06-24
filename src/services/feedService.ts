@@ -10,6 +10,7 @@ import type {
 import { storage } from "./storage";
 import { identityService } from "./identityService";
 import { moderationService } from "./moderationService";
+import { spamService } from "./spamService";
 import { reputationService } from "./reputationService";
 import { profileService } from "./profileService";
 import { trustService } from "./trustService";
@@ -253,7 +254,7 @@ class FeedService {
   /* ---------- feed generation ---------- */
   async generate(
     algorithm: FeedAlgorithm,
-    opts: { moderation: ModerationProfile; friends?: string[]; community?: string; subscribedTopics?: string[]; mutedTopics?: string[]; mutedFeeds?: string[]; includeNostr?: boolean; limit?: number; values?: CommunityValues } = { moderation: "discovery" },
+    opts: { moderation: ModerationProfile; friends?: string[]; community?: string; subscribedTopics?: string[]; mutedTopics?: string[]; mutedFeeds?: string[]; includeNostr?: boolean; limit?: number; values?: CommunityValues; hideJunk?: boolean } = { moderation: "discovery" },
   ): Promise<{ posts: Post[]; reasons: Map<string, RecommendationReason>; verdicts: Map<string, ModerationVerdict>; replies: Map<string, Post[]> }> {
     const _t = (typeof performance !== "undefined" ? performance.now() : Date.now());
     // Bounded working set: rank only the newest window (storage.recentPosts keeps
@@ -301,6 +302,16 @@ class FeedService {
       verdicts.set(p.id, v);
       return v.action !== "hide";
     });
+
+    // On-device AI spam/scam/bot filter (opt-in). Flagged posts are removed from
+    // the feed entirely — never rendered. Classification is async + cached: a fast
+    // keyword pre-filter drops blatant scams now; the Transformers.js classifier
+    // catches the rest in the background and emits feed:updated to re-filter. Your
+    // own posts are never dropped.
+    if (opts.hideJunk) {
+      spamService.classify(posts);
+      posts = posts.filter((p) => p.author === meId || !spamService.isJunk(p.id, p.text ?? ""));
+    }
 
     // Personal opt-out: hide RSS-Bot / network-feed stories from topics you've
     // muted in Topics. Applies to EVERY algorithm — it's your "show/hide" over
