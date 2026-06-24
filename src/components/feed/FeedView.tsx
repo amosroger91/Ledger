@@ -342,20 +342,22 @@ export default function FeedView() {
         )}
         <Composer community={community ?? undefined} />
 
-        {/* Controls: Tabs + Filter Chips + Refresh (keyword search lives in the top bar) */}
-        <Stack spacing={1} sx={{ mb: 2 }}>
-          <Stack direction="row" alignItems="center" spacing={1} sx={{ flexWrap: "wrap", gap: { xs: 1, md: 1 } }}>
-            <Box sx={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', mr: 1, '& .MuiToggleButton-root': { whiteSpace: 'nowrap' } }}>
-              <ToggleButtonGroup
-                exclusive size="small" value={algo}
-                onChange={(_, v) => v && setSettings({ feedAlgorithm: v })}
-                sx={{ display: 'inline-flex', flexWrap: 'nowrap', '& .MuiToggleButton-root': { border: '1px solid rgba(58,155,240,0.18)', color: 'text.secondary', fontSize: { xs: '0.72rem', sm: '0.875rem' }, px: { xs: 0.5, sm: 1 }, '&.Mui-selected': { background: 'linear-gradient(135deg,#3f97ff,#1668e0)', color: '#ffffff' } } }}
-              >
-                {ALGOS.map((a) => <ToggleButton key={a.id} value={a.id}>{a.label}</ToggleButton>)}
-              </ToggleButtonGroup>
-            </Box>
+        {/* Controls — feed algorithm tabs on one row, content filters + refresh on the
+            next, so they never cram together on a phone. Each row scrolls horizontally
+            only if its own content overflows (no nested side-by-side scroll areas). */}
+        <Stack direction={{ xs: "column", md: "row" }} spacing={1} alignItems={{ md: "center" }} sx={{ mb: 2 }}>
+          <Box sx={{ overflowX: "auto", WebkitOverflowScrolling: "touch", flexShrink: 0, mx: -0.5, px: 0.5, "& .MuiToggleButton-root": { whiteSpace: "nowrap" } }}>
+            <ToggleButtonGroup
+              exclusive size="small" value={algo}
+              onChange={(_, v) => v && setSettings({ feedAlgorithm: v })}
+              sx={{ display: "inline-flex", flexWrap: "nowrap", "& .MuiToggleButton-root": { border: "1px solid rgba(58,155,240,0.18)", color: "text.secondary", fontSize: { xs: "0.78rem", sm: "0.875rem" }, px: { xs: 1, sm: 1.25 }, py: 0.45, "&.Mui-selected": { background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#ffffff" } } }}
+            >
+              {ALGOS.map((a) => <ToggleButton key={a.id} value={a.id}>{a.label}</ToggleButton>)}
+            </ToggleButtonGroup>
+          </Box>
 
-            <Box sx={{ display: 'flex', overflowX: 'auto', WebkitOverflowScrolling: 'touch', gap: 0.5, ml: 0.5, px: 0.5, '& > *': { flex: '0 0 auto' } }}>
+          <Stack direction="row" alignItems="center" spacing={1} sx={{ flex: { md: 1 }, minWidth: 0 }}>
+            <Box sx={{ display: "flex", overflowX: "auto", WebkitOverflowScrolling: "touch", gap: 0.5, flex: 1, minWidth: 0, py: 0.25, "& > *": { flex: "0 0 auto" } }}>
               {FILTERS.map((f) => (
                 <Chip key={f.id} label={f.label} size="small" onClick={() => setFilter(f.id)}
                   variant={filter === f.id ? "filled" : "outlined"}
@@ -364,10 +366,10 @@ export default function FeedView() {
                     : { borderColor: "rgba(58,155,240,0.3)", color: "text.secondary" }} />
               ))}
             </Box>
-
-            <Box sx={{ flex: 1 }} />
-            <Button size="small" variant="outlined" startIcon={<RefreshRoundedIcon sx={{ animation: refreshing ? "zbspin 1s linear infinite" : "none", "@keyframes zbspin": { to: { transform: "rotate(360deg)" } } }} />} onClick={doRefresh} disabled={refreshing} sx={{ textTransform: "none", fontWeight: 600, flex: { xs: "1 1 auto", sm: "0 0 auto" }, minWidth: { xs: 0, sm: "auto" }, fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
-              {refreshing ? "Refreshing…" : "Refresh"}
+            <Button size="small" variant="outlined" onClick={doRefresh} disabled={refreshing} aria-label="Refresh"
+              sx={{ flexShrink: 0, textTransform: "none", fontWeight: 600, minWidth: { xs: 38, sm: "auto" }, px: { xs: 0.75, sm: 1.25 } }}>
+              <RefreshRoundedIcon sx={{ fontSize: 18, animation: refreshing ? "zbspin 1s linear infinite" : "none", "@keyframes zbspin": { to: { transform: "rotate(360deg)" } } }} />
+              <Box component="span" sx={{ display: { xs: "none", sm: "inline" }, ml: 0.5 }}>{refreshing ? "Refreshing…" : "Refresh"}</Box>
             </Button>
           </Stack>
         </Stack>
