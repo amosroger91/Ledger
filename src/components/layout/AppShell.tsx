@@ -1,7 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Box, Stack, Typography, Tooltip, IconButton, Chip, Avatar, Divider, CircularProgress, Badge, Popover, Button, useMediaQuery } from "@mui/material";
+import { Box, Stack, Typography, Tooltip, IconButton, Chip, Avatar, Divider, CircularProgress, Badge, Popover, Button, Drawer, useMediaQuery } from "@mui/material";
 import type { Theme } from "@mui/material";
 import NotificationsRoundedIcon from "@mui/icons-material/NotificationsRounded";
+import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import { useNavigate, useLocation } from "react-router-dom";
 import { bus } from "@/lib/events";
 import { companionService } from "@/services/companionService";
@@ -70,7 +71,7 @@ function AlertsBell() {
         </IconButton>
       </Tooltip>
       <Popover open={!!anchor} anchorEl={anchor} onClose={() => setAnchor(null)} anchorOrigin={{ vertical: "bottom", horizontal: "right" }} transformOrigin={{ vertical: "top", horizontal: "right" }}>
-        <Box sx={{ width: 340, maxHeight: 440, display: "flex", flexDirection: "column" }}>
+        <Box sx={{ width: { xs: 300, sm: 340 }, maxWidth: "92vw", maxHeight: 440, display: "flex", flexDirection: "column" }}>
           <Stack direction="row" alignItems="center" sx={{ px: 1.5, py: 1, borderBottom: "1px solid var(--bl-line)" }}>
             <Typography sx={{ fontWeight: 800, flex: 1 }}>Alerts</Typography>
             {alerts.length > 0 && <Button size="small" onClick={() => { alertsService.clear(); }}>Clear</Button>}
@@ -106,12 +107,12 @@ function ModelStatusChip() {
     return (
       <Tooltip title="Your private on-device AI is downloading — it's cached after the first time">
         <Chip size="small" icon={<CircularProgress size={12} sx={{ color: "#1668e0 !important", ml: 0.5 }} variant={st.progress ? "determinate" : "indeterminate"} value={pct} />}
-          label={`AI ${pct}%`} sx={{ bgcolor: "rgba(255,255,255,0.92)", color: "#1668e0", "& .MuiChip-label": { fontWeight: 700 } }} />
+          label={`AI ${pct}%`} sx={{ display: { xs: "none", sm: "inline-flex" }, bgcolor: "rgba(255,255,255,0.92)", color: "#1668e0", "& .MuiChip-label": { fontWeight: 700 } }} />
       </Tooltip>
     );
   }
   if (st.state === "ready" && !hideReady) {
-    return <Tooltip title="On-device AI loaded — runs privately in your browser"><Chip size="small" label="AI ready" sx={{ bgcolor: "rgba(84,201,90,0.92)", color: "#fff", "& .MuiChip-label": { fontWeight: 700 } }} /></Tooltip>;
+    return <Tooltip title="On-device AI loaded — runs privately in your browser"><Chip size="small" label="AI ready" sx={{ display: { xs: "none", sm: "inline-flex" }, bgcolor: "rgba(84,201,90,0.92)", color: "#fff", "& .MuiChip-label": { fontWeight: 700 } }} /></Tooltip>;
   }
   return null;
 }
@@ -122,103 +123,112 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const me = useStore((s) => s.me);
   const onlineCount = useStore((s) => s.onlineCount);
   const status = useStore((s) => s.settings.presenceStatus);
-  const compact = useMediaQuery((theme: Theme) => theme.breakpoints.down("md"));
+  const compact = useMediaQuery((theme: Theme) => theme.breakpoints.down("md")); // ≤ md → icon-only rail
+  const phone = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));   // ≤ sm → rail moves into a drawer
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Logo click → go to the home feed AND scroll it to the very top. rAF runs the
-  // scroll after the route commits; #app-scroll is the persistent scroll container.
+  // Close the drawer whenever the route changes (e.g. a nav tap).
+  useEffect(() => { setDrawerOpen(false); }, [pathname]);
+
+  // Logo click → go to the home feed AND scroll it to the very top.
   const goHome = () => {
     nav("/");
-    // Instant + synchronous: works mid-route-change and even when the tab is
-    // backgrounded (requestAnimationFrame / smooth-scroll get paused then).
     document.getElementById("app-scroll")?.scrollTo({ top: 0 });
-    // Also kick a feed refresh. setTimeout(0) so a freshly-mounted FeedView (when
-    // arriving from another page) has subscribed before the event fires.
     setTimeout(() => bus.emit("feed:refresh", undefined), 0);
   };
 
+  // Nav rail contents — shared by the desktop/tablet rail and the phone drawer.
+  // `expanded` shows full labels; collapsed (the ≤md rail) is icon-only.
+  const renderNav = (expanded: boolean) => (
+    <>
+      <Stack direction="row" alignItems="center" spacing={1} onClick={goHome} role="button" aria-label="Go to home feed and scroll to top"
+        sx={{ px: { xs: 0.5, sm: 1 }, py: 1.5, cursor: "pointer", borderRadius: 2, "&:hover": { opacity: 0.85 } }}>
+        <Box component="img" src={`${import.meta.env.BASE_URL}logo.png`} alt="Ledger" sx={{ width: 30, height: 30, borderRadius: "8px", display: "block", boxShadow: "0 0 18px rgba(58,155,240,.35)", flexShrink: 0 }} />
+        {expanded && <Typography variant="h6" sx={{ background: "linear-gradient(90deg,#3f97ff,#1668e0)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>Ledger</Typography>}
+      </Stack>
+
+      {NAV.map((item) => {
+        const active = pathname === item.to || (item.to === "/messages" && pathname.startsWith("/chatroom"));
+        return (
+          <Tooltip key={item.to} title={expanded ? "" : item.label} placement="right">
+            <Box
+              onClick={() => nav(item.to)}
+              sx={{
+                display: "flex", alignItems: "center", gap: 1.5, px: { xs: 0.75, sm: 1.5 }, py: 1.1, borderRadius: 2, cursor: "pointer",
+                color: active ? "#ffffff" : "text.secondary",
+                background: active ? "linear-gradient(135deg,#3f97ff,#1668e0)" : "transparent",
+                boxShadow: active ? "0 6px 18px rgba(58,155,240,.3)" : "none",
+                "&:hover": { background: active ? undefined : "rgba(58,155,240,0.08)", color: active ? undefined : "text.primary" },
+                justifyContent: expanded ? "flex-start" : "center",
+                minHeight: "48px",
+              }}
+            >
+              {item.icon}
+              {expanded && <Typography sx={{ fontWeight: 700 }}>{item.label}</Typography>}
+            </Box>
+          </Tooltip>
+        );
+      })}
+
+      <Box sx={{ flex: 1 }} />
+      <InstallButton compact={!expanded} />
+      <Tooltip title={expanded ? "" : "Support the project"} placement="right">
+        <Box
+          component="a" href={`${import.meta.env.BASE_URL}support.html`} target="_blank" rel="noopener noreferrer"
+          sx={{
+            display: "flex", alignItems: "center", gap: 1.5, px: { xs: 0.75, sm: 1.5 }, py: 1.1, borderRadius: 2, cursor: "pointer",
+            textDecoration: "none", color: "#5a3a12",
+            background: "linear-gradient(135deg,#ffe08a,#ffce5a)", border: "1px solid #f6b73c",
+            boxShadow: "0 4px 12px rgba(246,183,60,.3)", mb: 0.5, minHeight: "48px",
+            "&:hover": { background: "linear-gradient(135deg,#ffe9a8,#ffd877)" },
+            justifyContent: expanded ? "flex-start" : "center",
+          }}
+        >
+          <LocalCafeRoundedIcon fontSize={expanded ? "medium" : "small"} />
+          {expanded && <Typography sx={{ fontWeight: 800 }}>Support the project</Typography>}
+        </Box>
+      </Tooltip>
+      {expanded && <Divider sx={{ my: 1 }} />}
+      {expanded && <PresenceList />}
+    </>
+  );
+
   return (
     <Box sx={{ position: "relative", zIndex: 1, height: "100vh", overflow: "hidden", p: { xs: 0, sm: 1, md: 2 } }}>
-    <Box sx={{ display: "grid", gridTemplateColumns: compact ? "56px 1fr" : "230px 1fr", height: { xs: "100vh", md: "calc(100vh - 32px)" }, bgcolor: "var(--bl-face)", border: "1px solid var(--bl-edge-frame)", borderRadius: { xs: 0, md: "8px" }, overflow: "hidden", boxShadow: "0 12px 44px rgba(0,0,0,0.4)" }}>
-      {/* nav rail — full height, stays put while the content column scrolls */}
-      <Box sx={{ borderRight: "1px solid var(--bl-line)", p: { xs: 0.75, sm: 1 }, display: "flex", flexDirection: "column", gap: 0.25, height: "100%", overflowY: "auto", background: "linear-gradient(180deg, var(--bl-tasks-1), var(--bl-tasks-2))" }}>
-        <Stack direction="row" alignItems="center" spacing={1} onClick={goHome} role="button" aria-label="Go to home feed and scroll to top"
-          sx={{ px: { xs: 0.5, sm: 1 }, py: 1.5, cursor: "pointer", borderRadius: 2, "&:hover": { opacity: 0.85 } }}>
-          <Box component="img" src={`${import.meta.env.BASE_URL}logo.png`} alt="Ledger" sx={{ width: { xs: 28, sm: 30 }, height: { xs: 28, sm: 30 }, borderRadius: "8px", display: "block", boxShadow: "0 0 18px rgba(58,155,240,.35)", flexShrink: 0 }} />
-          {!compact && <Typography variant="h6" sx={{ background: "linear-gradient(90deg,#3f97ff,#1668e0)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>Ledger</Typography>}
-        </Stack>
+    <Box sx={{ display: "grid", gridTemplateColumns: phone ? "1fr" : compact ? "56px 1fr" : "230px 1fr", height: { xs: "100vh", md: "calc(100vh - 32px)" }, bgcolor: "var(--bl-face)", border: "1px solid var(--bl-edge-frame)", borderRadius: { xs: 0, md: "8px" }, overflow: "hidden", boxShadow: "0 12px 44px rgba(0,0,0,0.4)" }}>
+      {/* nav rail — full height on tablet/desktop; on phones it lives in a slide-out drawer */}
+      {!phone && (
+        <Box sx={{ borderRight: "1px solid var(--bl-line)", p: { xs: 0.75, sm: 1 }, display: "flex", flexDirection: "column", gap: 0.25, height: "100%", overflowY: "auto", background: "linear-gradient(180deg, var(--bl-tasks-1), var(--bl-tasks-2))" }}>
+          {renderNav(!compact)}
+        </Box>
+      )}
+      {phone && (
+        <Drawer anchor="left" open={drawerOpen} onClose={() => setDrawerOpen(false)}
+          PaperProps={{ sx: { width: 250, maxWidth: "82vw", p: 1, display: "flex", flexDirection: "column", gap: 0.25, background: "linear-gradient(180deg, var(--bl-tasks-1), var(--bl-tasks-2))" } }}>
+          {renderNav(true)}
+        </Drawer>
+      )}
 
-        {NAV.map((item) => {
-          // /chatroom is the "Live Rooms" tab of the combined Town Square page.
-          const active = pathname === item.to || (item.to === "/messages" && pathname.startsWith("/chatroom"));
-          return (
-            <Tooltip key={item.to} title={compact ? item.label : ""} placement="right">
-              <Box
-                onClick={() => nav(item.to)}
-                sx={{
-                  display: "flex", alignItems: "center", gap: 1.5, px: { xs: 0.5, sm: 1.5 }, py: 1.1, borderRadius: 2, cursor: "pointer",
-                  color: active ? "#ffffff" : "text.secondary",
-                  background: active ? "linear-gradient(135deg,#3f97ff,#1668e0)" : "transparent",
-                  boxShadow: active ? "0 6px 18px rgba(58,155,240,.3)" : "none",
-                  "&:hover": { background: active ? undefined : "rgba(58,155,240,0.08)", color: active ? undefined : "text.primary" },
-                  justifyContent: compact ? "center" : "flex-start",
-                  minHeight: "48px",
-                }}
-              >
-                {item.icon}
-                {!compact && <Typography sx={{ fontWeight: 700 }}>{item.label}</Typography>}
-              </Box>
-            </Tooltip>
-          );
-        })}
-
-        <Box sx={{ flex: 1 }} />
-
-        {/* Install as a PWA (Android prompt / iOS instructions); self-hides when
-            already installed or unsupported. */}
-        <InstallButton compact={compact} />
-
-        {/* Support — Ledger stays free, open-source & uncensored; the only
-            funding is voluntary support for the developer. */}
-        <Tooltip title={compact ? "Support the project" : ""} placement="right">
-          <Box
-            component="a" href={`${import.meta.env.BASE_URL}support.html`} target="_blank" rel="noopener noreferrer"
-            sx={{
-              display: "flex", alignItems: "center", gap: 1.5, px: { xs: 0.5, sm: 1.5 }, py: 1.1, borderRadius: 2, cursor: "pointer",
-              textDecoration: "none", color: "#5a3a12",
-              background: "linear-gradient(135deg,#ffe08a,#ffce5a)", border: "1px solid #f6b73c",
-              boxShadow: "0 4px 12px rgba(246,183,60,.3)", mb: 0.5, minHeight: "48px",
-              "&:hover": { background: "linear-gradient(135deg,#ffe9a8,#ffd877)" },
-              justifyContent: compact ? "center" : "flex-start",
-            }}
-          >
-            <LocalCafeRoundedIcon fontSize={compact ? "small" : "medium"} />
-            {!compact && <Typography sx={{ fontWeight: 800 }}>Support the project</Typography>}
-          </Box>
-        </Tooltip>
-
-        {!compact && <Divider sx={{ my: 1 }} />}
-        {!compact && <PresenceList />}
-      </Box>
-
-      {/* main column — minHeight:0 lets the scrollable content child actually
-          shrink-to-fit and scroll instead of overflowing the clipped grid. */}
+      {/* main column — minWidth/minHeight:0 lets the scrollable child shrink-to-fit & scroll. */}
       <Box sx={{ display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, overflow: "hidden", bgcolor: "var(--bl-face)" }}>
         {/* Luna title bar */}
-        <Stack direction="row" alignItems="center" spacing={1.5} sx={{ px: 2, py: 1, position: "sticky", top: 0, zIndex: 5, color: "#fff", borderBottom: "1px solid var(--bl-title-edge)", background: "var(--bl-gloss-title), linear-gradient(180deg, var(--bl-title-hi), var(--bl-title-low))", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)" }}>
+        <Stack direction="row" alignItems="center" spacing={{ xs: 0.75, sm: 1.5 }} sx={{ px: { xs: 1, sm: 2 }, py: 1, position: "sticky", top: 0, zIndex: 5, color: "#fff", borderBottom: "1px solid var(--bl-title-edge)", background: "var(--bl-gloss-title), linear-gradient(180deg, var(--bl-title-hi), var(--bl-title-low))", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)" }}>
+          {phone && <IconButton onClick={() => setDrawerOpen(true)} aria-label="Open menu" sx={{ color: "#fff", ml: -0.75 }}><MenuRoundedIcon /></IconButton>}
+          {phone && <Box component="img" src={`${import.meta.env.BASE_URL}logo.png`} alt="Ledger" onClick={goHome} sx={{ width: 26, height: 26, borderRadius: "7px", cursor: "pointer", flexShrink: 0 }} />}
           <Typography variant="h6" sx={{ color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.4)", display: { xs: "none", md: "block" }, whiteSpace: "nowrap", flex: { md: "0 0 auto" } }}>{NAV.find((n) => n.to === pathname)?.label ?? (pathname.startsWith("/chatroom") ? "Town Square" : "Ledger")}</Typography>
           <Box sx={{ flex: 1, display: "flex", justifyContent: compact ? "flex-end" : "flex-start" }}><GlobalSearch compact={compact} /></Box>
           <ModelStatusChip />
           <AlertsBell />
-          <Chip size="small" label={`${onlineCount} online`} sx={{ bgcolor: "rgba(255,255,255,0.92)", color: "var(--bl-green-600)", border: "none", "& .MuiChip-label": { fontWeight: 700 } }} icon={<Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#4ca325", ml: 1 }} />} />
+          <Chip size="small" label={`${onlineCount} online`} sx={{ display: { xs: "none", sm: "inline-flex" }, bgcolor: "rgba(255,255,255,0.92)", color: "var(--bl-green-600)", border: "none", "& .MuiChip-label": { fontWeight: 700 } }} icon={<Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#4ca325", ml: 1 }} />} />
           <Tooltip title={me?.username ?? ""}>
-            <Box sx={{ position: "relative", cursor: "pointer" }} onClick={() => nav("/profile")}>
+            <Box sx={{ position: "relative", cursor: "pointer", flexShrink: 0 }} onClick={() => nav("/profile")}>
               <UserAvatar pk={me?.publicKey ?? ""} name={me?.username ?? "?"} avatar={me?.avatar} size={32} />
               <Box sx={{ position: "absolute", right: -1, bottom: -1, width: 11, height: 11, borderRadius: "50%", bgcolor: STATUS_COLOR[status], border: "2px solid #fff" }} />
             </Box>
           </Tooltip>
         </Stack>
 
-        <Box id="app-scroll" sx={{ flex: 1, minHeight: 0, overflowY: "auto", p: { xs: 1.5, md: 3 }, pb: 12 }}>{children}</Box>
+        <Box id="app-scroll" sx={{ flex: 1, minHeight: 0, overflowY: "auto", p: { xs: 1.25, sm: 1.5, md: 3 }, pb: 12 }}>{children}</Box>
       </Box>
     </Box>
     </Box>
