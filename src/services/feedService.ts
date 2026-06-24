@@ -11,6 +11,7 @@ import { storage } from "./storage";
 import { identityService } from "./identityService";
 import { moderationService } from "./moderationService";
 import { spamService } from "./spamService";
+import { nsfwService } from "./nsfwService";
 import { reputationService } from "./reputationService";
 import { profileService } from "./profileService";
 import { trustService } from "./trustService";
@@ -254,7 +255,7 @@ class FeedService {
   /* ---------- feed generation ---------- */
   async generate(
     algorithm: FeedAlgorithm,
-    opts: { moderation: ModerationProfile; friends?: string[]; community?: string; subscribedTopics?: string[]; mutedTopics?: string[]; mutedFeeds?: string[]; includeNostr?: boolean; limit?: number; values?: CommunityValues; hideJunk?: boolean } = { moderation: "discovery" },
+    opts: { moderation: ModerationProfile; friends?: string[]; community?: string; subscribedTopics?: string[]; mutedTopics?: string[]; mutedFeeds?: string[]; includeNostr?: boolean; limit?: number; values?: CommunityValues; hideJunk?: boolean; hideFlaggedText?: boolean } = { moderation: "discovery" },
   ): Promise<{ posts: Post[]; reasons: Map<string, RecommendationReason>; verdicts: Map<string, ModerationVerdict>; replies: Map<string, Post[]> }> {
     const _t = (typeof performance !== "undefined" ? performance.now() : Date.now());
     // Bounded working set: rank only the newest window (storage.recentPosts keeps
@@ -311,6 +312,12 @@ class FeedService {
     if (opts.hideJunk) {
       spamService.classify(posts);
       posts = posts.filter((p) => p.author === meId || !spamService.isJunk(p.id, p.text ?? ""));
+    }
+
+    // "Hide" mode for NSFW / foul language: drop flagged-text posts from the feed
+    // entirely — no placeholder, never rendered (same on-device text matcher).
+    if (opts.hideFlaggedText) {
+      posts = posts.filter((p) => !nsfwService.isAdultText(p.text ?? ""));
     }
 
     // Personal opt-out: hide RSS-Bot / network-feed stories from topics you've

@@ -277,16 +277,10 @@ export function SafeImage({ src, alt, sx }: { src: string; alt?: string; sx?: Sx
     return () => { on = false; };
   }, [src, active]);
 
-  // HIDE: never render the image while unverified or once flagged — a slim bar
-  // stands in (tap to reveal), so an adult image is never flashed pre-classification.
-  if (mode === "hide" && !revealed && status !== "ok") {
-    return (
-      <Box sx={{ mt: 1, px: 1.25, py: 0.75, borderRadius: 1.5, border: "1px solid var(--bl-line)", bgcolor: "rgba(0,0,0,0.04)", display: "flex", alignItems: "center", gap: 1 }}>
-        <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>{status === "checking" ? "Checking image…" : "🔞 Adult image hidden"}</Typography>
-        {status === "nsfw" && <Button size="small" onClick={() => setRevealed(true)} sx={{ flex: "0 0 auto" }}>Show</Button>}
-      </Box>
-    );
-  }
+  // HIDE: never render the image — nothing at all, no placeholder. While the
+  // on-device check is pending we also render nothing, so an adult image is never
+  // flashed before it's classified.
+  if (mode === "hide" && status !== "ok") return null;
   const blurred = mode === "screen" && !revealed && status !== "ok";
   return (
     <Box sx={{ position: "relative", display: "inline-block", maxWidth: "100%", lineHeight: 0 }}>
@@ -549,10 +543,10 @@ function ReplyNode({ reply, replyMap, mePk, onReact, depth }: { reply: Post; rep
   const [showBox, setShowBox] = useState(false);
   const nsfwMode = useStore((s) => s.settings.nsfwMode);
   const profanityMode = useStore((s) => s.settings.profanityMode);
-  const [revealed, setRevealed] = useState(false);
   const censor = profanityMode === "screen";
-  const hidden = !revealed && (nsfwMode === "hide" || profanityMode === "hide") && nsfwService.isAdultText(reply.text);
   const children = replyMap.get(reply.id) ?? [];
+  // "Hide" mode: drop the reply entirely — no placeholder.
+  if ((nsfwMode === "hide" || profanityMode === "hide") && nsfwService.isAdultText(reply.text)) return null;
   return (
     <Box sx={{ mb: 1 }}>
       <Stack direction="row" spacing={1}>
@@ -562,17 +556,10 @@ function ReplyNode({ reply, replyMap, mePk, onReact, depth }: { reply: Post; rep
             <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>{reply.authorName}</Typography>
             <Typography variant="caption" color="text.secondary">· {relativeTime(reply.createdAt)}</Typography>
           </Stack>
-          {hidden ? (
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ my: 0.25 }}>
-              <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }} noWrap>🙈 Hidden — {profanityMode === "hide" && nsfwMode !== "hide" ? "strong language" : "sensitive content"}</Typography>
-              <Button size="small" onClick={() => setRevealed(true)} sx={{ flex: "0 0 auto" }}>Show</Button>
-            </Stack>
-          ) : (<>
           {reply.text && <Typography component="div" variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{renderBody(reply.text, censor, reply.source === "nostr")}</Typography>}
           {reply.media?.map((m, i) => m.type === "image"
             ? <SafeImage key={i} src={m.url} sx={{ mt: 0.5, maxWidth: "100%", maxHeight: 240, borderRadius: 1.5, border: "1px solid var(--bl-line)" }} />
             : m.type === "audio" ? <AudioCard key={i} url={m.url} title={m.alt || "Audio track"} /> : null)}
-          </>)}
           <Stack direction="row" alignItems="center" spacing={1}>
             <Box sx={{ flex: 1 }}><ReactRow post={reply} me={mePk} onAdd={onReact} /></Box>
             <Button size="small" startIcon={<ReplyRoundedIcon fontSize="small" />} onClick={() => setShowBox((v) => !v)} sx={{ color: "text.secondary", flex: "0 0 auto" }}>
@@ -673,9 +660,8 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
   // <SafeImage>. When either trips (and the post isn't already restricted by the
   // moderation layer) the body is hidden behind a "Show anyway" reveal.
   const textFlag = nsfwService.isAdultText(post.text);
-  // "Hide" (either category) keeps a flagged post out of the timeline behind a tap.
-  const mustHide = !revealed && (nsfwMode === "hide" || profanityMode === "hide") && textFlag;
-  // "Screen" (nsfw) gates the explicit body behind a "Show anyway" reveal, as before.
+  // "Hide" mode removes flagged posts from the feed entirely (in feedService) — no
+  // placeholder here. "Screen" (nsfw) gates the explicit body behind a reveal.
   const textNsfw = nsfwMode === "screen" && textFlag;
   const gated = restricted || textNsfw;
   // "Screen" (profanity) masks cuss words inline (f**k); hide/show leave text as-is.
@@ -763,22 +749,6 @@ export default function PostCard({ post, reason, replies = [], replyMap, verdict
         <Stack direction="row" alignItems="center" spacing={1}>
           <Typography variant="body2" color="text.secondary" sx={{ flex: 1, minWidth: 0 }} noWrap>{icon} {txt}</Typography>
           <Button size="small" onClick={undoDismiss} sx={{ flex: "0 0 auto" }}>Undo</Button>
-        </Stack>
-      </GlassCard>
-    );
-  }
-
-  // "Hide" mode: keep the flagged post out of the timeline — just a slim bar with
-  // a tap to reveal it (which renders it in full, honoring any "screen" settings).
-  if (mustHide) {
-    const why = nsfwMode === "hide" && profanityMode !== "hide" ? "adult content"
-      : profanityMode === "hide" && nsfwMode !== "hide" ? "strong language"
-      : "adult content or strong language";
-    return (
-      <GlassCard id={`post-${post.id}`} sx={{ mb: 1.5, px: 2, py: 1, opacity: 0.82 }}>
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <Typography variant="body2" color="text.secondary" sx={{ flex: 1, minWidth: 0 }} noWrap>🙈 Hidden — may contain {why}</Typography>
-          <Button size="small" onClick={() => setRevealed(true)} sx={{ flex: "0 0 auto" }}>Show</Button>
         </Stack>
       </GlassCard>
     );

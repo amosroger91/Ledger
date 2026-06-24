@@ -20,8 +20,7 @@ export default function MessageBody({ text = "", media }: { text?: string; media
   const profanityMode = useStore((s) => s.settings.profanityMode);
   const censor = profanityMode === "screen";
   const autoTranslate = useStore((s) => s.settings.autoTranslate);
-  const [revealed, setRevealed] = useState(false);
-  const hidden = !revealed && (nsfwMode === "hide" || profanityMode === "hide") && nsfwService.isAdultText(text);
+  const hidden = (nsfwMode === "hide" || profanityMode === "hide") && nsfwService.isAdultText(text);
   const [trans, setTrans] = useState<{ text: string; src: string } | null>(null);
   const [showOriginal, setShowOriginal] = useState(false);
   const [translating, setTranslating] = useState(false);
@@ -54,15 +53,8 @@ export default function MessageBody({ text = "", media }: { text?: string; media
   const fade = "linear-gradient(to bottom, #000 72%, transparent)";
   const shown = clamp ? body.slice(0, 1200) : body;   // only parse what we show (long Nostr notes can be huge)
 
-  // "Hide" mode: collapse the whole message to a slim bar with a tap to reveal.
-  if (hidden) {
-    return (
-      <Stack direction="row" alignItems="center" spacing={1}>
-        <Typography variant="body2" color="text.secondary" sx={{ flex: 1, minWidth: 0 }} noWrap>🙈 Hidden — {profanityMode === "hide" && nsfwMode !== "hide" ? "strong language" : "sensitive content"}</Typography>
-        <Button size="small" onClick={() => setRevealed(true)} sx={{ flex: "0 0 auto" }}>Show</Button>
-      </Stack>
-    );
-  }
+  // "Hide" mode: render nothing — the message is simply not shown.
+  if (hidden) return null;
 
   return (
     <Box>
