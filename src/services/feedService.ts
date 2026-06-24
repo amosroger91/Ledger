@@ -307,15 +307,19 @@ class FeedService {
     // On-device AI spam/scam/bot filter (opt-in). Flagged posts are removed from
     // the feed entirely — never rendered. Classification is async + cached: a fast
     // keyword pre-filter drops blatant scams now; the Transformers.js classifier
-    // catches the rest in the background and emits feed:updated to re-filter. Your
-    // own posts are never dropped.
+    // catches the rest in the background and emits feed:updated to re-filter.
+    // It ONLY judges external user content — never your own posts, Ledger's
+    // system/changelog/AI posts, or our own RSS feeds (those are "ours" and have
+    // their own controls); they're always shown.
     if (opts.hideJunk) {
-      spamService.classify(posts);
-      posts = posts.filter((p) => p.author === meId || !spamService.isJunk(p.id, p.text ?? ""));
+      const ours = (p: Post) => p.author === meId || p.author === "rss-bot" || p.author === "system" || p.author === "ai-bot";
+      spamService.classify(posts.filter((p) => !ours(p)));
+      posts = posts.filter((p) => ours(p) || !spamService.isJunk(p.id, p.text ?? ""));
     }
 
     // "Hide" mode for NSFW / foul language: drop flagged-text posts from the feed
-    // entirely — no placeholder, never rendered (same on-device text matcher).
+    // entirely — no placeholder, never rendered. This DOES apply to everything,
+    // including our own posts / RSS / system (same on-device text matcher).
     if (opts.hideFlaggedText) {
       posts = posts.filter((p) => !nsfwService.isAdultText(p.text ?? ""));
     }
