@@ -82,6 +82,18 @@ export default function Composer({ community }: { community?: string }) {
     toast(`Posted to ${where} — it's out there forever ✦`, "success");
   }
 
+  // Toolbar icons (image / gif / mp3 / HTML / Companion) — shared by the desktop
+  // inline toolbar and the phone's own full-width icon row.
+  const toolbarIcons = (
+    <>
+      <Tooltip title="Attach image"><IconButton size="small" onClick={() => fileRef.current?.click()}><ImageRoundedIcon fontSize="small" /></IconButton></Tooltip>
+      <Tooltip title="Add a GIF"><IconButton size="small" onClick={() => setGifOpen(true)}><GifBoxRoundedIcon fontSize="small" /></IconButton></Tooltip>
+      <Tooltip title="Share an mp3"><IconButton size="small" onClick={() => audioRef.current?.click()}><AudiotrackRoundedIcon fontSize="small" /></IconButton></Tooltip>
+      <Tooltip title="HTML post / embed (map, game, custom)"><IconButton size="small" onClick={() => setHtmlOpen(true)}><CodeRoundedIcon fontSize="small" /></IconButton></Tooltip>
+      <Tooltip title="Companion: draft a fresh post"><IconButton size="small" onClick={async () => { const { posts } = await feedService.generate("trending", { moderation }); setText(companionService.draftPost(posts)); }}><AutoFixHighRoundedIcon fontSize="small" /></IconButton></Tooltip>
+    </>
+  );
+
   return (
     <GlassCard sx={{ mb: 2, p: { xs: 1.5, sm: 2 }, overflow: "hidden" }}>
       <Stack direction="row" spacing={{ xs: 1, sm: 1.5 }}>
@@ -103,15 +115,12 @@ export default function Composer({ community }: { community?: string }) {
               ))}
             </Stack>
           )}
-          <Stack direction="row" alignItems="center" useFlexGap flexWrap="wrap" spacing={0.5} sx={{ mt: 1, rowGap: 0.5 }}>
-            <Tooltip title="Attach image"><IconButton size="small" onClick={() => fileRef.current?.click()}><ImageRoundedIcon fontSize="small" /></IconButton></Tooltip>
-            <Tooltip title="Add a GIF"><IconButton size="small" onClick={() => setGifOpen(true)}><GifBoxRoundedIcon fontSize="small" /></IconButton></Tooltip>
-            <Tooltip title="Share an mp3"><IconButton size="small" onClick={() => audioRef.current?.click()}><AudiotrackRoundedIcon fontSize="small" /></IconButton></Tooltip>
-            <Tooltip title="HTML post / embed (map, game, custom)"><IconButton size="small" onClick={() => setHtmlOpen(true)}><CodeRoundedIcon fontSize="small" /></IconButton></Tooltip>
-            <Tooltip title="Companion: draft a fresh post"><IconButton size="small" onClick={async () => { const { posts } = await feedService.generate("trending", { moderation }); setText(companionService.draftPost(posts)); }}><AutoFixHighRoundedIcon fontSize="small" /></IconButton></Tooltip>
-            {/* Desktop: the visibility picker + Post sit inline, right-aligned, beside
-                the toolbar icons. On phones they move to the full-bleed footer below. */}
-            {!phone && (
+          {/* Desktop toolbar: icons + the inline visibility picker & Post. On phones the
+              icons get their OWN full-width row (below) and the picker + Post move to the
+              full-bleed footer, so this whole row is desktop-only. */}
+          {!phone && (
+            <Stack direction="row" alignItems="center" useFlexGap flexWrap="wrap" spacing={0.5} sx={{ mt: 1, rowGap: 0.5 }}>
+              {toolbarIcons}
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, ml: "auto" }}>
                 {nostrEnabled && (
                   <Tooltip title="Where this post goes">
@@ -126,10 +135,18 @@ export default function Composer({ community }: { community?: string }) {
                 <Button variant="contained" onClick={post} disabled={(!text.trim() && !media.length) || (target === "nostr" && !text.trim())}
                   sx={{ px: 2.5 }}>Post</Button>
               </Box>
-            )}
-          </Stack>
+            </Stack>
+          )}
         </Box>
       </Stack>
+      {phone && (
+        // Phone: the toolbar icons get their OWN single full-width row, spread across
+        // the card just above the warning/action bar. (In the avatar-inset content
+        // column all five 48px buttons couldn't fit on one line and wrapped.)
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 1.25 }}>
+          {toolbarIcons}
+        </Stack>
+      )}
       {showPermanentWarning && (
         // Full-bleed banner: negative margins cancel the card's padding on the
         // left/right so it spans the whole card (overflow:hidden rounds the corners).
