@@ -48,6 +48,11 @@ export const STARTER_HTML = `<style>
   .tag { display:inline-block; padding:4px 12px; margin:3px; border-radius:999px;
          background: rgba(255,255,255,0.16); font-size: 12px; }
   marquee { margin-top: 14px; opacity: .85; }
+  @media (max-width: 480px) {
+    .wrap { margin: 12px auto; padding: 10px; }
+    .card { padding: 12px 14px; border-radius: 12px; }
+    h1 { font-size: 20px; }
+  }
 </style>
 <div class="wrap">
   <div class="card">
@@ -65,7 +70,7 @@ export const STARTER_HTML = `<style>
 // page background). No app styling is forced in. Same-origin is intentionally
 // withheld, so even scripts in a peer's profile can't touch your account/keys.
 function profileHtmlDoc(html: string): string {
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0}img,iframe,video,canvas,svg{max-width:100%}</style></head><body>${html}</body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0}* { box-sizing: border-box; }img,iframe,video,canvas,svg{max-width:100%}body{word-break:break-word;overflow-wrap:break-word;}</style></head><body>${html}</body></html>`;
 }
 function CustomHtml({ html }: { html: string }) {
   const [tall, setTall] = useState(false);

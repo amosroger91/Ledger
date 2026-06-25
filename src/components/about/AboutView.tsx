@@ -19,7 +19,7 @@ export default function AboutView() {
     return marked.parse(md, { async: false, gfm: true, breaks: false }) as string;
   }, []);
   return (
-    <Box sx={{ maxWidth: 820, mx: "auto" }}>
+    <Box sx={{ maxWidth: 820, mx: "auto", pt: { xs: 1.5, sm: 0 } }}>
       <Typography variant="h5" sx={{ mb: 0.5 }}>About Ledger</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Straight from the project's README — what this is, why it's built this way, and how it all works with no server.</Typography>
       <GlassCard

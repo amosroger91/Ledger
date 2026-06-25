@@ -116,7 +116,7 @@ export default function RelayFeeds() {
                       <FormControlLabel key={f.id}
                         control={<Switch size="small" checked={on} onChange={(e) => toggleFeed(f.id, e.target.checked)} />}
                         label={f.title}
-                        sx={{ ml: 0, justifyContent: "space-between", "& .MuiFormControlLabel-label": { fontSize: 14, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }}
+                        sx={{ ml: 0, mr: 0, width: "100%", justifyContent: "space-between", "& .MuiFormControlLabel-label": { fontSize: 14, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }}
                         labelPlacement="start"
                       />
                     );

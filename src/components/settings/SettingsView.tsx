@@ -142,7 +142,8 @@ export default function SettingsView() {
         {row("Status", "What others on the network see.",
           <Select size="small" value={settings.presenceStatus} onChange={(e) => setSettings({ presenceStatus: e.target.value as PresenceStatus })}>{STATUS.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}</Select>)}
         <Divider />
-        <FormControlLabel control={<Switch checked={settings.reducedMotion} onChange={(e) => setSettings({ reducedMotion: e.target.checked })} />} label="Reduce motion (calms the animated background)" sx={{ mt: 1 }} />
+        {row("Reduce motion", "Calm the animated background and simplify transition effects.",
+          <Switch checked={settings.reducedMotion} onChange={(e) => setSettings({ reducedMotion: e.target.checked })} />)}
         <Divider />
         {row("Pre-load PolitiFact index", "\"Fact-check this\" is always available from a post's ⋯ menu — it's a purely local keyword match against PolitiFact's recent ratings (no AI, nothing sent anywhere). Keep this on to pre-load that index at launch so the first check is instant; off still works, it just loads on first use.",
           <Switch checked={settings.showFactChecks} onChange={(e) => { setSettings({ showFactChecks: e.target.checked }); if (e.target.checked) factCheckService.refresh().catch(() => {}); }} />)}
