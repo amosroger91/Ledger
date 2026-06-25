@@ -239,7 +239,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           slide-out drawer (the hamburger in the title bar opens it) so the content
           column gets the full width. */}
       {!compact && (
-        <Box sx={{ borderRight: "1px solid var(--bl-line)", p: 1, display: "flex", flexDirection: "column", gap: 0.25, height: "100%", overflowY: "auto", background: "linear-gradient(180deg, var(--bl-tasks-1), var(--bl-tasks-2))" }}>
+        <Box sx={{ borderRight: "1px solid var(--bl-line)", p: 1, display: "flex", flexDirection: "column", gap: 0.25, height: "100%", overflowY: "auto", background: "linear-gradient(180deg, var(--bl-tasks-1), var(--bl-tasks-2))", "&::-webkit-scrollbar": { display: "none" }, scrollbarWidth: "none", msOverflowStyle: "none" }}>
           {renderNav(true, false)}
         </Box>
       )}
@@ -255,7 +255,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         {/* Luna title bar */}
         <Stack direction="row" alignItems="center" spacing={{ xs: 0.75, sm: 1.5 }} sx={{ px: { xs: 1, sm: 2 }, py: 1, position: "sticky", top: 0, zIndex: 5, color: "#fff", borderBottom: "1px solid var(--bl-title-edge)", background: "var(--bl-gloss-title), linear-gradient(180deg, var(--bl-title-hi), var(--bl-title-low))", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)" }}>
           {compact && <IconButton onClick={() => setDrawerOpen(true)} aria-label="Open menu" sx={{ color: "#fff", ml: -0.75 }}><MenuRoundedIcon /></IconButton>}
-          <Typography variant="h6" sx={{ color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.4)", display: { xs: "none", md: "block" }, whiteSpace: "nowrap", flex: { md: "0 0 auto" } }}>{NAV.find((n) => n.to === pathname)?.label ?? (pathname.startsWith("/chatroom") ? "Town Square" : "Ledger")}</Typography>
+
           <Box sx={{ flex: 1, display: "flex", justifyContent: compact ? "flex-end" : "flex-start" }}><GlobalSearch compact={compact} /></Box>
           <ModelStatusChip />
           {compact && <ChatDropdown />}

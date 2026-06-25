@@ -1,12 +1,13 @@
-import { useRef, useState, useEffect } from "react";
-import { Stack, TextField, Button, IconButton, Box, Chip, Tooltip, Typography, Select, MenuItem, useMediaQuery } from "@mui/material";
+import { useRef, useState } from "react";
+import { Stack, TextField, Button, IconButton, Box, Chip, Tooltip, Typography, Select, MenuItem, useMediaQuery, ButtonGroup } from "@mui/material";
 import type { Theme } from "@mui/material";
 import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
 import GifBoxRoundedIcon from "@mui/icons-material/GifBoxRounded";
 import AudiotrackRoundedIcon from "@mui/icons-material/AudiotrackRounded";
 import CodeRoundedIcon from "@mui/icons-material/CodeRounded";
 import AutoFixHighRoundedIcon from "@mui/icons-material/AutoFixHighRounded";
-import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import ArrowDropDownRoundedIcon from "@mui/icons-material/ArrowDropDownRounded";
 import GlassCard from "@/components/common/GlassCard";
 import GifPicker from "@/components/common/GifPicker";
 import HtmlComposer from "./HtmlComposer";
@@ -20,6 +21,12 @@ import UserAvatar from "@/components/common/UserAvatar";
 import { toast } from "@/lib/events";
 import type { MediaRef } from "@/types";
 
+const TARGET_LABELS: Record<string, string> = {
+  ledger: "Ledger only",
+  both: "Ledger + Nostr",
+  nostr: "Nostr only",
+};
+
 export default function Composer({ community }: { community?: string }) {
   const me = useStore((s) => s.me);
   const moderation = useStore((s) => s.settings.moderationProfile);
@@ -29,27 +36,25 @@ export default function Composer({ community }: { community?: string }) {
   const [media, setMedia] = useState<MediaRef[]>([]);
   const [gifOpen, setGifOpen] = useState(false);
   const [htmlOpen, setHtmlOpen] = useState(false);
+  const [targetOpen, setTargetOpen] = useState(false);
   const [showPermanentWarning, setShowPermanentWarning] = useState<boolean>(() => {
     try { return localStorage.getItem("composer:permanentWarningDismissed") !== "1"; } catch { return true; }
   });
   const fileRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLInputElement>(null);
-  // Phone: the visibility picker + Post become a full-bleed bottom bar (two halves
-  // spanning the whole card). Larger screens keep them inline in the toolbar.
-  const phone = useMediaQuery((t: Theme) => t.breakpoints.down("sm"));
+  const anchorRef = useRef<HTMLDivElement>(null);
+
+  // Phone layout triggers below 480px (narrower than MUI's default sm=600px)
+  const phone = useMediaQuery("@media (max-width:479px)");
 
   async function attach(file?: File) {
     if (!file) return;
-    // Downscale so the image is small enough to persist locally and sync over
-    // the relay (full-res photos get dropped on round-trip).
     const url = await compressPostImage(file);
     setMedia((m) => [...m, { type: "image", url, mime: file.type === "image/gif" ? "image/gif" : "image/jpeg", bytes: url.length }]);
   }
 
   async function attachAudio(file?: File) {
     if (!file) return;
-    // Audio is stored as a data URL (local-first, no server). Cap the size so a
-    // huge file doesn't bloat the post as it syncs over the relay.
     if (file.size > 12 * 1024 * 1024) { toast("That mp3 is over 12 MB — pick a smaller file to share it on your timeline.", "warn"); return; }
     const url = await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(file); });
     setMedia((m) => [...m, { type: "audio", url, mime: file.type || "audio/mpeg", bytes: file.size, alt: file.name.replace(/\.[^.]+$/, "") }]);
@@ -83,8 +88,9 @@ export default function Composer({ community }: { community?: string }) {
     toast(`Posted to ${where} — it's out there forever ✦`, "success");
   }
 
-  // Toolbar icons (image / gif / mp3 / HTML / Companion) — shared by the desktop
-  // inline toolbar and the phone's own full-width icon row.
+  const canPost = (!!text.trim() || !!media.length) && !(target === "nostr" && !text.trim());
+
+  // Toolbar icons row
   const toolbarIcons = (
     <>
       <Tooltip title="Attach image"><IconButton size="small" onClick={() => fileRef.current?.click()}><ImageRoundedIcon fontSize="small" /></IconButton></Tooltip>
@@ -95,93 +101,183 @@ export default function Composer({ community }: { community?: string }) {
     </>
   );
 
+  // ── Merged split-button (visibility picker | Post) ──────────────────────────
+  // Two halves joined without gap, rounded as a pill, anchored bottom-right.
+  // Used on every breakpoint except the smallest phone.
+  const splitButton = nostrEnabled ? (
+    <Box ref={anchorRef} sx={{ display: "flex", alignItems: "stretch", borderRadius: "8px", overflow: "hidden", border: "1px solid", borderColor: "primary.main", boxShadow: "0 2px 8px rgba(58,155,240,0.18)" }}>
+      {/* Left half — visibility picker */}
+      <Box
+        onClick={() => setTargetOpen((o) => !o)}
+        sx={{
+          display: "flex", alignItems: "center", gap: 0.25, px: 1.25, cursor: "pointer",
+          bgcolor: "rgba(58,155,240,0.07)", borderRight: "1px solid", borderColor: "rgba(58,155,240,0.3)",
+          fontSize: 13, fontWeight: 600, color: "text.primary", whiteSpace: "nowrap",
+          userSelect: "none",
+          "&:hover": { bgcolor: "rgba(58,155,240,0.13)" },
+          transition: "background .15s ease",
+          minWidth: 0,
+        }}
+      >
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {TARGET_LABELS[target]}
+        </span>
+        <ArrowDropDownRoundedIcon sx={{ fontSize: 18, flexShrink: 0, color: "primary.main" }} />
+      </Box>
+      {/* Right half — Post button */}
+      <Button
+        variant="contained" disableElevation onClick={post} disabled={!canPost}
+        sx={{
+          borderRadius: 0, px: { xs: 1.75, sm: 2.5 }, fontWeight: 700, fontSize: 14,
+          boxShadow: "none", minWidth: 56,
+        }}
+      >
+        Post
+      </Button>
+      {/* Dropdown for visibility */}
+      {targetOpen && (
+        <Box
+          sx={{
+            position: "absolute", bottom: "100%", right: 0, mb: 0.5, zIndex: 1400,
+            bgcolor: "background.paper", border: "1px solid var(--bl-line)",
+            borderRadius: 2, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", minWidth: 160,
+            overflow: "hidden",
+          }}
+          onMouseLeave={() => setTargetOpen(false)}
+        >
+          {(["ledger", "both", "nostr"] as const).map((v) => (
+            <Box
+              key={v} onClick={() => { setTarget(v); setTargetOpen(false); }}
+              sx={{
+                px: 2, py: 1, fontSize: 14, cursor: "pointer", fontWeight: target === v ? 700 : 400,
+                color: target === v ? "primary.main" : "text.primary",
+                "&:hover": { bgcolor: "rgba(58,155,240,0.07)" },
+              }}
+            >
+              {TARGET_LABELS[v]}
+            </Box>
+          ))}
+        </Box>
+      )}
+    </Box>
+  ) : (
+    // Nostr disabled — just a plain Post button
+    <Button
+      variant="contained" disableElevation onClick={post} disabled={!canPost}
+      sx={{ borderRadius: "8px", px: 2.5, fontWeight: 700, fontSize: 14 }}
+    >
+      Post
+    </Button>
+  );
+
   return (
     <GlassCard sx={{ mb: 2, p: { xs: 1.5, sm: 2 }, overflow: "hidden" }}>
       <Stack direction="row" spacing={{ xs: 1, sm: 1.5 }}>
         <UserAvatar pk={me?.publicKey ?? ""} name={me?.username ?? "?"} avatar={me?.avatar} />
-        <Box sx={{ flex: 1 }}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
           <TextField
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Broadcast to the swarm…  (#tags work, every post is signed)"
             fullWidth multiline minRows={3} maxRows={10} variant="standard"
-            InputProps={{ disableUnderline: true, sx: { fontSize: 18, pt: 0.6, pb: 0.6 } }}
+            InputProps={{ disableUnderline: true, sx: { fontSize: { xs: 16, sm: 18 }, pt: 0.6, pb: 0.6 } }}
           />
+
+          {/* Attached media thumbnails */}
           {media.length > 0 && (
             <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: "wrap", alignItems: "center" }}>
               {media.map((m, i) => (
                 m.type === "audio"
                   ? <Chip key={i} icon={<AudiotrackRoundedIcon />} label={m.alt || "audio"} onDelete={() => setMedia((x) => x.filter((_, j) => j !== i))} sx={{ bgcolor: "rgba(124,92,255,0.12)" }} />
-                  : <Box key={i} component="img" src={m.url} sx={{ width: { xs: 72, sm: 84 }, height: { xs: 72, sm: 84 }, objectFit: "cover", borderRadius: 2, border: "1px solid rgba(58,155,240,0.2)", cursor: "pointer" }} onClick={() => setMedia((x) => x.filter((_, j) => j !== i))} />
+                  : <Box key={i} component="img" src={m.url} sx={{ width: { xs: 64, sm: 80 }, height: { xs: 64, sm: 80 }, objectFit: "cover", borderRadius: 2, border: "1px solid rgba(58,155,240,0.2)", cursor: "pointer" }} onClick={() => setMedia((x) => x.filter((_, j) => j !== i))} />
               ))}
             </Stack>
           )}
-          {/* Desktop toolbar: icons + the inline visibility picker & Post. On phones the
-              icons get their OWN full-width row (below) and the picker + Post move to the
-              full-bleed footer, so this whole row is desktop-only. */}
+
+          {/* Bottom toolbar: icons left, split-button right — all viewports ≥ 480px */}
           {!phone && (
-            <Stack direction="row" alignItems="center" useFlexGap flexWrap="wrap" spacing={0.5} sx={{ mt: 1, rowGap: 0.5 }}>
-              {toolbarIcons}
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, ml: "auto" }}>
-                {nostrEnabled && (
-                  <Tooltip title="Where this post goes">
-                    <Select size="small" value={target} onChange={(e) => setTarget(e.target.value as "ledger" | "both" | "nostr")}
-                      sx={{ height: 32, fontSize: 13, "& .MuiSelect-select": { py: 0.4 } }}>
-                      <MenuItem value="ledger">Ledger only</MenuItem>
-                      <MenuItem value="both">Ledger + Nostr</MenuItem>
-                      <MenuItem value="nostr">Nostr only</MenuItem>
-                    </Select>
-                  </Tooltip>
-                )}
-                <Button variant="contained" onClick={post} disabled={(!text.trim() && !media.length) || (target === "nostr" && !text.trim())}
-                  sx={{ px: 2.5 }}>Post</Button>
+            <Stack direction="row" alignItems="center" sx={{ mt: 1.5, gap: 0 }}>
+              {/* Icon cluster — no wrapping, shrink if needed */}
+              <Stack direction="row" alignItems="center" spacing={0.25} sx={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+                {toolbarIcons}
+              </Stack>
+              {/* Split button — positioned relative so the dropdown opens upward */}
+              <Box sx={{ position: "relative", flexShrink: 0, ml: 1 }}>
+                {splitButton}
               </Box>
             </Stack>
           )}
         </Box>
       </Stack>
+
+      {/* Phone icon row (below avatar+text) */}
       {phone && (
-        // Phone: the toolbar icons get their OWN single full-width row, spread across
-        // the card just above the warning/action bar. (In the avatar-inset content
-        // column all five 48px buttons couldn't fit on one line and wrapped.)
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 1.25 }}>
+        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mt: 1.25, flexWrap: "wrap" }}>
           {toolbarIcons}
         </Stack>
       )}
+
+      {/* Permanent posting warning banner */}
       {showPermanentWarning && (
-        // Full-bleed banner: negative margins cancel the card's padding on the
-        // left/right so it spans the whole card (overflow:hidden rounds the corners).
-        // On a phone the action bar sits below it, so it's only flush to the bottom
-        // edge (mb negative) on larger screens where it IS the bottom element.
-        <Box role="status" aria-live="polite" sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: { xs: 1.5, sm: 2 }, mx: { xs: -1.5, sm: -2 }, mb: { xs: 0, sm: -2 }, px: { xs: 1.5, sm: 2 }, py: 0.75, bgcolor: 'rgba(255,243,205,0.98)', borderTop: '1px solid rgba(255,235,59,0.32)' }}>
+        <Box
+          role="status" aria-live="polite"
+          sx={{
+            display: "flex", alignItems: "center", gap: 1,
+            mt: { xs: 1.25, sm: 1.5 },
+            mx: { xs: -1.5, sm: -2 },
+            mb: phone ? 0 : { xs: 0, sm: -2 },
+            px: { xs: 1.5, sm: 2 }, py: 0.75,
+            bgcolor: "rgba(255,243,205,0.98)",
+            borderTop: "1px solid rgba(255,235,59,0.32)",
+          }}
+        >
           <Typography variant="caption" color="text.primary" sx={{ flex: 1, lineHeight: 1.25 }}>
             🔗 Posting is <b>permanent</b> — once it's out, it spreads across the network and can't be unsent or deleted. Post like it's forever, because it is.
           </Typography>
-          <IconButton size="small" aria-label="Dismiss permanent posting warning" onClick={() => { try { localStorage.setItem("composer:permanentWarningDismissed", "1"); } catch {} setShowPermanentWarning(false); }} sx={{ mr: -0.5 }}>
+          <IconButton
+            size="small" aria-label="Dismiss permanent posting warning"
+            onClick={() => { try { localStorage.setItem("composer:permanentWarningDismissed", "1"); } catch {} setShowPermanentWarning(false); }}
+            sx={{ mr: -0.5 }}
+          >
             <CloseRoundedIcon fontSize="small" />
           </IconButton>
         </Box>
       )}
+
+      {/* Phone action bar — full-bleed bottom bar, two equal halves */}
       {phone && (
-        // Phone action bar — full-bleed, flush to the bottom edge, two equal halves
-        // (visibility picker | Post) spanning the whole card just like the banner. It
-        // sits under the warning while that's shown, and becomes the bottom bar once
-        // it's dismissed. Card overflow:hidden rounds the outer corners.
-        <Box sx={{ display: "grid", gridTemplateColumns: nostrEnabled ? "1fr 1fr" : "1fr", mx: -1.5, mb: -1.5, mt: showPermanentWarning ? 0 : 1.5, borderTop: "1px solid var(--bl-line)" }}>
+        <Box sx={{
+          display: "grid",
+          gridTemplateColumns: nostrEnabled ? "1fr 1fr" : "1fr",
+          mx: -1.5, mb: -1.5,
+          mt: showPermanentWarning ? 0 : 1.5,
+          borderTop: "1px solid var(--bl-line)",
+        }}>
           {nostrEnabled && (
-            <Select value={target} onChange={(e) => setTarget(e.target.value as "ledger" | "both" | "nostr")}
+            <Select
+              value={target} onChange={(e) => setTarget(e.target.value as "ledger" | "both" | "nostr")}
               variant="standard" disableUnderline
-              sx={{ height: 52, px: 1.75, fontSize: 14, fontWeight: 600, color: "text.primary", bgcolor: "rgba(58,155,240,0.06)", borderRight: "1px solid var(--bl-line)",
-                "& .MuiSelect-select": { display: "flex", alignItems: "center", height: "100%", py: 0, pr: 3.5, boxSizing: "border-box" }, "& .MuiSelect-icon": { right: 8 } }}>
+              sx={{
+                height: 52, px: 1.75, fontSize: 13, fontWeight: 600, color: "text.primary",
+                bgcolor: "rgba(58,155,240,0.06)", borderRight: "1px solid var(--bl-line)",
+                "& .MuiSelect-select": { display: "flex", alignItems: "center", height: "100%", py: 0, pr: 3.5, boxSizing: "border-box" },
+                "& .MuiSelect-icon": { right: 8 },
+              }}
+            >
               <MenuItem value="ledger">Ledger only</MenuItem>
               <MenuItem value="both">Ledger + Nostr</MenuItem>
               <MenuItem value="nostr">Nostr only</MenuItem>
             </Select>
           )}
-          <Button variant="contained" onClick={post} disabled={(!text.trim() && !media.length) || (target === "nostr" && !text.trim())}
-            sx={{ height: 52, borderRadius: 0, boxShadow: "none", fontSize: 15, fontWeight: 700 }}>Post</Button>
+          <Button
+            variant="contained" onClick={post} disabled={!canPost}
+            sx={{ height: 52, borderRadius: 0, boxShadow: "none", fontSize: 15, fontWeight: 700 }}
+          >
+            Post
+          </Button>
         </Box>
       )}
+
       <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => attach(e.target.files?.[0])} />
       <input ref={audioRef} type="file" accept="audio/*,.mp3" hidden onChange={(e) => attachAudio(e.target.files?.[0])} />
       <GifPicker open={gifOpen} onClose={() => setGifOpen(false)} onPick={(url) => setMedia((m) => [...m, { type: "image", url, mime: "image/gif" }])} />

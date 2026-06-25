@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef, useLayoutEffect, memo } from "react";
-import { Box, ToggleButtonGroup, ToggleButton, Stack, Typography, Button, useMediaQuery, LinearProgress, Chip, CircularProgress, Avatar, Select, MenuItem } from "@mui/material";
+import { Box, ToggleButtonGroup, ToggleButton, Stack, Typography, Button, useMediaQuery, LinearProgress, Chip, CircularProgress, Avatar, Select, MenuItem, IconButton, Tooltip, Divider } from "@mui/material";
 import FilterListRoundedIcon from "@mui/icons-material/FilterListRounded";
 import type { Theme } from "@mui/material";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
@@ -366,34 +366,74 @@ export default function FeedView() {
             </Select>
           </Stack>
         ) : (
-          <Stack direction={{ xs: "column", lg: "row" }} spacing={1.5} alignItems={{ xs: "stretch", lg: "center" }} sx={{ mb: 2 }}>
-            <Box sx={{ overflowX: "auto", WebkitOverflowScrolling: "touch", flexShrink: 0, mx: -0.5, px: 0.5, "& .MuiToggleButton-root": { whiteSpace: "nowrap" } }}>
+          // Unified single-row control bar: algo tabs | divider | content-type select | refresh icon
+          <Box sx={{
+            display: "flex", alignItems: "center", gap: 1, mb: 2,
+            bgcolor: "var(--bl-face)", border: "1px solid var(--bl-line)",
+            borderRadius: 2, px: 1, py: 0.5, minHeight: 44,
+          }}>
+            {/* Algo toggle tabs — horizontally scrollable, no wrapping */}
+            <Box sx={{ flex: 1, overflowX: "auto", WebkitOverflowScrolling: "touch", "&::-webkit-scrollbar": { display: "none" }, scrollbarWidth: "none" }}>
               <ToggleButtonGroup
                 exclusive size="small" value={algo}
                 onChange={(_, v) => v && setSettings({ feedAlgorithm: v })}
-                sx={{ display: "inline-flex", flexWrap: "nowrap", "& .MuiToggleButton-root": { border: "1px solid rgba(58,155,240,0.18)", color: "text.secondary", fontSize: "0.875rem", px: 1.25, py: 0.45, "&.Mui-selected": { background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#ffffff" } } }}
+                sx={{
+                  display: "inline-flex", gap: 0.25, p: 0,
+                  "& .MuiToggleButtonGroup-grouped": { border: "none !important", borderRadius: "6px !important" },
+                  "& .MuiToggleButton-root": {
+                    border: "none", borderRadius: "6px", fontSize: "0.82rem", fontWeight: 600,
+                    px: 1.4, py: 0.55, whiteSpace: "nowrap", color: "text.secondary", textTransform: "none",
+                    "&.Mui-selected": {
+                      background: "linear-gradient(135deg,#3f97ff,#1668e0)",
+                      color: "#fff",
+                      boxShadow: "0 2px 6px rgba(58,155,240,0.35)",
+                    },
+                    "&:hover:not(.Mui-selected)": { bgcolor: "rgba(58,155,240,0.07)" },
+                  },
+                }}
               >
                 {ALGOS.map((a) => <ToggleButton key={a.id} value={a.id}>{a.label}</ToggleButton>)}
               </ToggleButtonGroup>
             </Box>
 
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ flex: 1, minWidth: 0 }}>
-              <Box sx={{ display: "flex", overflowX: "auto", WebkitOverflowScrolling: "touch", gap: 0.5, flex: 1, minWidth: 0, py: 0.25, "& > *": { flex: "0 0 auto" } }}>
-                {FILTERS.map((f) => (
-                  <Chip key={f.id} label={f.label} size="small" onClick={() => setFilter(f.id)}
-                    variant={filter === f.id ? "filled" : "outlined"}
-                    sx={filter === f.id
-                      ? { background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#fff", fontWeight: 700 }
-                      : { borderColor: "rgba(58,155,240,0.3)", color: "text.secondary" }} />
-                ))}
-              </Box>
-              <Button size="small" variant="outlined" onClick={doRefresh} disabled={refreshing} aria-label="Refresh"
-                sx={{ flexShrink: 0, textTransform: "none", fontWeight: 600, px: 1.25 }}>
-                <RefreshRoundedIcon sx={{ fontSize: 18, animation: refreshing ? "zbspin 1s linear infinite" : "none", "@keyframes zbspin": { to: { transform: "rotate(360deg)" } } }} />
-                <Box component="span" sx={{ ml: 0.5 }}>{refreshing ? "Refreshing…" : "Refresh"}</Box>
-              </Button>
-            </Stack>
-          </Stack>
+            {/* Divider */}
+            <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+
+            {/* Content-type compact select */}
+            <Tooltip title="Filter by content type">
+              <Select
+                size="small" value={filter}
+                onChange={(e) => setFilter(e.target.value as ContentFilter)}
+                variant="outlined"
+                renderValue={(v) => (
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <FilterListRoundedIcon sx={{ fontSize: 15, color: "text.secondary" }} />
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>{FILTERS.find((f) => f.id === v)?.label}</span>
+                  </Stack>
+                )}
+                sx={{
+                  height: 34, fontSize: 13, minWidth: 120, maxWidth: 160,
+                  bgcolor: filter !== "all" ? "rgba(58,155,240,0.07)" : undefined,
+                  "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--bl-line)" },
+                  "& .MuiSelect-select": { py: 0.5, pr: "28px !important" },
+                }}
+              >
+                {FILTERS.map((f) => <MenuItem key={f.id} value={f.id} sx={{ fontSize: 13 }}>{f.label}</MenuItem>)}
+              </Select>
+            </Tooltip>
+
+            {/* Refresh icon-only button */}
+            <Tooltip title={refreshing ? "Refreshing…" : "Refresh feed"}>
+              <span>
+                <IconButton
+                  size="small" onClick={doRefresh} disabled={refreshing} aria-label="Refresh feed"
+                  sx={{ color: "text.secondary", "&:hover": { color: "primary.main", bgcolor: "rgba(58,155,240,0.08)" } }}
+                >
+                  <RefreshRoundedIcon sx={{ fontSize: 20, animation: refreshing ? "zbspin 1s linear infinite" : "none", "@keyframes zbspin": { to: { transform: "rotate(360deg)" } } }} />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Box>
         )}
 
         {refreshing && (
