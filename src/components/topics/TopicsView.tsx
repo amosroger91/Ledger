@@ -54,12 +54,14 @@ export default function TopicsView() {
 
   return (
     <Box sx={{ maxWidth: 900, mx: "auto" }}>
-      <Stack direction="row" alignItems="center" sx={{ mb: 2 }}>
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ xs: "stretch", sm: "center" }} sx={{ mb: 2 }}>
         <Box sx={{ flex: 1 }}>
           <Typography variant="h5">Topics</Typography>
           <Typography variant="body2" color="text.secondary">Subscribe to topics to shape your feed. The always-on relay refreshes <b>every</b> feed for everyone every few minutes and seeds them into your timeline — you don't fetch anything. <b>Refresh now</b> forces an immediate client-side pull only if you want it fresher than the relay's last cycle.</Typography>
         </Box>
-        <Button variant="contained" startIcon={<RefreshRoundedIcon />} disabled={busy} onClick={refresh}>{busy ? "Fetching…" : "Refresh now"}</Button>
+        <Button variant="contained" startIcon={<RefreshRoundedIcon />} disabled={busy} onClick={refresh} sx={{ alignSelf: { xs: "flex-start", sm: "center" } }}>
+          {busy ? "Fetching…" : "Refresh now"}
+        </Button>
       </Stack>
 
       <RelayFeeds />
@@ -98,18 +100,18 @@ export default function TopicsView() {
         <Typography variant="overline" color="text.secondary">Add a custom feed</Typography>
         <Stack spacing={1} sx={{ mt: 1 }}>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-            <Select size="small" value={custom.ckind} onChange={(e) => setCustom({ ...custom, ckind: e.target.value })} sx={{ minWidth: 170 }}>
+            <Select size="small" fullWidth value={custom.ckind} onChange={(e) => setCustom({ ...custom, ckind: e.target.value })} sx={{ minWidth: { xs: 0, sm: 170 } }}>
               {KINDS.map((k) => <MenuItem key={k.id} value={k.id}>{k.label}</MenuItem>)}
             </Select>
             <TextField size="small" fullWidth placeholder={kindMeta.placeholder} value={custom.url} onChange={(e) => setCustom({ ...custom, url: e.target.value })} onKeyDown={(e) => e.key === "Enter" && addCustom()} />
           </Stack>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-            <Select size="small" value={topics.includes(custom.topic) ? custom.topic : "__new"} onChange={(e) => setCustom({ ...custom, topic: e.target.value === "__new" ? "" : e.target.value })} sx={{ minWidth: 170 }}>
+            <Select size="small" fullWidth value={topics.includes(custom.topic) ? custom.topic : "__new"} onChange={(e) => setCustom({ ...custom, topic: e.target.value === "__new" ? "" : e.target.value })} sx={{ minWidth: { xs: 0, sm: 170 } }}>
               {topics.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
               <MenuItem value="__new">+ New topic…</MenuItem>
             </Select>
-            {!topics.includes(custom.topic) && <TextField size="small" placeholder="New topic name" value={custom.topic} onChange={(e) => setCustom({ ...custom, topic: e.target.value })} />}
-            <TextField size="small" placeholder="Label (optional)" value={custom.name} onChange={(e) => setCustom({ ...custom, name: e.target.value })} />
+            {!topics.includes(custom.topic) && <TextField size="small" fullWidth placeholder="New topic name" value={custom.topic} onChange={(e) => setCustom({ ...custom, topic: e.target.value })} />}
+            <TextField size="small" fullWidth placeholder="Label (optional)" value={custom.name} onChange={(e) => setCustom({ ...custom, name: e.target.value })} />
             <Button variant="contained" onClick={addCustom} disabled={!custom.url.trim() || !custom.topic.trim()}>Add</Button>
           </Stack>
         </Stack>

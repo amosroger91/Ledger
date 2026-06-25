@@ -101,7 +101,8 @@ export default function ListenView() {
 
       <ToggleButtonGroup
         exclusive size="small" value={mode} onChange={(_, v) => v && setMode(v)}
-        sx={{ mb: 2, "& .MuiToggleButton-root": { border: "1px solid rgba(58,155,240,0.18)", color: "text.secondary", "&.Mui-selected": { background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#ffffff" } } }}
+        fullWidth
+        sx={{ mb: 2, flexWrap: "wrap", "& .MuiToggleButton-root": { border: "1px solid rgba(58,155,240,0.18)", color: "text.secondary", "&.Mui-selected": { background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#ffffff" } } }}
       >
         <ToggleButton value="music"><MusicNoteRoundedIcon fontSize="small" sx={{ mr: 0.5 }} /> Radio</ToggleButton>
         <ToggleButton value="video"><SmartDisplayRoundedIcon fontSize="small" sx={{ mr: 0.5 }} /> Watch rooms</ToggleButton>

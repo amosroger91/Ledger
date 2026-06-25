@@ -94,10 +94,12 @@ export default function WatchParty() {
               sx={room === p ? { background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#fff", fontWeight: 700 } : {}} />
           ))}
         </Stack>
-        <Stack direction="row" spacing={1} sx={{ mt: 1.5 }} alignItems="center">
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ mt: 1.5 }} alignItems={{ xs: "stretch", sm: "center" }}>
           <TextField size="small" placeholder="Join or make a room by name…" value={joinName} onChange={(e) => setJoinName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && joinByName()} sx={{ flex: 1 }} />
-          <FormControlLabel control={<Checkbox size="small" checked={priv} onChange={(e) => setPriv(e.target.checked)} />} label="Private" />
-          <Button variant="outlined" disabled={!joinName.trim()} onClick={joinByName}>Join</Button>
+          <Stack direction="row" spacing={1} alignItems="center" justifyContent={{ xs: "space-between", sm: "flex-start" }}>
+            <FormControlLabel control={<Checkbox size="small" checked={priv} onChange={(e) => setPriv(e.target.checked)} />} label="Private" sx={{ mr: 0 }} />
+            <Button variant="outlined" disabled={!joinName.trim()} onClick={joinByName} sx={{ minWidth: { xs: 80, sm: "auto" } }}>Join</Button>
+          </Stack>
         </Stack>
         {otherRooms.length > 0 && (
           <Box sx={{ mt: 1.5 }}>

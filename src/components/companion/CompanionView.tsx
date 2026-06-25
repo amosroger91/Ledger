@@ -101,23 +101,25 @@ export default function CompanionView() {
   return (
     <Box sx={{ maxWidth: 820, mx: "auto", height: "100%", display: "flex", flexDirection: "column" }}>
       <GlassCard sx={{ mb: 2 }}>
-        <Stack direction="row" alignItems="center" spacing={2}>
-          <Avatar sx={{ background: "linear-gradient(135deg,#3f97ff,#1668e0,#0a55cf)", color: "#ffffff" }}><AutoAwesomeRoundedIcon /></Avatar>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="h6">Your Companion</Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-              {!supported ? "WebGPU unavailable — fast offline engine"
-                : ready ? <><CheckCircleRoundedIcon sx={{ fontSize: 14, color: "#54c95a" }} /> {modelInfo.label} loaded · runs on your device, private & offline</>
-                : loading ? `Downloading ${modelInfo.label}…`
-                : "On-device LLM · downloads automatically"}
-            </Typography>
-          </Box>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="caption" color="text.secondary">Model{settings.llmAuto ? " · auto" : ""}</Typography>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ xs: "stretch", sm: "center" }}>
+          <Stack direction="row" alignItems="center" spacing={2} sx={{ flex: 1, minWidth: 0 }}>
+            <Avatar sx={{ background: "linear-gradient(135deg,#3f97ff,#1668e0,#0a55cf)", color: "#ffffff" }}><AutoAwesomeRoundedIcon /></Avatar>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography variant="h6">Your Companion</Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 0.5, flexWrap: "wrap" }}>
+                {!supported ? "WebGPU unavailable — fast offline engine"
+                  : ready ? <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexWrap: "wrap" }}><CheckCircleRoundedIcon sx={{ fontSize: 14, color: "#54c95a" }} /> {modelInfo.label} loaded · runs on your device, private & offline</Box>
+                  : loading ? `Downloading ${modelInfo.label}…`
+                  : "On-device LLM · downloads automatically"}
+              </Typography>
+            </Box>
+          </Stack>
+          <Box sx={{ minWidth: 0, alignSelf: { xs: "stretch", sm: "auto" } }}>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>Model{settings.llmAuto ? " · auto" : ""}</Typography>
             <Select
               size="small" fullWidth value={settings.llmModel}
               onChange={(e) => pickModel(e.target.value)}
-              sx={{ minWidth: 200 }}
+              sx={{ minWidth: { xs: 0, sm: 200 } }}
             >
               {MODELS.map((m) => <MenuItem key={m.id} value={m.id}>{m.label} · {m.size}</MenuItem>)}
             </Select>

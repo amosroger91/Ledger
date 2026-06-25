@@ -87,11 +87,11 @@ export default function RelayFeeds() {
       </Stack>
 
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ mt: 1.5 }}>
-        <Select size="small" value={src} onChange={(e) => setSrc(e.target.value)} sx={{ minWidth: 210 }}>
+        <Select size="small" fullWidth value={src} onChange={(e) => setSrc(e.target.value)} sx={{ minWidth: { xs: 0, sm: 210 } }}>
           {SOURCES.map((s) => <MenuItem key={s.id} value={s.id}>{s.label}</MenuItem>)}
         </Select>
         <TextField size="small" fullWidth placeholder={meta.ph} value={val} onChange={(e) => setVal(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} />
-        <TextField size="small" placeholder={`topic · ${meta.topic}`} value={topic} onChange={(e) => setTopic(e.target.value)} sx={{ width: { xs: "100%", sm: 150 } }} />
+        <TextField size="small" fullWidth placeholder={`topic · ${meta.topic}`} value={topic} onChange={(e) => setTopic(e.target.value)} sx={{ width: { xs: "100%", sm: 150 } }} />
         <Button variant="contained" onClick={add} disabled={busy || !val.trim()}>{busy ? "Adding…" : "Add"}</Button>
       </Stack>
 
