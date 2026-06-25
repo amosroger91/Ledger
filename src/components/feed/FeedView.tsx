@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo, useRef, useLayoutEffect } from "react";
-import { Box, ToggleButtonGroup, ToggleButton, Stack, Typography, Button, useMediaQuery, LinearProgress, Chip, CircularProgress, Avatar } from "@mui/material";
+import { Box, ToggleButtonGroup, ToggleButton, Stack, Typography, Button, useMediaQuery, LinearProgress, Chip, CircularProgress, Avatar, Select, MenuItem } from "@mui/material";
+import FilterListRoundedIcon from "@mui/icons-material/FilterListRounded";
 import type { Theme } from "@mui/material";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
@@ -88,7 +89,7 @@ function AdUnit() {
 export default function FeedView() {
   const settings = useStore((s) => s.settings);
   const setSettings = useStore((s) => s.setSettings);
-  const compact = useMediaQuery((theme: Theme) => theme.breakpoints.down("md"));
+  const compact = useMediaQuery((theme: Theme) => theme.breakpoints.down("md")); // ≤ md → single column + the feed controls become compact dropdowns
   const [posts, setPosts] = useState<Post[]>([]);
   const [reasons, setReasons] = useState<Map<string, RecommendationReason>>(new Map());
   const [refreshing, setRefreshing] = useState(false);
@@ -342,41 +343,56 @@ export default function FeedView() {
         )}
         <Composer community={community ?? undefined} />
 
-        {/* Controls — feed algorithm tabs on one row, content filters + refresh on the
-            next, so they never cram together on a phone. Each row scrolls horizontally
-            only if its own content overflows (no nested side-by-side scroll areas). */}
-        <Stack direction={{ xs: "column", md: "row" }} spacing={1} alignItems={{ md: "center" }} sx={{ mb: 2 }}>
-          <Box sx={{ overflowX: { xs: "visible", md: "auto" }, WebkitOverflowScrolling: "touch", flexShrink: 0, width: { xs: "100%", md: "auto" }, mx: -0.5, px: 0.5, "& .MuiToggleButton-root": { whiteSpace: "nowrap" } }}>
-            <ToggleButtonGroup
-              exclusive size="small" value={algo}
-              onChange={(_, v) => v && setSettings({ feedAlgorithm: v })}
-              // Phone: stretch to a full-width segmented control so all five fit (no
-              // off-screen clipping). Desktop: natural inline width beside the filters.
-              sx={{ display: "flex", width: { xs: "100%", md: "auto" }, flexWrap: "nowrap", "& .MuiToggleButton-root": { flex: { xs: 1, md: "none" }, minWidth: 0, border: "1px solid rgba(58,155,240,0.18)", color: "text.secondary", fontSize: { xs: "0.72rem", sm: "0.875rem" }, px: { xs: 0.5, sm: 1.25 }, py: 0.45, "&.Mui-selected": { background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#ffffff" } } }}
-            >
-              {ALGOS.map((a) => <ToggleButton key={a.id} value={a.id}>{a.label}</ToggleButton>)}
-            </ToggleButtonGroup>
-          </Box>
-
-          <Stack direction="row" alignItems="center" spacing={1} sx={{ flex: { md: 1 }, minWidth: 0 }}>
-            {/* Phone: wrap the pills so every filter stays visible (scrolling hid
-                Links/Polls off-screen). Desktop: single row, scroll only if it overflows. */}
-            <Box sx={{ display: "flex", flexWrap: { xs: "wrap", md: "nowrap" }, overflowX: { xs: "visible", md: "auto" }, WebkitOverflowScrolling: "touch", gap: 0.5, flex: 1, minWidth: 0, py: 0.25, "& > *": { flex: "0 0 auto" } }}>
-              {FILTERS.map((f) => (
-                <Chip key={f.id} label={f.label} size="small" onClick={() => setFilter(f.id)}
-                  variant={filter === f.id ? "filled" : "outlined"}
-                  sx={filter === f.id
-                    ? { background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#fff", fontWeight: 700 }
-                    : { borderColor: "rgba(58,155,240,0.3)", color: "text.secondary" }} />
-              ))}
-            </Box>
-            <Button size="small" variant="outlined" onClick={doRefresh} disabled={refreshing} aria-label="Refresh"
-              sx={{ flexShrink: 0, textTransform: "none", fontWeight: 600, minWidth: { xs: 38, sm: "auto" }, px: { xs: 0.75, sm: 1.25 } }}>
-              <RefreshRoundedIcon sx={{ fontSize: 18, animation: refreshing ? "zbspin 1s linear infinite" : "none", "@keyframes zbspin": { to: { transform: "rotate(360deg)" } } }} />
-              <Box component="span" sx={{ display: { xs: "none", sm: "inline" }, ml: 0.5 }}>{refreshing ? "Refreshing…" : "Refresh"}</Box>
-            </Button>
+        {/* Controls. Phone: two compact dropdowns (feed algorithm + content filter)
+            and no Refresh button — pull-to-refresh handles reloads. Larger screens
+            keep the full toggle tabs + filter chips + Refresh. */}
+        {compact ? (
+          <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+            <Select size="small" value={algo} onChange={(e) => setSettings({ feedAlgorithm: e.target.value as FeedAlgorithm })}
+              sx={{ flex: 1, bgcolor: "var(--bl-face)", fontWeight: 700, "& .MuiSelect-select": { py: 1 } }}>
+              {ALGOS.map((a) => <MenuItem key={a.id} value={a.id}>{a.label}</MenuItem>)}
+            </Select>
+            <Select size="small" value={filter} onChange={(e) => setFilter(e.target.value as ContentFilter)}
+              renderValue={(v) => (
+                <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
+                  <FilterListRoundedIcon sx={{ fontSize: 17, color: "text.secondary", flexShrink: 0 }} />
+                  <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{FILTERS.find((f) => f.id === v)?.label}</Box>
+                </Stack>
+              )}
+              sx={{ flex: 1, bgcolor: "var(--bl-face)", fontWeight: 700, "& .MuiSelect-select": { py: 1 } }}>
+              {FILTERS.map((f) => <MenuItem key={f.id} value={f.id}>{f.label}</MenuItem>)}
+            </Select>
           </Stack>
-        </Stack>
+        ) : (
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+            <Box sx={{ overflowX: "auto", WebkitOverflowScrolling: "touch", flexShrink: 0, mx: -0.5, px: 0.5, "& .MuiToggleButton-root": { whiteSpace: "nowrap" } }}>
+              <ToggleButtonGroup
+                exclusive size="small" value={algo}
+                onChange={(_, v) => v && setSettings({ feedAlgorithm: v })}
+                sx={{ display: "inline-flex", flexWrap: "nowrap", "& .MuiToggleButton-root": { border: "1px solid rgba(58,155,240,0.18)", color: "text.secondary", fontSize: "0.875rem", px: 1.25, py: 0.45, "&.Mui-selected": { background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#ffffff" } } }}
+              >
+                {ALGOS.map((a) => <ToggleButton key={a.id} value={a.id}>{a.label}</ToggleButton>)}
+              </ToggleButtonGroup>
+            </Box>
+
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ flex: 1, minWidth: 0 }}>
+              <Box sx={{ display: "flex", overflowX: "auto", WebkitOverflowScrolling: "touch", gap: 0.5, flex: 1, minWidth: 0, py: 0.25, "& > *": { flex: "0 0 auto" } }}>
+                {FILTERS.map((f) => (
+                  <Chip key={f.id} label={f.label} size="small" onClick={() => setFilter(f.id)}
+                    variant={filter === f.id ? "filled" : "outlined"}
+                    sx={filter === f.id
+                      ? { background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#fff", fontWeight: 700 }
+                      : { borderColor: "rgba(58,155,240,0.3)", color: "text.secondary" }} />
+                ))}
+              </Box>
+              <Button size="small" variant="outlined" onClick={doRefresh} disabled={refreshing} aria-label="Refresh"
+                sx={{ flexShrink: 0, textTransform: "none", fontWeight: 600, px: 1.25 }}>
+                <RefreshRoundedIcon sx={{ fontSize: 18, animation: refreshing ? "zbspin 1s linear infinite" : "none", "@keyframes zbspin": { to: { transform: "rotate(360deg)" } } }} />
+                <Box component="span" sx={{ ml: 0.5 }}>{refreshing ? "Refreshing…" : "Refresh"}</Box>
+              </Button>
+            </Stack>
+          </Stack>
+        )}
 
         {refreshing && (
           <GlassCard sx={{ mb: 1.5, p: 0, overflow: "hidden" }}>

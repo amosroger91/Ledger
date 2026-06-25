@@ -105,21 +105,22 @@ export default function Composer({ community }: { community?: string }) {
             <Tooltip title="Share an mp3"><IconButton size="small" onClick={() => audioRef.current?.click()}><AudiotrackRoundedIcon fontSize="small" /></IconButton></Tooltip>
             <Tooltip title="HTML post / embed (map, game, custom)"><IconButton size="small" onClick={() => setHtmlOpen(true)}><CodeRoundedIcon fontSize="small" /></IconButton></Tooltip>
             <Tooltip title="Companion: draft a fresh post"><IconButton size="small" onClick={async () => { const { posts } = await feedService.generate("trending", { moderation }); setText(companionService.draftPost(posts)); }}><AutoFixHighRoundedIcon fontSize="small" /></IconButton></Tooltip>
-            {/* Keep the visibility picker + Post button as one unit so they never split
-                across wrapped rows; ml:auto right-aligns the group (it drops onto its
-                own right-aligned row on a phone instead of scattering). */}
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, ml: "auto" }}>
+            {/* Visibility picker + Post. On a phone they span the full width as two
+                equal halves — a clean action bar under the input. On larger screens
+                they sit inline, right-aligned next to the toolbar icons. */}
+            <Box sx={{ display: { xs: "grid", sm: "flex" }, gridTemplateColumns: { xs: nostrEnabled ? "1fr 1fr" : "1fr" }, alignItems: "center", gap: { xs: 1, sm: 0.5 }, width: { xs: "100%", sm: "auto" }, ml: { xs: 0, sm: "auto" } }}>
               {nostrEnabled && (
                 <Tooltip title="Where this post goes">
                   <Select size="small" value={target} onChange={(e) => setTarget(e.target.value as "ledger" | "both" | "nostr")}
-                    sx={{ height: 32, fontSize: 13, "& .MuiSelect-select": { py: 0.4 } }}>
+                    sx={{ width: { xs: "100%", sm: "auto" }, minWidth: 0, height: { xs: 48, sm: 32 }, fontSize: 13, "& .MuiSelect-select": { py: { xs: 0, sm: 0.4 } } }}>
                     <MenuItem value="ledger">Ledger only</MenuItem>
                     <MenuItem value="both">Ledger + Nostr</MenuItem>
                     <MenuItem value="nostr">Nostr only</MenuItem>
                   </Select>
                 </Tooltip>
               )}
-              <Button variant="contained" onClick={post} disabled={(!text.trim() && !media.length) || (target === "nostr" && !text.trim())}>Post</Button>
+              <Button variant="contained" onClick={post} disabled={(!text.trim() && !media.length) || (target === "nostr" && !text.trim())}
+                sx={{ width: { xs: "100%", sm: "auto" }, minWidth: 0, px: { sm: 2.5 } }}>Post</Button>
             </Box>
           </Stack>
         </Box>
