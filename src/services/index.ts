@@ -20,7 +20,6 @@ import { bestModelForHardware, isWebGPU } from "./companionService";
 import { audioPlayerService } from "./audioPlayerService";
 import { factCheckService } from "./factCheckService";
 import { changelogService } from "./changelogService";
-import { nostrService } from "./nostrService";
 import { alertsService } from "./alertsService";
 import { isOff } from "@/lib/flags";
 import type { AppSettings } from "@/types";
@@ -95,7 +94,11 @@ export async function boot(): Promise<BootResult> {
     if (!isOff("rss")) rssService.seedDefaults().catch(() => {});
     if (!isOff("changelog")) changelogService.refresh().catch(() => {}); // repo commits → timeline activity
     if (settings.showFactChecks && !isOff("factcheck")) factCheckService.refresh().catch(() => {}); // PolitiFact index
-    if (settings.nostrEnabled !== false && !isOff("nostr")) nostrService.start().catch(() => {}); // stream Nostr notes for your topics
+    if (settings.nostrEnabled !== false && !isOff("nostr")) {
+      import("./nostrService").then(({ nostrService }) => {
+        nostrService.start().catch(() => {});
+      }).catch(() => {});
+    }
     if (!isOff("prune")) setInterval(() => storage.pruneEphemeralPosts().catch(() => {}), 10 * 60 * 1000); // keep the RSS/Nostr cache bounded during long sessions
   }
   return { onboarded: !!me, settings };
@@ -108,7 +111,11 @@ export async function onOnboarded() {
   if (!isOff("peer")) peerService.start();
   if (!isOff("rss")) rssService.seedDefaults().catch(() => {}); // feed loads from the mesh (relay-seeded Gun), not a client refetch
   if (!isOff("changelog")) changelogService.refresh().catch(() => {});
-  if (!isOff("nostr")) nostrService.start().catch(() => {}); // stream Nostr notes (on by default for new accounts)
+  if (!isOff("nostr")) {
+    import("./nostrService").then(({ nostrService }) => {
+      nostrService.start().catch(() => {});
+    }).catch(() => {});
+  }
 }
 
 // Earlier builds seeded sample posts; strip them so the feed only ever shows

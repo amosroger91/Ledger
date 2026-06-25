@@ -17,7 +17,6 @@ import RadioRoundedIcon from "@mui/icons-material/RadioRounded";
 import GraphicEqRoundedIcon from "@mui/icons-material/GraphicEqRounded";
 import { storage } from "@/services/storage";
 import { communityService } from "@/services/communityService";
-import { nostrService } from "@/services/nostrService";
 import { listenTogetherService, GENRES, flagOf, type Station } from "@/services/listenTogetherService";
 import { useStore } from "@/store/useStore";
 import { bus } from "@/lib/events";
@@ -75,7 +74,8 @@ export default function GlobalSearch({ compact }: { compact?: boolean }) {
     if (!open || ql2.length < 2 || !nostrEnabled) { setLoadingNostr(false); return; }
     let alive = true; setLoadingNostr(true);
     const h = setTimeout(() => {
-      nostrService.search(ql2)
+      import("@/services/nostrService")
+        .then(({ nostrService }) => nostrService.search(ql2))
         .then(() => storage.allPosts())
         .then((ps) => { if (alive) setPosts(ps); })
         .catch(() => {})

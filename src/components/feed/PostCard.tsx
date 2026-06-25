@@ -39,7 +39,6 @@ import WhyRecommended from "./WhyRecommended";
 import UserAvatar from "@/components/common/UserAvatar";
 import { relativeTime } from "@/lib/time";
 import { feedService } from "@/services/feedService";
-import { nostrService } from "@/services/nostrService";
 import { peerService } from "@/services/peerService";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "@/store/useStore";
@@ -777,7 +776,9 @@ export const PostCard = memo(function PostCard({ post, reason, replies = [], rep
       await feedService.commentAsAi(post.id, text, modelLabel);
       // Bridge to Nostr: mirror the original post there (once) and post the AI
       // comment as a reply. No-op unless Nostr is active.
-      nostrService.bridgeAiComment(post, `${text}\n\n— 🤖 Ledger AI (${modelLabel})`).catch(() => {});
+      import("@/services/nostrService").then(({ nostrService }) => {
+        nostrService.bridgeAiComment(post, `${text}\n\n— 🤖 Ledger AI (${modelLabel})`).catch(() => {});
+      }).catch(() => {});
     } catch { /* best-effort */ }
   }
 

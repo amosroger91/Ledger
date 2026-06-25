@@ -12,7 +12,6 @@ import GifPicker from "@/components/common/GifPicker";
 import HtmlComposer from "./HtmlComposer";
 import { compressPostImage } from "@/lib/image";
 import { feedService } from "@/services/feedService";
-import { nostrService } from "@/services/nostrService";
 import { peerService } from "@/services/peerService";
 import { companionService } from "@/services/companionService";
 import { moderationService } from "@/services/moderationService";
@@ -75,7 +74,9 @@ export default function Composer({ community }: { community?: string }) {
     }
     if (toNostr && body) {
       const tags = [...new Set((body.match(/#[a-z0-9_]+/gi) ?? []).map((t) => t.slice(1).toLowerCase()))];
-      nostrService.publishNote(body, tags).catch(() => {});
+      import("@/services/nostrService").then(({ nostrService }) => {
+        nostrService.publishNote(body, tags).catch(() => {});
+      }).catch(() => {});
     }
     setText(""); setMedia([]); setTarget("ledger");
     const where = toLedger && toNostr ? "Ledger + Nostr" : toNostr ? "Nostr" : community ? "the group" : "Ledger";

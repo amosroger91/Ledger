@@ -13,7 +13,7 @@ import { useNavigate } from "react-router-dom";
 import UserAvatar from "@/components/common/UserAvatar";
 import { companionService } from "@/services/companionService";
 import { joinChatroom } from "@/services/chatroomService";
-import { joinGlobalChat, myGlobalAuthor, type GlobalChatController } from "@/services/globalChatService";
+import type { GlobalChatController } from "@/services/globalChatService";
 import MessageBody from "@/components/common/MessageBody";
 import { useChatScroll } from "@/lib/useChatScroll";
 import { playPing } from "@/lib/ping";
@@ -166,19 +166,48 @@ function GlobalChatPanel({ visible, onMin, onClose }: { visible: boolean; onMin:
 
   useEffect(() => {
     let alive = true;
-    myGlobalAuthor().then((a) => { if (alive) { setMine(a); mineRef.current = a; } });
-    // Upsert against the live list (not an external Set — that breaks under StrictMode's
-    // double-mount; see GlobalChatView). Multi-relay copies + name upgrades update in place.
-    const render = (m: ChatMessage) => {
-      if (m.author !== mineRef.current && Date.now() - m.createdAt < 25000 && !pinged.current.has(m.id)) { pinged.current.add(m.id); playPing(); }
-      setMessages((prev) => {
-        const i = prev.findIndex((x) => x.id === m.id);
-        if (i >= 0) { const next = prev.slice(); next[i] = { ...next[i], ...m }; return next; }
-        return [...prev, m].sort((a, b) => a.createdAt - b.createdAt).slice(-300);
-      });
+    let activeCtrl: GlobalChatController | null = null;
+
+    import("@/services/globalChatService")
+      .then(({ myGlobalAuthor, joinGlobalChat }) => {
+        if (!alive) return;
+        myGlobalAuthor().then((a) => {
+          if (alive) {
+            setMine(a);
+            mineRef.current = a;
+          }
+        });
+
+        // Upsert against the live list (not an external Set — that breaks under StrictMode's
+        // double-mount; see GlobalChatView). Multi-relay copies + name upgrades update in place.
+        const render = (m: ChatMessage) => {
+          if (m.author !== mineRef.current && Date.now() - m.createdAt < 25000 && !pinged.current.has(m.id)) {
+            pinged.current.add(m.id);
+            playPing();
+          }
+          setMessages((prev) => {
+            const i = prev.findIndex((x) => x.id === m.id);
+            if (i >= 0) {
+              const next = prev.slice();
+              next[i] = { ...next[i], ...m };
+              return next;
+            }
+            return [...prev, m].sort((a, b) => a.createdAt - b.createdAt).slice(-300);
+          });
+        };
+
+        activeCtrl = joinGlobalChat({ onStatus: setStatus, onChat: render });
+        ctrl.current = activeCtrl;
+      })
+      .catch(() => {});
+
+    return () => {
+      alive = false;
+      if (activeCtrl) {
+        activeCtrl.leave();
+      }
+      ctrl.current = null;
     };
-    ctrl.current = joinGlobalChat({ onStatus: setStatus, onChat: render });
-    return () => { alive = false; ctrl.current?.leave(); ctrl.current = null; };
   }, []);
   useEffect(() => { if (visible) jump("auto"); }, [visible, jump]);   // opening the dock jumps to the latest
 

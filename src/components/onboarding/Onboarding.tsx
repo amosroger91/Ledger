@@ -4,7 +4,6 @@ import QrCodeScannerRoundedIcon from "@mui/icons-material/QrCodeScannerRounded";
 import InstallMobileRoundedIcon from "@mui/icons-material/InstallMobileRounded";
 import GlassCard from "@/components/common/GlassCard";
 import { identityService } from "@/services/identityService";
-import { nostrService } from "@/services/nostrService";
 import { onOnboarded } from "@/services";
 import { useStore } from "@/store/useStore";
 import { toast } from "@/lib/events";
@@ -35,7 +34,10 @@ export default function Onboarding() {
       // key aborts before we create the Ledger identity, so the user can fix it.
       const nsec = nostrKey.trim();
       if (nsec) {
-        try { await nostrService.importKey(nsec); }
+        try {
+          const { nostrService } = await import("@/services/nostrService");
+          await nostrService.importKey(nsec);
+        }
         catch { toast("That doesn't look like a Nostr nsec key — check it, or leave it blank to get a new one.", "error"); return; }
       }
       await identityService.create(username);
