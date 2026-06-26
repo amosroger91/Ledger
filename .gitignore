@@ -7,3 +7,8 @@ Thumbs.db
 .vscode/
 .idea/
 *.log
+
+# Rust / WASM build artifacts — main stays pure source; the WASM package is
+# (re)built by scripts/build-wasm.mjs locally and in CI, never committed.
+wasm/target/
+wasm/pkg/

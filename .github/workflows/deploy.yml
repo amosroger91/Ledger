@@ -30,11 +30,32 @@ jobs:
         with:
           node-version: 20
           cache: npm
+      # Rust + wasm toolchain for the ledger-core WASM hot path. The wasm32
+      # target compiles the crate; wasm-pack (+ its bundled wasm-opt) produces
+      # wasm/pkg, which `npm run build`'s prebuild step (build-wasm.mjs) invokes.
+      # On Linux the native cargo build runs fine (no App Control), so prod gets
+      # the real WASM rather than the TS fallback stub.
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            wasm/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('wasm/Cargo.lock', 'wasm/Cargo.toml') }}
+          restore-keys: cargo-${{ runner.os }}-
+      - uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: latest
       # Use `npm install`, not `npm ci`: the repo is developed on Windows, whose
       # lockfile omits the Linux-specific optional native deps (esbuild/rollup),
       # which makes the strict `npm ci` fail here. `npm install` resolves the
       # right platform binaries on Linux and still respects the lock.
       - run: npm install --no-audit --no-fund
+      # Runs prebuild (build-wasm.mjs → wasm/pkg) then vite build.
       - run: npm run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

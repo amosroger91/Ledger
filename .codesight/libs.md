@@ -1,0 +1,192 @@
+# Libraries
+
+- `server\src\dashboard.js` — function dashboardHtml: () => void, const CONSENT_TEXT
+- `server\src\gun\relay.js` — function startGunRelay: (server) => void, function getGun
+- `server\src\identity.js` — function loadIdentity: () => void, const identity
+- `server\src\lib\crypto.js`
+  - function bufToB64url: (buf) => void
+  - function b64urlToBuf: (s) => void
+  - function canonical: (obj) => void
+  - function signRecord: (data, pk, jwk) => void
+  - function verifyRecord: (rec) => void
+  - function fingerprint: (pk) => void
+- `server\src\lib\hash.js` — function fnv1a: (str) => void, function stableId
+- `server\src\lib\http.js` — function fetchText: (url, {...}, headers, proxy) => void, function mapLimit: (items, limit, worker) => void
+- `server\src\node\contributor.js` — function startContributor: () => void, function nodeStats: () => void
+- `server\src\publisher.js`
+  - function publishedCount: () => void
+  - function publishNewRssToGun: () => void
+  - function startPublisher: () => void
+- `server\src\routes.js` — function buildRouter: () => void
+- `server\src\rss\feeds.js`
+  - function withId: (f) => void
+  - function youtubeFeed: ({...}, playlistId, title, topic) => void
+  - function rsshubFeed: (route, {...}, topic) => void
+  - const DEFAULT_FEEDS
+- `server\src\rss\normalize.js` — function itemToPost: (item, feed) => void
+- `server\src\rss\resolvers.js`
+  - function resolveYouTube: (ref) => void
+  - function resolvePodcast: (term) => void
+  - function fetchCVE: (app) => void
+- `src\lib\crypto.ts`
+  - function bufToB64url: (buf) => string
+  - function b64urlToBuf: (s) => ArrayBuffer
+  - function canonical: (obj) => string
+  - function generateKeyMaterial: () => Promise<KeyMaterial>
+  - function signRecord: (data, pk, jwk) => Promise<Signed<T>>
+  - function verifyRecord: (rec) => Promise<boolean>
+  - _...2 more_
+- `src\lib\diag.ts`
+  - function diag: (label, extra?) => void
+  - function diagTime: (label, fn) => void
+  - function armHeartbeat: (thresholdMs) => void
+  - const DIAG
+- `src\lib\embeddings.ts`
+  - function embed: (text) => number[]
+  - function cosine: (a, b) => number
+  - function topTerms: (text, n) => string[]
+  - class InterestProfile
+  - const EMBED_DIM
+- `src\lib\emoticons.ts` — function emojify: (text) => string
+- `src\lib\events.ts`
+  - function toast
+  - interface LedgerEvents
+  - const bus
+- `src\lib\factMatch.ts`
+  - function contentTokens: (text) => string[]
+  - function extractFeatures: (text) => Features
+  - function buildIdf: (claims) => Map<string, number>
+  - function rankFactChecks: (text, index, idf?, number>) => Ranked<T> | null
+  - interface Features
+  - interface Ranked
+  - _...4 more_
+- `src\lib\feedRank.ts`
+  - function rankFeed: (recent, ctx) => RankResult
+  - interface RankOpts
+  - interface RankContext
+  - interface RankResult
+- `src\lib\flags.ts` — function isOff: (name) => boolean, const ANY_OFF
+- `src\lib\htmlEntities.ts` — function decodeEntities: (input) => string
+- `src\lib\id.ts` — function newId
+- `src\lib\image.ts`
+  - function readDataUrl: (file) => Promise<string>
+  - function loadImg: (src) => Promise<HTMLImageElement>
+  - function compressBanner: (file, maxW) => Promise<string>
+  - function compressAvatar: (file, size) => Promise<string>
+  - function compressPostImage: (file, maxDim, quality) => Promise<string>
+- `src\lib\moderationCore.ts`
+  - function evaluateModeration: (text, ctx, tw) => ModerationVerdict
+  - interface EvalContext
+  - interface TrustInput
+- `src\lib\ping.ts` — function playPing: () => void
+- `src\lib\postType.ts`
+  - function postSignals: (p) => PostSignals
+  - function matchesFilter: (p, f) => boolean
+  - function matchesQuery: (p, query) => boolean
+  - interface PostSignals
+  - type ContentFilter
+- `src\lib\pwa.ts`
+  - function isStandalone: () => boolean
+  - function isIOS: () => boolean
+  - function promptInstall: () => Promise<"accepted" | "dismissed" | null>
+  - function useInstall: () => void
+  - function registerServiceWorker: () => void
+  - function canPromptInstall
+- `src\lib\records.ts`
+  - function isBotAuthor: (pk) => boolean
+  - function signPost: (p, jwk) => Promise<void>
+  - function postIsAuthentic: (p) => Promise<boolean>
+  - function signProfile: (p, jwk) => Promise<void>
+  - function profileIsAuthentic: (p) => Promise<boolean>
+  - function signTrust: (e, jwk) => Promise<void>
+  - _...3 more_
+- `src\lib\time.ts` — function relativeTime: (ts) => string, function clockTime: (ts) => string
+- `src\lib\trustMath.ts`
+  - function myRelation: (edges, me, to) => TrustKind | null
+  - function isMuted: (edges, me, to) => boolean
+  - function isBlocked: (edges, me, to) => boolean
+  - function vouchCount: (edges, to) => number
+  - function score: (edges, me, to, community?) => number
+- `src\lib\unloadGuard.ts` — function bypassUnloadGuard: () => void, function setUnloadGuard: (key, active) => void
+- `src\lib\useChatScroll.ts` — function useChatScroll: (count) => void
+- `src\lib\watchGuard.ts`
+  - function setActiveVideo: (key, info) => void
+  - function activeVideo: () => ActiveVideo | null
+  - type ActiveVideo
+- `src\lib\youtube.ts` — function openOnYouTube: (videoId, seconds) => void
+- `src\services\chatMedia.ts`
+  - function getState: () => void
+  - function getLocalStream: () => void
+  - function hasMedia: () => void
+  - function setMedia: (want) => Promise<MediaStream | null>
+  - function stopLocal: () => void
+- `src\services\chatroomService.ts`
+  - function roomPeerId: (roomId) => string
+  - function joinChatroom: (opts) => void
+  - interface RoomMember
+  - interface RoomIdentity
+  - interface RoomHandlers
+- `src\services\companionService.ts`
+  - function isWebGPU: () => boolean
+  - function bestModelForHardware: () => Promise<
+  - function modelReady: (id) => boolean
+  - interface LlmModel
+  - const MODELS: LlmModel[]
+  - const companionService
+- `src\services\deviceTransferService.ts`
+  - function buildLink: (code, secret) => string
+  - function parseLink: (hash) => void
+  - interface HostHandle
+  - type HostStatus
+  - const deviceTransferService
+- `src\services\gifService.ts` — function searchGifs: (query, limit) => Promise<Gif[]>, interface Gif
+- `src\services\globalChatService.ts`
+  - function joinGlobalChat: (handlers) => GlobalChatController
+  - function myGlobalAuthor: () => Promise<string>
+  - interface GlobalChatHandlers
+  - interface GlobalChatController
+  - const GLOBAL_CHANNEL_ID
+- `src\services\index.ts`
+  - function boot: () => Promise<BootResult>
+  - function onOnboarded: () => void
+  - interface BootResult
+- `src\services\listenTogetherService.ts`
+  - function flagOf: (cc?) => string
+  - interface Station
+  - interface BrowseOpts
+  - const GENRES
+  - const COUNTRIES: { code: string; name: string }[]
+  - const listenTogetherService
+- `src\services\nsfwService.ts`
+  - function isAdultText: (text?) => boolean
+  - function censorText: (text?) => string
+  - function isAdultImage: (src) => Promise<boolean>
+  - const nsfwService
+- `src\services\rssService.ts`
+  - function topicSlug
+  - interface Feed
+  - interface RssConfig
+  - interface RssItem
+  - type FeedKind
+  - const TOPIC_FEEDS: Record<string, Feed[]>
+  - _...2 more_
+- `src\services\spamService.ts`
+  - function looksObviouslyJunk: (text) => boolean
+  - function isJunk: (id, text) => boolean
+  - function classify: (posts) => void
+  - function junkSnapshot: () => string[]
+  - const spamService
+- `src\services\storage.ts`
+  - function requestPersistentStorage: () => Promise<boolean>
+  - function readSettingsSync: () => AppSettings | undefined
+  - const storage
+  - const DEFAULT_SETTINGS: AppSettings
+- `src\services\translateService.ts`
+  - function langName: (code) => string
+  - function probablyNotEnglish: (text) => boolean
+  - const translateService
+- `src\services\watchRoomService.ts`
+  - function isPrivate
+  - function roomLabel
+  - const LOBBY
+  - const watchRoomService

@@ -16,6 +16,7 @@
 // ============================================================
 import { storage } from "@/services/storage";
 import { rankFeed, type RankOpts } from "@/lib/feedRank";
+import { initEmbeddings } from "@/lib/embeddings";
 import { looksObviouslyJunk } from "@/services/spamService";
 import type { FeedAlgorithm, TrustEdge } from "@/types";
 
@@ -36,6 +37,8 @@ const ctx: Worker = self as unknown as Worker;
 ctx.onmessage = async (e: MessageEvent<RankRequest>) => {
   const m = e.data;
   try {
+    // Bring the WASM cosine() online for ranking (idempotent; falls back to TS).
+    await initEmbeddings();
     const recent = await storage.recentPosts(m.opts.limit ?? 800, m.opts.community);
     const junk = new Set(m.junkIds);
     const result = rankFeed(recent, {

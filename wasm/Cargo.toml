@@ -1,0 +1,22 @@
+[package]
+name = "ledger-core"
+version = "0.1.0"
+edition = "2021"
+description = "Hot-path numeric core (text embeddings + vector math) for the Ledger feed, compiled to WASM."
+license = "MIT"
+repository = "https://github.com/amosroger91/SocialExperiment"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+
+[profile.release]
+# Optimize the wasm for size + speed; this is a tiny numeric crate so we can
+# afford fat LTO and a single codegen unit. opt-level "s" keeps the .wasm small
+# while staying fast for our tight float loops.
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"

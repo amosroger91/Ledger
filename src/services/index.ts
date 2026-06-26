@@ -22,6 +22,7 @@ import { factCheckService } from "./factCheckService";
 import { changelogService } from "./changelogService";
 import { alertsService } from "./alertsService";
 import { isOff } from "@/lib/flags";
+import { initEmbeddings } from "@/lib/embeddings";
 import type { AppSettings } from "@/types";
 
 export interface BootResult { onboarded: boolean; settings: AppSettings }
@@ -56,6 +57,11 @@ export async function boot(): Promise<BootResult> {
     } catch { /* keep current model */ }
   }
   await storage.saveSettings(settings);
+
+  // Load the Rust/WASM embeddings core before the feed starts embedding posts,
+  // so create/RSS/Nostr embedding + feed ranking take the fast path. Non-fatal:
+  // on failure it silently falls back to the pure-TS implementation.
+  await initEmbeddings();
 
   await feedService.init();
   audioPlayerService.init();           // shared mp3 player joins media exclusivity

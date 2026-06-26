@@ -6,6 +6,8 @@
   "description": "Ledger — a decentralized, local-first, browser-native social platform.",
   "scripts": {
     "dev": "vite",
+    "build:wasm": "node scripts/build-wasm.mjs",
+    "prebuild": "node scripts/build-wasm.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",

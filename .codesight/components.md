@@ -1,0 +1,53 @@
+# Components
+
+- **App** — `src\App.tsx`
+- **AboutView** — `src\components\about\AboutView.tsx`
+- **ChatroomView** — props: fullWidth — `src\components\chatroom\ChatroomView.tsx`
+- **Background** — `src\components\common\Background.tsx`
+- **GifPicker** — props: open, onClose, onPick — `src\components\common\GifPicker.tsx`
+- **GlassCard** — props: sx — `src\components\common\GlassCard.tsx`
+- **MessageBody** — props: text, media — `src\components\common\MessageBody.tsx`
+- **RoomChat** — props: roomId, title, media, height — `src\components\common\RoomChat.tsx`
+- **StationLogo** — props: src, size, radius, fallback — `src\components\common\StationLogo.tsx`
+- **UserAvatar** — props: pk, name, avatar, size, sx — `src\components\common\UserAvatar.tsx`
+- **CommunitiesView** — `src\components\communities\CommunitiesView.tsx`
+- **CompanionView** — `src\components\companion\CompanionView.tsx`
+- **Composer** — props: community — `src\components\feed\Composer.tsx`
+- **FeedView** — `src\components\feed\FeedView.tsx`
+- **HtmlComposer** — props: open, onClose, onPost — `src\components\feed\HtmlComposer.tsx`
+- **LinkCard** — props: url — `src\components\feed\PostCard.tsx`
+- **SafeImage** — props: src, alt, sx, expand — `src\components\feed\PostCard.tsx`
+- **PostCard** — props: post, reason, replies, replyMap, verdict, expanded — `src\components\feed\PostCard.tsx`
+- **PostView** — `src\components\feed\PostView.tsx`
+- **WhyRecommended** — props: reason, post, verdict, onBlock — `src\components\feed\WhyRecommended.tsx`
+- **AiSplash** — `src\components\layout\AiSplash.tsx`
+- **AppShell** — `src\components\layout\AppShell.tsx`
+- **AudioMiniPlayer** — `src\components\layout\AudioMiniPlayer.tsx`
+- **FloatingDocks** — `src\components\layout\FloatingDocks.tsx`
+- **GeoConsent** — `src\components\layout\GeoConsent.tsx`
+- **GlobalFeedVideo** — `src\components\layout\GlobalFeedVideo.tsx`
+- **GlobalSearch** — props: compact — `src\components\layout\GlobalSearch.tsx`
+- **GlobalSpotify** — `src\components\layout\GlobalSpotify.tsx`
+- **GlobalWatchPlayer** — `src\components\layout\GlobalWatchPlayer.tsx`
+- **ImageLightbox** — `src\components\layout\ImageLightbox.tsx`
+- **InstallButton** — props: compact — `src\components\layout\InstallButton.tsx`
+- **InstallHelpDialog** — props: open, onClose — `src\components\layout\InstallHelpDialog.tsx`
+- **MiniPlayer** — `src\components\layout\MiniPlayer.tsx`
+- **PresenceList** — `src\components\layout\PresenceList.tsx`
+- **ReloadGuardDialog** — `src\components\layout\ReloadGuardDialog.tsx`
+- **ListenView** — `src\components\listen\ListenView.tsx`
+- **WatchParty** — `src\components\listen\WatchParty.tsx`
+- **MarketView** — `src\components\market\MarketView.tsx`
+- **GlobalChatView** — `src\components\messages\GlobalChatView.tsx`
+- **MessagesView** — props: fullWidth — `src\components\messages\MessagesView.tsx`
+- **TownSquareView** — `src\components\messages\TownSquareView.tsx`
+- **NetworkView** — `src\components\network\NetworkView.tsx`
+- **Onboarding** — `src\components\onboarding\Onboarding.tsx`
+- **DeviceLinkReceiver** — props: code, secret — `src\components\profile\DeviceLinkReceiver.tsx`
+- **DeviceLoginDialog** — props: open, onClose — `src\components\profile\DeviceLoginDialog.tsx`
+- **ProfileView** — `src\components\profile\ProfileView.tsx`
+- **QrScanDialog** — props: open, onClose, onFound — `src\components\profile\QrScanDialog.tsx`
+- **SettingsView** — `src\components\settings\SettingsView.tsx`
+- **RelayFeeds** — `src\components\topics\RelayFeeds.tsx`
+- **TopicsView** — `src\components\topics\TopicsView.tsx`
+- **WalletView** — `src\components\wallet\WalletView.tsx`
