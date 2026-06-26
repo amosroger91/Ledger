@@ -9,13 +9,12 @@ import type {
 } from "@/types";
 import { storage } from "./storage";
 import { identityService } from "./identityService";
-import { moderationService } from "./moderationService";
 import { spamService } from "./spamService";
-import { nsfwService } from "./nsfwService";
 import { reputationService } from "./reputationService";
 import { profileService } from "./profileService";
 import { trustService } from "./trustService";
-import { embed, cosine, topTerms, InterestProfile } from "@/lib/embeddings";
+import { embed, InterestProfile } from "@/lib/embeddings";
+import { rankFeed, type RankOpts, type RankResult } from "@/lib/feedRank";
 import { signPost, postIsAuthentic } from "@/lib/records";
 import { bus } from "@/lib/events";
 import { diag } from "@/lib/diag";
@@ -29,6 +28,36 @@ const POSITIVE_REACTIONS = new Set(["⭐", "🔥", "🚀", "💜", "😂", "❤�
 // like EXCEPT these negative ones — an angry/thumbs-down reaction stays local only
 // and must never like the post upstream.
 const NEGATIVE_REACTIONS = new Set(["👎", "😠", "😡", "🤬", "💩", "🤮", "👿", "🖕", "💔"]);
+
+// ---- feed ranking worker ----
+// The read+rank runs in a Web Worker (services/feedWorker.ts) so it never blocks the
+// UI. One worker, request/response by id. If the worker is unavailable or hangs, the
+// promise rejects and generate() ranks on the main thread instead (never a hard fail).
+let feedWorker: Worker | null = null;
+let workerSeq = 1;
+const workerPending = new Map<number, { resolve: (r: RankResult) => void; reject: (e: unknown) => void }>();
+function getFeedWorker(): Worker {
+  if (feedWorker) return feedWorker;
+  const w = new Worker(new URL("../workers/feedWorker.ts", import.meta.url), { type: "module" });
+  w.onmessage = (e: MessageEvent<{ id: number; result?: RankResult; error?: string }>) => {
+    const { id, result, error } = e.data;
+    const p = workerPending.get(id); if (!p) return; workerPending.delete(id);
+    if (error || !result) p.reject(new Error(error ?? "feed worker: empty result")); else p.resolve(result);
+  };
+  w.onerror = () => { for (const p of workerPending.values()) p.reject(new Error("feed worker crashed")); workerPending.clear(); try { w.terminate(); } catch {} feedWorker = null; };
+  feedWorker = w;
+  return w;
+}
+function rankInWorker(msg: Record<string, unknown>): Promise<RankResult> {
+  if (typeof Worker === "undefined") return Promise.reject(new Error("no Worker"));
+  const w = getFeedWorker();
+  const id = workerSeq++;
+  return new Promise<RankResult>((resolve, reject) => {
+    workerPending.set(id, { resolve, reject });
+    w.postMessage({ id, ...msg });
+    setTimeout(() => { if (workerPending.has(id)) { workerPending.delete(id); reject(new Error("feed worker timeout")); } }, 8000);
+  });
+}
 
 class FeedService {
   private profile = new InterestProfile();
@@ -266,178 +295,38 @@ class FeedService {
   private persistProfile() { storage.kvSet("interest", this.profile.serialize()); }
 
   /* ---------- feed generation ---------- */
-  async generate(
-    algorithm: FeedAlgorithm,
-    opts: { moderation: ModerationProfile; friends?: string[]; community?: string; subscribedTopics?: string[]; mutedTopics?: string[]; mutedFeeds?: string[]; includeNostr?: boolean; limit?: number; values?: CommunityValues; hideJunk?: boolean; hideFlaggedText?: boolean } = { moderation: "discovery" },
-  ): Promise<{ posts: Post[]; reasons: Map<string, RecommendationReason>; verdicts: Map<string, ModerationVerdict>; replies: Map<string, Post[]> }> {
+  // The read + ranking run in a Web Worker (services/feedWorker.ts) so a full re-rank
+  // of the post window no longer blocks the UI (it was ~0.5–1.1s on the main thread,
+  // re-running every ~1.2s during a firehose). We hand the worker serializable snapshots
+  // of the in-memory state it can't reach; it reads recentPosts from IndexedDB itself and
+  // returns the ranked feed. Falls back to ranking on the main thread if no worker.
+  async generate(algorithm: FeedAlgorithm, opts: RankOpts = { moderation: "discovery" }): Promise<RankResult> {
     const _t = (typeof performance !== "undefined" ? performance.now() : Date.now());
-    // Bounded working set: rank only the newest window (storage.recentPosts keeps
-    // it O(1) regardless of total corpus size — the key to staying fast at scale).
-    const recent = await storage.recentPosts(opts.limit ?? 800, opts.community);
-    diag("generate: recentPosts returned", recent.length);
-    // Build the reply tree from the SAME bounded read (a reply is recent when its
-    // parent is), so refresh() never has to scan the whole store a second time.
-    const replies = new Map<string, Post[]>();
-    for (const p of recent) if (p.replyTo) { const a = replies.get(p.replyTo) ?? []; a.push(p); replies.set(p.replyTo, a); }
-    for (const a of replies.values()) a.sort((x, y) => x.createdAt - y.createdAt);
-    let posts = recent.filter((p) => !p.replyTo && !this.hidden.has(p.id)); // top-level, minus posts you hid
-    if (opts.includeNostr === false) posts = posts.filter((p) => p.source !== "nostr");   // Nostr unsubscribed
-    const meId = identityService.pk;
-
-    // Dedup RSS-Bot posts that point to the same link — the same story often
-    // arrives from multiple feeds/refreshes, and bots are basically just a URL.
-    // Keep the earliest, prune later duplicates.
-    {
-      const seenLinks = new Set<string>();
-      const dropIds = new Set<string>();
-      for (const p of [...posts].sort((a, b) => a.createdAt - b.createdAt)) {
-        if (p.author !== "rss-bot") continue;
-        const link = (p.text?.match(/https?:\/\/[^\s]+/)?.[0] ?? "").replace(/[)\].,]+$/, "").toLowerCase();
-        if (!link) continue;
-        if (seenLinks.has(link)) dropIds.add(p.id); else seenLinks.add(link);
-      }
-      if (dropIds.size) posts = posts.filter((p) => !dropIds.has(p.id));
+    const snap = {
+      algorithm, opts,
+      meId: identityService.pk,
+      interestVector: this.profile.vector(),
+      hidden: [...this.hidden],
+      trustEdges: trustService.edgesSnapshot(),
+      profiles: profileService.reputationSnapshot(),
+      junkIds: spamService.junkSnapshot(),
+    };
+    let result: RankResult;
+    try {
+      result = await rankInWorker(snap);
+    } catch (e) {
+      diag("generate: worker unavailable — ranking on main", String(e));
+      const recent = await storage.recentPosts(opts.limit ?? 800, opts.community);
+      result = rankFeed(recent, { algorithm, opts, meId: snap.meId, interestVector: snap.interestVector, hidden: new Set(snap.hidden), trustEdges: snap.trustEdges, profiles: snap.profiles, isJunk: (id, text) => spamService.isJunk(id, text) });
     }
-
-    // Layered moderation → graded verdicts. We only drop "hide" (you muted them);
-    // everything else stays, with the verdict surfaced in the UI.
-    const verdicts = new Map<string, ModerationVerdict>();
-    posts = posts.filter((p) => {
-      const bot = p.author === "rss-bot" || p.author === "system" || p.author === "ai-bot";
-      const v = moderationService.evaluate([p.text, p.poll?.question].filter(Boolean).join(" "), {
-        profile: opts.moderation,
-        authorPk: bot ? undefined : p.author,
-        authorName: p.authorName,
-        authorReputation: profileService.get(p.author)?.reputation ?? (p.author === meId ? 999 : 0),
-        knownAuthor: bot || p.author === meId || !!profileService.get(p.author) || p.author.startsWith("nostr:"),
-        community: p.community,
-        values: opts.values,
-      });
-      verdicts.set(p.id, v);
-      return v.action !== "hide";
-    });
-
-    // On-device AI spam/scam/bot filter (opt-in). Flagged posts are removed from
-    // the feed entirely — never rendered. Classification is async + cached: a fast
-    // keyword pre-filter drops blatant scams now; the Transformers.js classifier
-    // catches the rest in the background and emits feed:updated to re-filter.
-    // It ONLY judges external user content — never your own posts, Ledger's
-    // system/changelog/AI posts, or our own RSS feeds (those are "ours" and have
-    // their own controls); they're always shown.
+    // Queue background ML spam classification of the shown external posts (runs on the
+    // main thread, idle; a new junk verdict re-fires feed:updated → next rank filters it).
     if (opts.hideJunk) {
-      const ours = (p: Post) => p.author === meId || p.author === "rss-bot" || p.author === "system" || p.author === "ai-bot";
-      spamService.classify(posts.filter((p) => !ours(p)));
-      posts = posts.filter((p) => ours(p) || !spamService.isJunk(p.id, p.text ?? ""));
+      const ours = (p: Post) => p.author === identityService.pk || p.author === "rss-bot" || p.author === "system" || p.author === "ai-bot";
+      spamService.classify(result.posts.filter((p) => !ours(p)));
     }
-
-    // "Hide" mode for NSFW / foul language: drop flagged-text posts from the feed
-    // entirely — no placeholder, never rendered. This DOES apply to everything,
-    // including our own posts / RSS / system (same on-device text matcher).
-    if (opts.hideFlaggedText) {
-      posts = posts.filter((p) => !nsfwService.isAdultText(p.text ?? ""));
-    }
-
-    // Personal opt-out: hide RSS-Bot / network-feed stories from topics you've
-    // muted in Topics. Applies to EVERY algorithm — it's your "show/hide" over
-    // the global relay feeds (and curated RSS), keyed on the post's topic tag.
-    if (opts.mutedTopics?.length) {
-      const muted = new Set(opts.mutedTopics);
-      posts = posts.filter((p) => p.author !== "rss-bot" || !(p.tags[0] && muted.has(p.tags[0])));
-    }
-    // Per-feed opt-out: hide individual network feeds you've toggled off (by feed id).
-    if (opts.mutedFeeds?.length) {
-      const mutedF = new Set(opts.mutedFeeds);
-      posts = posts.filter((p) => !(p.feedId && mutedF.has(p.feedId)));
-    }
-
-    // "For You" = real human activity + RSS Bot posts only from topics you
-    // subscribed to. No LLM / interest-embedding curation involved.
-    if (algorithm === "ai-curated") {
-      const subTags = new Set((opts.subscribedTopics ?? []).map((t) => t.toLowerCase().replace(/[^a-z0-9]+/g, "")));
-      posts = posts.filter((p) => p.author !== "rss-bot" || (p.tags[0] && subTags.has(p.tags[0])));
-    }
-
-    const reasons = new Map<string, RecommendationReason>();
-    const now = Date.now();
-    const me = identityService.pk;
-    const friends = new Set(opts.friends ?? []);
-    const myVec = this.profile.vector();
-
-    const scored = posts.map((p) => {
-      const ageH = (now - p.createdAt) / 3.6e6;
-      const recency = Math.exp(-ageH / 24);                       // 1d half-ish life
-      // Freshness: a strong, fast-fading boost so the newest posts (and your
-      // own just-published one) sit at the very top, then hands off to curation.
-      const freshness = Math.exp(-((now - p.createdAt) / 60000) / 45); // ~45-min scale
-      const engagement = Object.values(p.reactions).reduce((s, a) => s + a.length, 0);
-      const affinity = p.embedding ? cosine(myVec, p.embedding) : 0;
-      const factors: RecommendationReason["factors"] = [];
-      let score = 0;
-
-      switch (algorithm) {
-        case "chronological":
-          score = p.createdAt;
-          factors.push({ label: "Newest first", weight: 1, detail: new Date(p.createdAt).toLocaleString() });
-          break;
-        case "trending":
-          score = engagement * 2 + recency * 5;
-          factors.push({ label: "Engagement", weight: engagement * 2, detail: `${engagement} reactions` });
-          factors.push({ label: "Recency", weight: recency * 5 });
-          break;
-        case "friends":
-          score = (friends.has(p.author) ? 10 : 0) + recency;
-          factors.push({ label: friends.has(p.author) ? "From someone you follow" : "Not from your circle", weight: friends.has(p.author) ? 10 : 0 });
-          factors.push({ label: "Recency", weight: recency });
-          break;
-        case "community":
-          score = (p.community === opts.community ? 10 : -100) + recency + engagement;
-          factors.push({ label: "In this community", weight: p.community === opts.community ? 10 : -100 });
-          factors.push({ label: "Recency", weight: recency });
-          factors.push({ label: "Engagement", weight: engagement, detail: `${engagement} reactions` });
-          break;
-        case "discovery":
-          // surface things slightly outside your bubble but still quality
-          score = (1 - affinity) * 3 + engagement + recency * 2 + (p.author !== me ? 1 : -5);
-          factors.push({ label: "New to you", weight: (1 - affinity) * 3, detail: `${(affinity * 100).toFixed(0)}% similar to your usual` });
-          factors.push({ label: "Quality signal", weight: engagement, detail: `${engagement} reactions` });
-          factors.push({ label: "Recency", weight: recency * 2 });
-          factors.push({ label: p.author !== me ? "Outside your usual circle" : "Your own post", weight: p.author !== me ? 1 : -5 });
-          break;
-        case "ai-curated":
-        default:
-          // For You: a flat base for being human / followed-topic activity, then
-          // recency + engagement (no LLM/embeddings). The base IS the "Human
-          // activity / topic" factor below, so the factor weights sum to the score.
-          score = 6 + recency * 6 + engagement * 0.5;
-          factors.push({ label: p.author === "rss-bot" ? "From a topic you follow" : "Human activity", weight: 6 });
-          factors.push({ label: "Recency", weight: recency * 6 });
-          factors.push({ label: "Engagement", weight: engagement * 0.5, detail: `${engagement} reactions` });
-          break;
-      }
-
-      // Newest-first boost across all ranked feeds (chronological is already
-      // time-ordered). Guarantees a just-published post lands at the top.
-      if (algorithm !== "chronological") {
-        score += freshness * 40;
-        factors.push({ label: "Freshness (newest first)", weight: freshness * 40, detail: "just posted" });
-      }
-
-      reasons.set(p.id, { postId: p.id, algorithm, score, factors: factors.sort((a, b) => b.weight - a.weight) });
-      return { p, score };
-    });
-
-    // Sort by score, then newest-first as the tiebreaker.
-    scored.sort((a, b) => b.score - a.score || b.p.createdAt - a.p.createdAt);
-    // Balance the two timelines ~50/50. Trending/Discovery keep their ranked order
-    // (a plain 1:1 source interleave). The timeline feeds — For You / Newest / Circle —
-    // use a TIME-COHERENT mix: 30-minute windows, 50/50 within each, with the busier
-    // source's surplus dropped in as a group, so a Ledger post is never shown next to a
-    // Nostr post from hours away.
-    const ranked = (algorithm === "trending" || algorithm === "discovery")
-      ? balanceSources(scored.map((s) => s.p))
-      : balanceByTime(scored.map((s) => s.p));
-    diag(`generate: done (ranked ${ranked.length}, scored ${scored.length})`, Math.round((typeof performance !== "undefined" ? performance.now() : Date.now()) - _t) + "ms");
-    return { posts: ranked, reasons, verdicts, replies };
+    diag(`generate: done (ranked ${result.posts.length})`, Math.round((typeof performance !== "undefined" ? performance.now() : Date.now()) - _t) + "ms");
+    return result;
   }
 
   interestVector() { return this.profile.vector(); }
@@ -445,52 +334,6 @@ class FeedService {
 
 function extractTags(text: string): string[] {
   return [...new Set((text.match(/#[a-z0-9_]+/gi) ?? []).map((t) => t.slice(1).toLowerCase()))];
-}
-
-/** Interleave Ledger and Nostr posts 1:1 (each keeping its ranked order) so the
- *  feed is an even mix and neither source ever exceeds ~50% — you can't scroll
- *  through more than half of one. Capped at 2×min, so the larger firehose's
- *  surplus is trimmed rather than dominating; if only one source is present, it's
- *  returned untouched (nothing to balance). */
-function balanceSources(posts: Post[]): Post[] {
-  const nostr = posts.filter((p) => p.source === "nostr");
-  const ledger = posts.filter((p) => p.source !== "nostr");
-  if (!nostr.length || !ledger.length) return posts;
-  const n = Math.min(nostr.length, ledger.length);
-  const out: Post[] = [];
-  for (let i = 0; i < n; i++) { out.push(ledger[i], nostr[i]); }
-  // Keep the surplus of the larger source instead of DROPPING it — otherwise a feed
-  // that's mostly one source (a fresh node's RSS mesh with only a handful of Nostr
-  // notes) gets capped to 2×the smaller source and looks nearly empty.
-  out.push(...ledger.slice(n), ...nostr.slice(n));
-  return out;
-}
-
-const SOURCE_WINDOW_MS = 30 * 60 * 1000; // keep mixed Ledger/Nostr posts within ~30 min of each other
-
-/** Time-coherent 50/50 mix. Walk both timelines newest-first in ~30-minute windows;
- *  within each window interleave Ledger and Nostr 1:1, then drop the busier source's
- *  surplus in as a GROUP — everything in a window is within 30 min, so a Ledger post is
- *  never placed next to a Nostr post from hours away. When one source is sparse you get
- *  balanced pairs where it exists and tidy groups of the other where it doesn't. Posts
- *  move only in time, none are dropped; one source only → returned untouched. */
-function balanceByTime(posts: Post[]): Post[] {
-  const nostr = posts.filter((p) => p.source === "nostr").sort((a, b) => b.createdAt - a.createdAt);
-  const ledger = posts.filter((p) => p.source !== "nostr").sort((a, b) => b.createdAt - a.createdAt);
-  if (!nostr.length || !ledger.length) return posts;
-  const out: Post[] = [];
-  let li = 0, ni = 0;
-  while (li < ledger.length || ni < nostr.length) {
-    // The window spans 30 min back from the newest post left in either source.
-    const head = Math.max(li < ledger.length ? ledger[li].createdAt : -Infinity, ni < nostr.length ? nostr[ni].createdAt : -Infinity);
-    const floor = head - SOURCE_WINDOW_MS;
-    const lWin: Post[] = []; while (li < ledger.length && ledger[li].createdAt >= floor) lWin.push(ledger[li++]);
-    const nWin: Post[] = []; while (ni < nostr.length && nostr[ni].createdAt >= floor) nWin.push(nostr[ni++]);
-    const k = Math.min(lWin.length, nWin.length);
-    for (let i = 0; i < k; i++) out.push(lWin[i], nWin[i]);   // 50/50 within the window
-    out.push(...lWin.slice(k), ...nWin.slice(k));             // surplus of the busier source, grouped, still in-window
-  }
-  return out;
 }
 
 export const feedService = new FeedService();

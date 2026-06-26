@@ -118,6 +118,10 @@ class TrustService {
   vouchCount(to: string): number {
     return new Set([...edges.values()].filter((e) => e.to === to && e.kind === "vouch").map((e) => e.from)).size;
   }
+
+  /** Serializable copy of all known edges — handed to the feed worker so it can
+   *  compute trust (block/mute/score/vouch) over the same graph (see lib/trustMath). */
+  edgesSnapshot(): TrustEdge[] { return [...edges.values()]; }
 }
 
 export const trustService = new TrustService();

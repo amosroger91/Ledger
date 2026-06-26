@@ -29,6 +29,14 @@ function slimForGraph(p: Profile): Profile {
 class ProfileService {
   get(pk: string): Profile | null { return cache.get(pk) ?? null; }
 
+  /** {pk → reputation} for every cached profile — handed to the feed worker for
+   *  moderation scoring. Key presence doubles as "known author" (we have a profile). */
+  reputationSnapshot(): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const [pk, p] of cache) out[pk] = p.reputation ?? 0;
+    return out;
+  }
+
   /** Ask the graph for a peer's full profile ON DEMAND (when you open their page) —
    *  profiles aren't streamed eagerly anymore (that froze boot). It arrives async via
    *  profile:update; until then the cached/snapshot view shows. */

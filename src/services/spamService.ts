@@ -36,7 +36,7 @@ const WEAK = [
   /\bwork\s+from\s+home\b/i, /\bclick\s+here\b/i, /\b(telegram|whats?app)\b/i,
   /\bdon'?t\s+miss\s+out\b/i, /\bspots?\s+(are\s+)?limited\b/i, /\bsignals?\s+group\b/i,
 ];
-function looksObviouslyJunk(text: string): boolean {
+export function looksObviouslyJunk(text: string): boolean {
   if (!text) return false;
   if (STRONG.some((re) => re.test(text))) return true;
   let w = 0;
@@ -130,4 +130,13 @@ export function classify(posts: Post[]): void {
   if (added) pump();
 }
 
-export const spamService = { isJunk, classify };
+/** Ids the ML classifier has decided ARE junk — handed to the feed worker so it can
+ *  filter them out without the verdict Map (the worker re-checks looksObviouslyJunk
+ *  itself for not-yet-classified posts). */
+export function junkSnapshot(): string[] {
+  const out: string[] = [];
+  for (const [id, bad] of verdicts) if (bad) out.push(id);
+  return out;
+}
+
+export const spamService = { isJunk, classify, junkSnapshot };
