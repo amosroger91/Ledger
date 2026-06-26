@@ -197,6 +197,15 @@ export function rankFeed(recent: Post[], ctx: RankContext): RankResult {
   const ranked = (algorithm === "trending" || algorithm === "discovery")
     ? balanceSources(scored.map((s) => s.p))
     : balanceByTime(scored.map((s) => s.p));
+
+  // Embeddings (a 64–256-float vector per post) are only needed for the ranking that
+  // just finished. Drop them from the result so the postMessage back to the main thread
+  // — and its structured-clone deserialize — stays small. The UI never reads
+  // post.embedding, and reaction/learn paths re-read the full post from storage. These
+  // are storage copies (worker read / recentPosts), so this never touches IndexedDB.
+  for (const p of ranked) delete p.embedding;
+  for (const arr of replies.values()) for (const p of arr) delete p.embedding;
+
   return { posts: ranked, reasons, verdicts, replies };
 }
 
