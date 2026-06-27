@@ -210,4 +210,18 @@ mod tests {
         let t = top_terms("apple apple banana cherry banana apple", 2);
         assert_eq!(t, vec!["apple".to_string(), "banana".to_string()]);
     }
+
+    #[test]
+    fn embed_many_splits_on_nul_and_matches_single() {
+        // The JS side joins the batch with '\u{0}'; embed_many must split on the
+        // SAME char and produce one EMBED_DIM vector per input, each identical to
+        // embed() of that input. (Guards the JS<->Rust batch separator contract.)
+        let a = "hello world";
+        let b = "the quick brown fox";
+        let joined = format!("{a}\u{0}{b}");
+        let flat = embed_many(&joined);
+        assert_eq!(flat.len(), 2 * EMBED_DIM);
+        assert_eq!(&flat[0..EMBED_DIM], &embed(a)[..]);
+        assert_eq!(&flat[EMBED_DIM..2 * EMBED_DIM], &embed(b)[..]);
+    }
 }
