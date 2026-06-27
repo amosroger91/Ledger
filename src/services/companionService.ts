@@ -78,8 +78,10 @@ async function loadModel(id: string): Promise<any | null> {
   loadingId = id;
   loadingPromise = (async () => {
     try {
-      const spec = "https://esm.run/@mlc-ai/web-llm";
-      const webllm: any = await import(/* @vite-ignore */ spec);
+      // Bundled (lazy chunk), NOT a runtime CDN import. The old esm.run import failed
+      // silently under CSP / offline / CDN hiccups — which left the companion stuck on
+      // the heuristic fallback forever. Bundling makes it same-origin and reliable.
+      const webllm: any = await import("@mlc-ai/web-llm");
       bus.emit("companion:model", { state: "loading", id, progress: 0, text: "starting" });
       // Run the engine in a Web Worker so the heavy model load/compile + inference
       // never block the UI thread (that was the "page unresponsive" freeze on boot).
@@ -91,11 +93,14 @@ async function loadModel(id: string): Promise<any | null> {
       engine = eng; loadedId = id;
       bus.emit("companion:model", { state: "ready", id });
       return eng;
-    } catch (e) {
-      console.warn("[companion] model load failed", e);
-      failed.add(id);                  // don't keep retrying a model that crashes this GPU
+    } catch (e: any) {
+      const msg = String(e?.message ?? e);
+      console.error("[companion] model load failed:", msg, e);
+      // Only blacklist the model on a real GPU/device crash (retrying would re-crash).
+      // Transient load errors (network, CDN) stay retryable on the next attempt.
+      if (/device lost|out of memory|maxBufferSize|createBuffer|adapter/i.test(msg)) failed.add(id);
       engine = null; loadedId = null;
-      bus.emit("companion:model", { state: "error", id });
+      bus.emit("companion:model", { state: "error", id, text: msg.slice(0, 200) });
       return null;
     } finally { loadingPromise = null; loadingId = null; }
   })();

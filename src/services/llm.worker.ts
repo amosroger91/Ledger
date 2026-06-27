@@ -7,9 +7,9 @@
 //  in a Web Worker, so the main thread stays responsive while the
 //  model loads and during inference.
 //
-//  WebLLM is imported from the same CDN the app uses. Messages that
-//  arrive before that dynamic import resolves are buffered and replayed
-//  in order, so the engine handshake is never lost.
+//  WebLLM is a bundled dependency (lazy worker chunk), loaded dynamically
+//  here. Messages that arrive before that import resolves are buffered and
+//  replayed in order, so the engine handshake is never lost.
 // ============================================================
 const ctx: any = self;
 const pending: any[] = [];
@@ -22,8 +22,7 @@ ctx.onmessage = (e: any) => {
 
 (async () => {
   try {
-    const spec = "https://esm.run/@mlc-ai/web-llm";   // string var → bundler/tsc leave it as a runtime import
-    const webllm: any = await import(/* @vite-ignore */ spec);
+    const webllm: any = await import("@mlc-ai/web-llm");   // bundled (same-origin worker chunk), not a runtime CDN import
     handler = new webllm.WebWorkerMLCEngineHandler();
     for (const e of pending) handler.onmessage(e);
     pending.length = 0;
