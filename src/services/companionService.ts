@@ -88,6 +88,11 @@ async function loadModel(id: string): Promise<any | null> {
       // The worker hosts WebWorkerMLCEngineHandler — see llm.worker.ts.
       const worker = new Worker(new URL("./llm.worker.ts", import.meta.url), { type: "module" });
       const eng = await webllm.CreateWebWorkerMLCEngine(worker, id, {
+        // Cache model weights in IndexedDB, not CacheStorage. CacheStorage.open
+        // throws "Unexpected internal error" in some Chrome profiles/contexts (and
+        // is blocked in others) — IndexedDB is available everywhere the rest of the
+        // app already uses it, so the model actually caches + loads reliably.
+        appConfig: { ...webllm.prebuiltAppConfig, cacheBackend: "indexeddb" },
         initProgressCallback: (p: any) => bus.emit("companion:model", { state: "loading", id, progress: p.progress ?? 0, text: p.text }),
       });
       engine = eng; loadedId = id;
