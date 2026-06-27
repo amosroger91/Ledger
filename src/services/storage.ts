@@ -12,7 +12,7 @@ import type {
 
 interface LedgerDB extends DBSchema {
   identity: { key: string; value: SecretIdentity };
-  posts: { key: string; value: Post; indexes: { byTime: number; byAuthor: string; byCommunity: string } };
+  posts: { key: string; value: Post; indexes: { byTime: number; byAuthor: string; byCommunity: string; byReplyTo: string } };
   messages: { key: string; value: ChatMessage; indexes: { byChannel: string; byTime: number } };
   communities: { key: string; value: Community };
   reputation: { key: string; value: ReputationLedgerEntry; indexes: { byTime: number } };
@@ -27,7 +27,7 @@ interface LedgerDB extends DBSchema {
 // empty database and orphans every existing user's local data. Kept (along with
 // the "nebula:settings" localStorage key below) through the Ledger rebrand.
 const DB_NAME = "nebula";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 let dbp: Promise<IDBPDatabase<LedgerDB>> | null = null;
 
 function db() {
@@ -35,7 +35,7 @@ function db() {
     dbp = openDB<LedgerDB>(DB_NAME, DB_VERSION, {
       // Versioned + idempotent so existing users migrate without re-creating
       // (and throwing on) stores they already have.
-      upgrade(d, oldVersion) {
+      upgrade(d, oldVersion, _newVersion, tx) {
         if (oldVersion < 1) {
           d.createObjectStore("identity", { keyPath: "publicKey" });
           const posts = d.createObjectStore("posts", { keyPath: "id" });
@@ -54,6 +54,14 @@ function db() {
         }
         if (oldVersion < 2 && !d.objectStoreNames.contains("profiles")) {
           d.createObjectStore("profiles", { keyPath: "pk" });
+        }
+        // v3: index posts by replyTo so reply lookups (PostView thread, profile
+        // reply map) don't scan the whole store. Only posts WITH a replyTo are
+        // indexed (top-level posts have it undefined); idb re-indexes existing
+        // rows on upgrade. Uses the upgrade transaction to reach the live store.
+        if (oldVersion < 3) {
+          const posts = tx.objectStore("posts");
+          if (!posts.indexNames.contains("byReplyTo")) posts.createIndex("byReplyTo", "replyTo");
         }
       },
     });
@@ -104,6 +112,14 @@ export const storage = {
     return (await (await db()).getAllFromIndex("posts", "byTime")).reverse();
   },
   async postsByAuthor(pk: string) { return (await db()).getAllFromIndex("posts", "byAuthor", pk); },
+  /** Just the post ids (keys) — far lighter than allPosts() when you only need the
+   *  set of what's stored (e.g. telling a peer what to backfill). */
+  async allPostIds(): Promise<string[]> { return (await db()).getAllKeys("posts") as Promise<string[]>; },
+  /** Replies to one post — uses the byReplyTo index instead of scanning the store. */
+  async repliesTo(postId: string): Promise<Post[]> { return (await db()).getAllFromIndex("posts", "byReplyTo", postId); },
+  /** Every reply in the store (posts with a replyTo) — the byReplyTo index excludes
+   *  top-level posts, so this loads only what replyMap() needs to group. */
+  async allReplies(): Promise<Post[]> { return (await db()).getAllFromIndex("posts", "byReplyTo"); },
   async deletePost(id: string) { (await db()).delete("posts", id); },
   /** Bounded newest-first working set for the feed. A community view reads that
    *  community's index; the global view scans the newest window (capped) and keeps

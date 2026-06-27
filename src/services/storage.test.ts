@@ -62,6 +62,30 @@ describe("storage.recentPosts", () => {
   });
 });
 
+describe("storage reply index (byReplyTo)", () => {
+  beforeEach(clearPosts);
+
+  it("repliesTo returns only the replies to a given post; allReplies returns every reply", async () => {
+    await storage.putPost(mkPost("root1", 1));
+    await storage.putPost(mkPost("root2", 2));
+    await storage.putPost({ ...mkPost("r1a", 3), replyTo: "root1" } as Post);
+    await storage.putPost({ ...mkPost("r1b", 4), replyTo: "root1" } as Post);
+    await storage.putPost({ ...mkPost("r2a", 5), replyTo: "root2" } as Post);
+
+    const toRoot1 = await storage.repliesTo("root1");
+    expect(toRoot1.map((p) => p.id).sort()).toEqual(["r1a", "r1b"]);
+
+    const all = await storage.allReplies();
+    expect(all.map((p) => p.id).sort()).toEqual(["r1a", "r1b", "r2a"]); // top-level roots excluded
+  });
+
+  it("allPostIds returns just the keys", async () => {
+    await storage.putPost(mkPost("x", 1));
+    await storage.putPost(mkPost("y", 2));
+    expect((await storage.allPostIds()).sort()).toEqual(["x", "y"]);
+  });
+});
+
 describe("storage.pruneEphemeralPosts", () => {
   beforeEach(clearPosts);
 

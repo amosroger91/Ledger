@@ -286,14 +286,15 @@ class FeedService {
   }
 
   async repliesFor(postId: string): Promise<Post[]> {
-    return (await storage.allPosts()).filter((p) => p.replyTo === postId).sort((a, b) => a.createdAt - b.createdAt);
+    return (await storage.repliesTo(postId)).sort((a, b) => a.createdAt - b.createdAt);
   }
 
-  /** Full parent→children reply map across all posts — for thread / detail / profile views. */
+  /** Full parent→children reply map — for thread / detail / profile views. Reads
+   *  only replies (byReplyTo index), not the whole store. */
   async replyMap(): Promise<Map<string, Post[]>> {
-    const all = await storage.allPosts();
+    const replies = await storage.allReplies();
     const m = new Map<string, Post[]>();
-    for (const p of all) if (p.replyTo) { const a = m.get(p.replyTo) ?? []; a.push(p); m.set(p.replyTo, a); }
+    for (const p of replies) if (p.replyTo) { const a = m.get(p.replyTo) ?? []; a.push(p); m.set(p.replyTo, a); }
     for (const a of m.values()) a.sort((x, y) => x.createdAt - y.createdAt);
     return m;
   }

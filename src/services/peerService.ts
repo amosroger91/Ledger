@@ -102,7 +102,7 @@ class PeerService {
   // the gaps both ways — no missed posts, no deletes, no duplicates.
   private async sendSyncReq(conn: DataConnection) {
     try {
-      const have = (await storage.allPosts()).map((p) => p.id);
+      const have = await storage.allPostIds();   // keys only — don't load full posts just for ids
       if (conn.open) conn.send({ t: "sync-req", d: { have } });
     } catch {}
   }
@@ -110,9 +110,10 @@ class PeerService {
   private async sendHistory(fromId: string | undefined, have: string[]) {
     try {
       const haveSet = new Set(have);
-      const missing = (await storage.allPosts())
+      // We only backfill the newest SYNC_MAX anyway (deeper history rides Gun), so
+      // read just that bounded window instead of the entire post store.
+      const missing = (await storage.recentPosts(SYNC_MAX))
         .filter((p) => !haveSet.has(p.id))
-        .sort((a, b) => b.createdAt - a.createdAt)
         .slice(0, SYNC_MAX);
       for (let i = 0; i < missing.length; i += SYNC_BATCH) {
         this.sendTo(fromId, { t: "sync-posts", d: missing.slice(i, i + SYNC_BATCH) });
