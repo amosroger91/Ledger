@@ -325,11 +325,15 @@
 .bl-card__head { padding: var(--bl-space-3) var(--bl-space-4); border-bottom: 1px solid var(--bl-line); background: linear-gradient(180deg, var(--bl-face-panel), var(--bl-face)); font-family: var(--bl-font-title); font-weight: var(--bl-weight-bold); font-size: var(--bl-text-sm); }
 .bl-card__body { padding: var(--bl-space-4); font-size: var(--bl-text-sm); color: var(--bl-ink); }
 
-/* the glossy hero/banner surface (constant Bliss sky + hill) */
+/* the modern premium backdrop gradient (replaces the nostalgic Bliss sky + hill) */
 .bl-bliss {
-  background:
-    radial-gradient(120% 70% at 78% 120%, #95bd5e 0%, #6d9c40 26%, #3f6f28 46%, transparent 58%),
-    linear-gradient(180deg, #2f7ad6 0%, #6aa9e4 34%, #bfe0f7 64%, #eaf5ff 82%, #cfe6c4 100%);
+  background: linear-gradient(135deg, #a5f3fc 0%, #e0f2fe 30%, #f3e8ff 70%, #fbcfe8 100%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .bl-bliss {
+    background: linear-gradient(135deg, #020617 0%, #0f172a 40%, #1e1b4b 80%, #030712 100%);
+  }
 }
 
 /* ---------------------------------------------------------------------
