@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Box, Stack, Typography, Button } from "@mui/material";
 import TranslateRoundedIcon from "@mui/icons-material/TranslateRounded";
 import { useStore } from "@/store/useStore";
@@ -31,6 +31,8 @@ export default function MessageBody({ text = "", media }: { text?: string; media
   const [translating, setTranslating] = useState(false);
   const [confirmedEnglish, setConfirmedEnglish] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [linkBlocked, setLinkBlocked] = useState(false);   // shared link's preview hit the blocklist
+  const onLinkBlocked = useCallback(() => setLinkBlocked(true), []);
   const translatable = useMemo(() => probablyNotEnglish(text), [text]);
   const link = useMemo(() => firstLink(text), [text]);   // first non-image/embed url → preview card
 
@@ -58,8 +60,9 @@ export default function MessageBody({ text = "", media }: { text?: string; media
   const fade = "linear-gradient(to bottom, #000 72%, transparent)";
   const shown = clamp ? body.slice(0, 1200) : body;   // only parse what we show (long Nostr notes can be huge)
 
-  // "Hide" mode (NSFW setting) or a blocked message: render nothing.
-  if (hidden || blocked) return null;
+  // "Hide" mode (NSFW setting), a blocked message, or a blocked shared-link
+  // preview (e.g. og:image at allgraph.ro/aePiot.jpg): render nothing.
+  if (hidden || blocked || linkBlocked) return null;
 
   return (
     <Box>
@@ -88,7 +91,7 @@ export default function MessageBody({ text = "", media }: { text?: string; media
       {media?.map((m, i) => (m.type === "image"
         ? <SafeImage key={i} src={m.url} sx={{ display: "block", mt: 0.5, maxWidth: "100%", maxHeight: 280, borderRadius: 1.5, border: "1px solid var(--bl-line)" }} />
         : null))}
-      {link && <LinkCard url={link} />}
+      {link && <LinkCard url={link} onBlocked={onLinkBlocked} />}
     </Box>
   );
 }

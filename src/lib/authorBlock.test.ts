@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isBlockedAuthorName, isBlockedText } from "./authorBlock";
+import { isBlockedAuthorName, isBlockedText, isBlockedPreview } from "./authorBlock";
 
 describe("isBlockedAuthorName", () => {
   it("matches the aéPiot spam brand across accent + case variants", () => {
@@ -55,5 +55,22 @@ describe("isBlockedText — child-safety screen", () => {
     for (const t of ["adult content, 18+ only", "my onlyfans link", "nsfw art (adults)"]) {
       expect(isBlockedText(t)).toBe(false);
     }
+  });
+});
+
+describe("isBlockedPreview — unfurled link metadata", () => {
+  it("blocks when the OG image is the aéPiot CDN image", () => {
+    expect(isBlockedPreview({ url: "https://innocent-looking.example/x", image: "https://allgraph.ro/aePiot.jpg" })).toBe(true);
+  });
+  it("blocks any image on the blocked host (even without the brand in the path)", () => {
+    expect(isBlockedPreview({ url: "https://example.com/p", image: "https://allgraph.ro/banner-1234.png" })).toBe(true);
+    expect(isBlockedText("https://allgraph.ro/whatever.png")).toBe(true);
+  });
+  it("blocks when the brand is in the preview title/description", () => {
+    expect(isBlockedPreview({ url: "https://example.com", title: "aéPiot — search everything" })).toBe(true);
+  });
+  it("does not block a clean preview", () => {
+    expect(isBlockedPreview({ url: "https://example.com/a", title: "A normal article", image: "https://cdn.example.com/og.jpg", site: "example.com" })).toBe(false);
+    expect(isBlockedPreview(null)).toBe(false);
   });
 });

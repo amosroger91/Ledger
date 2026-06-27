@@ -6,13 +6,14 @@
 // ============================================================
 import { storage } from "./storage";
 import { decodeEntities } from "@/lib/htmlEntities";
+import { isBlockedPreview } from "@/lib/authorBlock";
 
 const PROXIES = [
   (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
   (u: string) => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
 ];
 
-export interface Preview { url: string; title?: string; description?: string; image?: string; site?: string; }
+export interface Preview { url: string; title?: string; description?: string; image?: string; site?: string; blocked?: boolean; }
 
 const mem = new Map<string, Preview>();
 // Decode HTML entities in scraped meta tags. The shared helper covers numeric +
@@ -42,6 +43,7 @@ class LinkPreviewService {
     let image = meta(html, "og:image") || meta(html, "twitter:image");
     if (image && image.startsWith("//")) image = "https:" + image;
     const preview: Preview = { url, title: title || undefined, description: meta(html, "og:description") || meta(html, "description"), image: image && /^https?:\/\//.test(image) ? image : undefined, site: meta(html, "og:site_name") || host };
+    preview.blocked = isBlockedPreview(preview);   // unfurled OG image/host hit the blocklist (e.g. allgraph.ro/aePiot.jpg)
     mem.set(url, preview);
     storage.kvSet("lp:" + url, preview);
     return preview;
@@ -71,6 +73,7 @@ class LinkPreviewService {
       image: image && /^https?:\/\//.test(image) ? image : undefined,
       site: "TikTok",
     };
+    preview.blocked = isBlockedPreview(preview);
     mem.set(key, preview);
     storage.kvSet(key, preview);
     return preview;

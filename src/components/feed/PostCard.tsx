@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, Fragment, memo, type ReactNode } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, Fragment, memo, type ReactNode } from "react";
 import { Stack, Box, Typography, IconButton, Chip, Popover, Tooltip, TextField, Button } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material";
 import AddReactionRoundedIcon from "@mui/icons-material/AddReactionRounded";
@@ -256,10 +256,13 @@ function TikTokCard({ url }: { url: string }) {
 // Open-Graph link preview card for any shared link. `hideImage` renders the
 // compact, text-only variant (no OG image) — used when the post body already
 // shows an image, so we don't stack two big images and blow up the card height.
-export function LinkCard({ url, hideImage }: { url: string; hideImage?: boolean }) {
+export function LinkCard({ url, hideImage, onBlocked }: { url: string; hideImage?: boolean; onBlocked?: () => void }) {
   const [d, setD] = useState<Preview | null>(null);
-  useEffect(() => { let on = true; linkPreviewService.preview(url).then((p) => on && setD(p)).catch(() => {}); return () => { on = false; }; }, [url]);
+  useEffect(() => { let on = true; linkPreviewService.preview(url).then((p) => { if (!on) return; if (p?.blocked) onBlocked?.(); else setD(p); }).catch(() => {}); return () => { on = false; }; }, [url, onBlocked]);
   let host = url; try { host = new URL(url).hostname.replace(/^www\./, ""); } catch {}
+  // A blocked preview (e.g. og:image at allgraph.ro/aePiot.jpg) renders nothing;
+  // the host post/message hides itself via onBlocked.
+  if (d?.blocked) return null;
   return (
     <Box component="a" href={url} target="_blank" rel="noopener noreferrer" sx={{ display: "block", mt: 1.25, border: "1px solid var(--bl-line)", borderRadius: 2.5, overflow: "hidden", textDecoration: "none", color: "inherit", bgcolor: "var(--bl-white)", transition: "background .15s ease", "&:hover": { bgcolor: "rgba(58,155,240,0.04)" } }}>
       {!hideImage && d?.image && <Box component="img" src={d.image} loading="lazy" sx={{ width: "100%", maxHeight: 260, objectFit: "cover", display: "block" }} />}
@@ -754,6 +757,10 @@ export const PostCard = memo(function PostCard({ post, reason, replies = [], rep
   const [showReplies, setShowReplies] = useState(!!expanded);
   const [revealed, setRevealed] = useState(false);
   const [authMenu, setAuthMenu] = useState<HTMLElement | null>(null);
+  // Set when a shared link's UNFURLED preview hits the blocklist (e.g. og:image at
+  // allgraph.ro/aePiot.jpg) — the whole post is then removed from view.
+  const [previewBlocked, setPreviewBlocked] = useState(false);
+  const onPreviewBlocked = useCallback(() => setPreviewBlocked(true), []);
   // When you mute/block/hide from this card, we collapse just THIS one in place
   // (with an Undo) instead of re-ranking the whole feed — so your scroll stays put.
   const [dismissed, setDismissed] = useState<null | { kind: "muted" | "blocked" | "hidden" }>(null);
@@ -862,6 +869,9 @@ export const PostCard = memo(function PostCard({ post, reason, replies = [], rep
     setDismissed(null);
   }
 
+  // A shared link whose unfurled preview is blocked removes the post entirely.
+  if (previewBlocked) return null;
+
   if (dismissed) {
     const txt = dismissed.kind === "hidden" ? "Post hidden"
       : dismissed.kind === "blocked" ? `Blocked ${post.authorName} — you won't see their posts`
@@ -954,7 +964,7 @@ export const PostCard = memo(function PostCard({ post, reason, replies = [], rep
             if (embed?.type === "youtube") return <YouTubeCard id={embed.id} />;
             if (embed?.type === "spotify") return <SpotifyCard kind={embed.kind} id={embed.id} />;
             if (embed?.type === "tiktok") return <TikTokCard url={embed.url} />;
-            if (embed?.type === "link") return <LinkCard url={embed.url} hideImage={hasBodyImg} />;
+            if (embed?.type === "link") return <LinkCard url={embed.url} hideImage={hasBodyImg} onBlocked={onPreviewBlocked} />;
             return post.media?.map((m, i) => (m.type === "image" ? <SafeImage key={i} src={m.url} expand /> : null));
           })()}
 

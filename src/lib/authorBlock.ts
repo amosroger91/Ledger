@@ -21,6 +21,11 @@
 // Spam-brand substrings (normalized) — dropped from name, body, or links.
 const SPAM_TERMS = ["aepiot"];
 
+// Hosts blocked outright — incl. in fetched link-preview metadata. The aéPiot
+// spam network serves its OG preview images from this CDN (e.g. a clean-looking
+// link whose og:image is https://allgraph.ro/aePiot.jpg), so block the host too.
+const BLOCKED_HOSTS = ["allgraph.ro"];
+
 // Unambiguous child-exploitation coded terms. Checked against the COLLAPSED
 // (alphanumeric-only) text, so spacing/punctuation/leet evasion still matches.
 const CSAM_CODED = [
@@ -60,9 +65,21 @@ export function isBlockedText(text: string | undefined | null): boolean {
   const c = collapse(text);
   // spam brands — in the body or inside a link
   if (SPAM_TERMS.some((t) => n.includes(t) || c.includes(t))) return true;
+  // blocked hosts — visible link OR a fetched preview's image/url (n keeps dots)
+  if (BLOCKED_HOSTS.some((h) => n.includes(h) || c.includes(h.replace(/[^a-z0-9]/g, "")))) return true;
   // unambiguous coded terms (separator-proof)
   if (CSAM_CODED.some((t) => c.includes(t))) return true;
   // minor indicator + explicit/NSFW term
   if (EXPLICIT_RE.test(n) && (MINOR_RE.test(n) || AGE_RE.test(n))) return true;
   return false;
+}
+
+/** Screen a fetched link-preview's metadata. Catches links whose visible URL is
+ *  clean but whose unfurled Open-Graph image/host is blocked — e.g. a benign-
+ *  looking link whose og:image is https://allgraph.ro/aePiot.jpg. */
+export function isBlockedPreview(
+  p: { url?: string; title?: string; description?: string; image?: string; site?: string } | null | undefined,
+): boolean {
+  if (!p) return false;
+  return isBlockedText([p.url, p.title, p.description, p.image, p.site].filter(Boolean).join(" "));
 }
