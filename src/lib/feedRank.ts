@@ -16,6 +16,7 @@ import { cosine } from "@/lib/embeddings";
 import { evaluateModeration } from "@/lib/moderationCore";
 import * as trust from "@/lib/trustMath";
 import { isAdultText } from "@/services/nsfwService";
+import { isBlockedAuthorName } from "@/lib/authorBlock";
 
 export interface RankOpts {
   moderation: ModerationProfile;
@@ -54,6 +55,12 @@ export interface RankResult {
 
 export function rankFeed(recent: Post[], ctx: RankContext): RankResult {
   const { algorithm, opts, meId } = ctx;
+  // Drop spam-brand impersonators (e.g. "aéPiot") that flood the network under
+  // many throwaway identities: any post whose display name matches the blocklist
+  // is removed outright — top-level posts AND replies — before anything else runs.
+  // Not gated on source: the same spam arrives tagged nostr/relay/cache, and no
+  // legitimate account is named after the blocked brands.
+  recent = recent.filter((p) => !isBlockedAuthorName(p.authorName));
   // Build the reply tree from the SAME bounded read (a reply is recent when its
   // parent is), so a refresh never has to scan the whole store a second time.
   const replies = new Map<string, Post[]>();
