@@ -15,7 +15,7 @@ import type { Post, FeedAlgorithm, RecommendationReason, ModerationVerdict, Comm
 import { cosine } from "@/lib/embeddings";
 import { evaluateModeration } from "@/lib/moderationCore";
 import * as trust from "@/lib/trustMath";
-import { isAdultText } from "@/services/nsfwService";
+import { isAdultText } from "@/lib/textModeration";
 import { isBlockedAuthorName } from "@/lib/authorBlock";
 
 export interface RankOpts {
