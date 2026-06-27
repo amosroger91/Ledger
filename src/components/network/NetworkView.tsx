@@ -50,7 +50,11 @@ function buildAmbient(n: number): Ambient {
 }
 
 async function buildGraph(ambientN: number): Promise<Graph> {
-  const posts = await storage.allPosts();
+  // Bounded read: the graph recalculates (debounced) on every feed/presence change,
+  // and allPosts() loaded + deserialized every post AND its 256-float embedding from
+  // IndexedDB — 1.5–3s on the main thread on a large DB, freezing the tab during the
+  // relay firehose. The newest ~1000 posts render a fully representative galaxy.
+  const posts = await storage.recentPosts(1000);
   const byId = new Map(posts.map((p) => [p.id, p]));
   const act = new Map<string, number>();
   const onlineSet = new Set(presenceService.list().map((p) => p.pk).filter(isReal));
@@ -71,7 +75,10 @@ async function buildGraph(ambientN: number): Promise<Graph> {
   }
   for (const pk of onlineSet) if (!act.has(pk)) act.set(pk, 1);
   const me = identityService.pk;
-  if (isReal(me)) act.set(me, (act.get(me) ?? 0) + 3);
+  // You ARE online — include yourself in the online set so the HUD count matches the
+  // top bar ("1 online" vs "0 online now") and your own central node renders active
+  // (glow/aura, full size) instead of as an offline dot.
+  if (isReal(me)) { onlineSet.add(me); act.set(me, (act.get(me) ?? 0) + 3); }
 
   const pks = [...act.keys()];
   const idx = new Map(pks.map((pk, i) => [pk, i]));

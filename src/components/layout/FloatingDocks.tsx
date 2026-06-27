@@ -9,7 +9,7 @@ import SendRoundedIcon from "@mui/icons-material/SendRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import RemoveRoundedIcon from "@mui/icons-material/Remove";
 import OpenInFullRoundedIcon from "@mui/icons-material/OpenInFullRounded";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import UserAvatar from "@/components/common/UserAvatar";
 import { companionService } from "@/services/companionService";
 import { joinChatroom } from "@/services/chatroomService";
@@ -261,6 +261,12 @@ export default function FloatingDocks() {
   const [intro, setIntro] = useState(false);
   const [pending, setPending] = useState<string | null>(null); // a post asked the companion to comment
 
+  // The mini Companion is a small version of the full /companion page (its "expand"
+  // navigates there) — so hide the whole Companion node while you're ON that page,
+  // and restore it when you navigate away.
+  const onCompanionPage = useLocation().pathname === "/companion";
+  useEffect(() => { if (onCompanionPage) setCompanionOpen(false); }, [onCompanionPage]);
+
   // "Ask AI about this post" → open the dock and send the prompt.
   useEffect(() => bus.on("companion:prompt", ({ text }) => { setIntro(false); setChatOpen(false); setCompanionOpen(true); setPending(text); }), []);
   // Generic "Ask AI" → just open the mini dock (no prompt), never full-screen.
@@ -319,14 +325,16 @@ export default function FloatingDocks() {
             <Badge color="error" variant="dot" invisible={!chatActive || chatOpen}><ForumRoundedIcon sx={{ color: "#fff" }} /></Badge>
           </Box>
         </Tooltip>
-        <Tooltip title={companionOpen ? "Hide AI" : "Ask AI"} placement="top">
-          <Box onClick={toggleCompanion} sx={bubbleSx("linear-gradient(135deg,#3f97ff,#1668e0)")}>
-            <AutoAwesomeRoundedIcon sx={{ color: "#fff" }} />
-          </Box>
-        </Tooltip>
+        {!onCompanionPage && (
+          <Tooltip title={companionOpen ? "Hide AI" : "Ask AI"} placement="top">
+            <Box onClick={toggleCompanion} sx={bubbleSx("linear-gradient(135deg,#3f97ff,#1668e0)")}>
+              <AutoAwesomeRoundedIcon sx={{ color: "#fff" }} />
+            </Box>
+          </Tooltip>
+        )}
       </Stack>
 
-      {companionOpen && <CompanionPanel intro={intro} autoPrompt={pending} onConsumed={() => setPending(null)} onMin={() => setCompanionOpen(false)} onClose={() => setCompanionOpen(false)} />}
+      {companionOpen && !onCompanionPage && <CompanionPanel intro={intro} autoPrompt={pending} onConsumed={() => setPending(null)} onMin={() => setCompanionOpen(false)} onClose={() => setCompanionOpen(false)} />}
       {chatActive && <ChatroomPanel visible={chatOpen} onMin={() => setChatOpen(false)} onClose={() => { setChatActive(false); setChatOpen(false); }} />}
       {globalActive && <GlobalChatPanel visible={globalOpen} onMin={() => setGlobalOpen(false)} onClose={() => { setGlobalActive(false); setGlobalOpen(false); }} />}
     </Box>
