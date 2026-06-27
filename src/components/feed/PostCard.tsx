@@ -48,6 +48,17 @@ const REACTIONS = ["❤️", "🔥", "😂", "😮", "💀", "🏳️‍🌈", "
 
 const YT_RE = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{11})/i;
 const IMG_RE = /\.(png|jpe?g|gif|webp|avif|bmp|svg)(\?[^\s]*)?$/i;
+
+// True if the post body itself already shows an image — an attached media image,
+// a direct image URL in the text, or a markdown/HTML <img>. When this holds we
+// suppress the link preview's OG image so the card doesn't show two stacked images.
+function bodyHasImage(post: Post): boolean {
+  if (post.media?.some((m) => m.type === "image")) return true;
+  const txt = post.text ?? "";
+  if (!txt) return false;
+  for (const tok of txt.split(/\s+/)) if (/^https?:\/\//.test(tok) && IMG_RE.test(tok)) return true;
+  return /<img\b/i.test(txt) || /!\[[^\]]*\]\([^)]+\)/.test(txt);
+}
 // Spotify share links: track / album / playlist / episode / show.
 const SPOTIFY_RE = /open\.spotify\.com\/(?:intl-[a-z]+\/)?(track|album|playlist|episode|show|artist)\/([A-Za-z0-9]+)/i;
 const TIKTOK_RE = /https?:\/\/(?:www\.|m\.|vm\.|vt\.)?tiktok\.com\/[^\s]+/i;
@@ -242,14 +253,16 @@ function TikTokCard({ url }: { url: string }) {
   );
 }
 
-// Open-Graph link preview card for any shared link.
-export function LinkCard({ url }: { url: string }) {
+// Open-Graph link preview card for any shared link. `hideImage` renders the
+// compact, text-only variant (no OG image) — used when the post body already
+// shows an image, so we don't stack two big images and blow up the card height.
+export function LinkCard({ url, hideImage }: { url: string; hideImage?: boolean }) {
   const [d, setD] = useState<Preview | null>(null);
   useEffect(() => { let on = true; linkPreviewService.preview(url).then((p) => on && setD(p)).catch(() => {}); return () => { on = false; }; }, [url]);
   let host = url; try { host = new URL(url).hostname.replace(/^www\./, ""); } catch {}
   return (
     <Box component="a" href={url} target="_blank" rel="noopener noreferrer" sx={{ display: "block", mt: 1.25, border: "1px solid var(--bl-line)", borderRadius: 2.5, overflow: "hidden", textDecoration: "none", color: "inherit", bgcolor: "var(--bl-white)", transition: "background .15s ease", "&:hover": { bgcolor: "rgba(58,155,240,0.04)" } }}>
-      {d?.image && <Box component="img" src={d.image} loading="lazy" sx={{ width: "100%", maxHeight: 260, objectFit: "cover", display: "block" }} />}
+      {!hideImage && d?.image && <Box component="img" src={d.image} loading="lazy" sx={{ width: "100%", maxHeight: 260, objectFit: "cover", display: "block" }} />}
       <Box sx={{ p: 1.25 }}>
         <Typography variant="caption" sx={{ color: "text.secondary", textTransform: "uppercase", letterSpacing: 0.4, fontSize: 11 }}>{decodeEntities(d?.site || host)}</Typography>
         <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.3, mt: 0.25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{decodeEntities(d?.title || host)}</Typography>
@@ -773,6 +786,9 @@ export const PostCard = memo(function PostCard({ post, reason, replies = [], rep
     return null;
   }, [post.text]);
 
+  // When the body already shows an image, the link preview drops its OG image.
+  const hasBodyImg = useMemo(() => bodyHasImage(post), [post.text, post.media]);
+
   // User-triggered fact-check: purely algorithmic, on-device. We extract the
   // post's salient terms and rank PolitiFact's recent claims by IDF-weighted
   // lexical overlap — no AI involved; it links you to PolitiFact's own wording.
@@ -938,7 +954,7 @@ export const PostCard = memo(function PostCard({ post, reason, replies = [], rep
             if (embed?.type === "youtube") return <YouTubeCard id={embed.id} />;
             if (embed?.type === "spotify") return <SpotifyCard kind={embed.kind} id={embed.id} />;
             if (embed?.type === "tiktok") return <TikTokCard url={embed.url} />;
-            if (embed?.type === "link") return <LinkCard url={embed.url} />;
+            if (embed?.type === "link") return <LinkCard url={embed.url} hideImage={hasBodyImg} />;
             return post.media?.map((m, i) => (m.type === "image" ? <SafeImage key={i} src={m.url} expand /> : null));
           })()}
 
