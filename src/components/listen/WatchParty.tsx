@@ -88,10 +88,10 @@ export default function WatchParty() {
         </Stack>
         <Stack direction="row" spacing={0.5} sx={{ flexWrap: "wrap", gap: 0.5 }}>
           <Chip label="🍿 Public Lobby" size="small" onClick={() => switchRoom(LOBBY)} variant={room === LOBBY ? "filled" : "outlined"}
-            sx={room === LOBBY ? { background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#fff", fontWeight: 700 } : {}} />
+            sx={room === LOBBY ? { background: "var(--bl-accent-gradient)", color: "#fff", fontWeight: 700 } : {}} />
           {PRESETS.map((p) => (
             <Chip key={p} label={"#" + p} size="small" onClick={() => switchRoom(p)} variant={room === p ? "filled" : "outlined"}
-              sx={room === p ? { background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#fff", fontWeight: 700 } : {}} />
+              sx={room === p ? { background: "var(--bl-accent-gradient)", color: "#fff", fontWeight: 700 } : {}} />
           ))}
         </Stack>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ mt: 1.5 }} alignItems={{ xs: "stretch", sm: "center" }}>

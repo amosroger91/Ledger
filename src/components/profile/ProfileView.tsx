@@ -150,7 +150,7 @@ function ProfileDisplay({ profile, own, onEdit }: { profile: Profile; own?: bool
 
           <Stack direction="row" alignItems="center" spacing={1} sx={{ flexWrap: "wrap" }}>
             <Typography variant="h4" sx={{ fontWeight: 800, lineHeight: 1.1 }}>{profile.username}</Typography>
-            <Chip size="small" label={rank} sx={{ background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#fff", fontWeight: 700 }} />
+            <Chip size="small" label={rank} sx={{ background: "var(--bl-accent-gradient)", color: "#fff", fontWeight: 700 }} />
           </Stack>
           {profile.quote && <Typography sx={{ mt: 0.5, fontStyle: "italic", color: "text.secondary" }}>“{profile.quote}”</Typography>}
           {profile.location && <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>📍 {profile.location}</Typography>}
@@ -387,7 +387,7 @@ function OwnProfile({ me, refreshMe }: { me: any; refreshMe: () => void }) {
           </Box>
           <input ref={avatarRef} type="file" accept="image/*" hidden onChange={(e) => setPhoto(e.target.files?.[0])} />
           <Box sx={{ flex: 1, pb: 1 }}>
-            <Stack direction="row" spacing={1} alignItems="center"><Typography variant="h5">{me?.username}</Typography><Chip size="small" label={rank} sx={{ background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#fff", fontWeight: 700 }} /></Stack>
+            <Stack direction="row" spacing={1} alignItems="center"><Typography variant="h5">{me?.username}</Typography><Chip size="small" label={rank} sx={{ background: "var(--bl-accent-gradient)", color: "#fff", fontWeight: 700 }} /></Stack>
             <Tooltip title={me?.publicKey ?? ""}><Typography variant="caption" color="text.secondary" sx={{ fontFamily: "monospace" }}>id {fingerprint(me?.publicKey ?? "")}</Typography></Tooltip>
             <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5, flexWrap: "wrap" }}>
               <Typography variant="body2">📍 {me?.location || "no location"}</Typography>

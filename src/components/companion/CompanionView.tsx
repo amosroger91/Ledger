@@ -137,7 +137,7 @@ export default function CompanionView() {
         {history.length === 0 && <Typography color="text.secondary">Ask me anything — I'm a real language model running on your own device (it downloads automatically; progress shows above). While it loads, the quick tools below answer instantly.</Typography>}
         {history.map((m) => (
           <Stack key={m.id} direction="row" justifyContent={m.role === "user" ? "flex-end" : "flex-start"}>
-            <Box sx={{ maxWidth: { xs: "85%", sm: "78%" }, px: 1.5, py: 1, borderRadius: 2, background: m.role === "user" ? "linear-gradient(135deg,#3f97ff,#1668e0)" : "#ffffff", color: m.role === "user" ? "#ffffff" : "text.primary", wordBreak: "break-word" }}>
+            <Box sx={{ maxWidth: { xs: "85%", sm: "78%" }, px: 1.5, py: 1, borderRadius: 2, background: m.role === "user" ? "var(--bl-accent-gradient)" : "var(--bl-face-raised)", color: m.role === "user" ? "#ffffff" : "text.primary", wordBreak: "break-word" }}>
               <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>{m.text}</Typography>
             </Box>
           </Stack>

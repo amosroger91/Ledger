@@ -491,7 +491,7 @@ export default function FeedView() {
                     border: "none", borderRadius: "6px", fontSize: "0.82rem", fontWeight: 600,
                     px: 1.4, py: 0.55, whiteSpace: "nowrap", color: "text.secondary", textTransform: "none",
                     "&.Mui-selected": {
-                      background: "linear-gradient(135deg,#3f97ff,#1668e0)",
+                      background: "var(--bl-accent-gradient)",
                       color: "#fff",
                       boxShadow: "0 2px 6px rgba(58,155,240,0.35)",
                     },
@@ -571,7 +571,7 @@ export default function FeedView() {
         {newCount > 0 && !refreshing && (
           <Box sx={{ position: "sticky", top: 8, zIndex: 6, display: "flex", justifyContent: "center", mb: 1.5, pointerEvents: "none" }}>
             <Button onClick={applyPending} variant="contained" size="small" startIcon={<KeyboardArrowUpRoundedIcon />}
-              sx={{ pointerEvents: "auto", borderRadius: 999, textTransform: "none", fontWeight: 800, px: 2.5, boxShadow: 4, background: "linear-gradient(135deg,#3f97ff,#1668e0)", "&:hover": { background: "linear-gradient(135deg,#3f97ff,#0a55cf)" } }}>
+              sx={{ pointerEvents: "auto", borderRadius: 999, textTransform: "none", fontWeight: 800, px: 2.5, boxShadow: 4, background: "var(--bl-accent-gradient)", "&:hover": { filter: "brightness(1.1)" } }}>
               {newCount} new post{newCount > 1 ? "s" : ""}
             </Button>
           </Box>

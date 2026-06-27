@@ -91,7 +91,7 @@ export default function CommunitiesView() {
         <Stack direction="row" spacing={0.5}>
           {FILTERS.map((f) => (
             <Chip key={f.id} label={f.label} size="small" onClick={() => setFilter(f.id)} variant={filter === f.id ? "filled" : "outlined"}
-              sx={filter === f.id ? { background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#fff", fontWeight: 700 } : { borderColor: "rgba(58,155,240,0.3)", color: "text.secondary" }} />
+              sx={filter === f.id ? { background: "var(--bl-accent-gradient)", color: "#fff", fontWeight: 700 } : { borderColor: "rgba(58,155,240,0.3)", color: "text.secondary" }} />
           ))}
         </Stack>
       </Stack>

@@ -124,7 +124,7 @@ export default function WalletView() {
           <Stack spacing={1.5}>
             <TextField label="Recipient address (0x…)" value={to} onChange={(e) => setTo(e.target.value)} fullWidth size="small" />
             <ToggleButtonGroup exclusive fullWidth size="small" value={currency} onChange={(_, v) => v && setCurrency(v)}
-              sx={{ "& .MuiToggleButton-root": { fontWeight: 700 }, "& .Mui-selected": { background: "linear-gradient(135deg,#3f97ff,#1668e0) !important", color: "#fff !important" } }}>
+              sx={{ "& .MuiToggleButton-root": { fontWeight: 700 }, "& .Mui-selected": { background: "var(--bl-accent-gradient) !important", color: "#fff !important" } }}>
               <ToggleButton value="MATIC">MATIC</ToggleButton>
               <ToggleButton value="USDC">USDC</ToggleButton>
             </ToggleButtonGroup>
@@ -132,7 +132,7 @@ export default function WalletView() {
               InputProps={{ endAdornment: <Button size="small" onClick={setMax} disabled={!bal} sx={{ minWidth: 0, fontWeight: 700 }}>Max</Button> }}
               helperText={amtUsd != null ? `≈ $${amtUsd.toFixed(2)}` : (bal ? `Balance: ${currency === "MATIC" ? bal.matic : bal.usdc} ${currency}` : " ")} />
             <Button variant="contained" size="large" startIcon={<SendRoundedIcon />} onClick={send} disabled={sending}
-              sx={{ background: "linear-gradient(135deg,#3f97ff,#1668e0)", fontWeight: 700, py: 1.1 }}>{sending ? "Sending…" : `Send ${currency}`}</Button>
+              sx={{ background: "var(--bl-accent-gradient)", fontWeight: 700, py: 1.1 }}>{sending ? "Sending…" : `Send ${currency}`}</Button>
             {lastTx && (
               <Button size="small" endIcon={<OpenInNewRoundedIcon />} component="a" href={walletService.explorerTx(lastTx)} target="_blank" rel="noopener noreferrer" sx={{ textTransform: "none" }}>
                 View last transaction

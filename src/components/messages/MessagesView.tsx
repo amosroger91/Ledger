@@ -72,7 +72,7 @@ export default function MessagesView({ fullWidth }: { fullWidth?: boolean } = {}
             return (
               <Stack key={m.id} direction="row" spacing={1} justifyContent={mine ? "flex-end" : "flex-start"}>
                 {!mine && <UserAvatar pk={m.author} name={m.authorName} avatar={m.authorAvatar} size={28} />}
-                <Box sx={{ maxWidth: "70%", px: 1.5, py: 0.9, borderRadius: 2, background: mine ? "linear-gradient(135deg,#3f97ff,#1668e0)" : "#ffffff", color: mine ? "#ffffff" : "text.primary" }}>
+                <Box sx={{ maxWidth: "70%", px: 1.5, py: 0.9, borderRadius: 2, background: mine ? "var(--bl-accent-gradient)" : "var(--bl-face-raised)", color: mine ? "#ffffff" : "text.primary" }}>
                   {!mine && <Typography variant="caption" sx={{ fontWeight: 700 }}>{m.authorName}</Typography>}
                   <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>{m.text}</Typography>
                   <Typography variant="caption" sx={{ opacity: 0.6 }}>{clockTime(m.createdAt)}</Typography>

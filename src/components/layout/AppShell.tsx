@@ -222,10 +222,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
           component="a" href={`${import.meta.env.BASE_URL}support.html`} target="_blank" rel="noopener noreferrer"
           sx={{
             display: "flex", alignItems: "center", gap: 1.5, px: { xs: 0.75, sm: 1.5 }, py: 1.1, borderRadius: 2, cursor: "pointer",
-            textDecoration: "none", color: "var(--bl-accent)",
-            background: "transparent", border: "1px solid var(--bl-accent)",
-            boxShadow: "none", mb: 0.5, minHeight: "48px",
-            "&:hover": { background: "var(--bl-accent-soft)" },
+            textDecoration: "none", color: "#fff",
+            background: "var(--bl-accent-gradient)", border: "none",
+            boxShadow: "0 2px 6px rgba(58,155,240,0.35)", mb: 0.5, minHeight: "48px",
+            "&:hover": { filter: "brightness(1.1)" },
             justifyContent: expanded ? "flex-start" : "center",
             transition: "all var(--bl-dur-fast) var(--bl-ease)",
           }}

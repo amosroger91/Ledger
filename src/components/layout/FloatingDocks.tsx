@@ -33,7 +33,7 @@ const PANEL_SX = {
 
 function Header({ icon, title, subtitle, onExpand, onMin, onClose }: { icon: React.ReactNode; title: string; subtitle: string; onExpand: () => void; onMin: () => void; onClose: () => void }) {
   return (
-    <Stack direction="row" alignItems="center" spacing={1} sx={{ px: 1.25, py: 0.75, color: "#fff", background: "linear-gradient(135deg,#3f97ff,#1668e0,#0a55cf)" }}>
+    <Stack direction="row" alignItems="center" spacing={1} sx={{ px: 1.25, py: 0.75, color: "#fff", background: "var(--bl-accent-gradient)" }}>
       <Avatar sx={{ width: 28, height: 28, bgcolor: "rgba(255,255,255,0.22)" }}>{icon}</Avatar>
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography sx={{ fontWeight: 800, fontSize: 14, lineHeight: 1.1 }} noWrap>{title}</Typography>
@@ -74,12 +74,12 @@ function CompanionPanel({ intro, autoPrompt, onConsumed, onMin, onClose }: { int
       <Header icon={<AutoAwesomeRoundedIcon fontSize="small" />} title="Your Companion" subtitle={companionService.modelReady() ? "on-device · ready" : "local engine"} onExpand={() => { onMin(); nav("/companion"); }} onMin={onMin} onClose={onClose} />
       <Box sx={{ flex: 1, overflowY: "auto", p: 1.25, display: "flex", flexDirection: "column", gap: 1 }}>
         {intro && history.length === 0 && (
-          <Box sx={{ alignSelf: "flex-start", maxWidth: "85%", px: 1.25, py: 0.9, borderRadius: 2, bgcolor: "#fff" }}>
+          <Box sx={{ alignSelf: "flex-start", maxWidth: "85%", px: 1.25, py: 0.9, borderRadius: 2, bgcolor: "var(--bl-face-raised)" }}>
             <Typography variant="body2">{greeting}</Typography>
           </Box>
         )}
         {history.map((m) => (
-          <Box key={m.id} sx={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "85%", px: 1.25, py: 0.9, borderRadius: 2, background: m.role === "user" ? "linear-gradient(135deg,#3f97ff,#1668e0)" : "#fff", color: m.role === "user" ? "#fff" : "text.primary" }}>
+          <Box key={m.id} sx={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "85%", px: 1.25, py: 0.9, borderRadius: 2, background: m.role === "user" ? "var(--bl-accent-gradient)" : "var(--bl-face-raised)", color: m.role === "user" ? "#ffffff" : "text.primary" }}>
             <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.text}</Typography>
           </Box>
         ))}
@@ -133,7 +133,7 @@ function ChatroomPanel({ visible, onMin, onClose }: { visible: boolean; onMin: (
           return (
             <Stack key={m.id} direction="row" spacing={0.75} justifyContent={mine ? "flex-end" : "flex-start"}>
               {!mine && <UserAvatar pk={m.author} name={m.authorName} avatar={m.authorAvatar} size={24} />}
-              <Box sx={{ maxWidth: "78%", px: 1.1, py: 0.7, borderRadius: 2, background: mine ? "linear-gradient(135deg,#3f97ff,#1668e0)" : "#fff", color: mine ? "#fff" : "text.primary" }}>
+              <Box sx={{ maxWidth: "78%", px: 1.1, py: 0.7, borderRadius: 2, background: mine ? "var(--bl-accent-gradient)" : "var(--bl-face-raised)", color: mine ? "#ffffff" : "text.primary" }}>
                 {!mine && <Typography variant="caption" sx={{ fontWeight: 700 }}>{m.authorName}</Typography>}
                 {m.text && <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.text}</Typography>}
                 {m.media?.map((md, i) => md.type === "image" ? <Box key={i} component="img" src={md.url} sx={{ mt: 0.5, maxWidth: "100%", borderRadius: 1 }} /> : null)}
@@ -224,7 +224,7 @@ function GlobalChatPanel({ visible, onMin, onClose }: { visible: boolean; onMin:
             return (
               <Stack key={m.id} direction="row" spacing={0.75} justifyContent={isMine ? "flex-end" : "flex-start"}>
                 {!isMine && <UserAvatar pk={m.author} name={m.authorName} avatar={m.authorAvatar} size={24} />}
-                <Box sx={{ maxWidth: "78%", px: 1.1, py: 0.7, borderRadius: 2, background: isMine ? "linear-gradient(135deg,#3f97ff,#1668e0)" : "#fff", color: isMine ? "#fff" : "text.primary" }}>
+                <Box sx={{ maxWidth: "78%", px: 1.1, py: 0.7, borderRadius: 2, background: isMine ? "var(--bl-accent-gradient)" : "var(--bl-face-raised)", color: isMine ? "#ffffff" : "text.primary" }}>
                   {!isMine && <Typography variant="caption" sx={{ fontWeight: 700 }}>{m.authorName}</Typography>}
                   {(m.text || m.media?.length) ? <MessageBody text={m.text} media={m.media} /> : null}
                   <Typography variant="caption" sx={{ opacity: 0.6, display: "block" }}>{clockTime(m.createdAt)}</Typography>
@@ -327,7 +327,7 @@ export default function FloatingDocks() {
         </Tooltip>
         {!onCompanionPage && (
           <Tooltip title={companionOpen ? "Hide AI" : "Ask AI"} placement="top">
-            <Box onClick={toggleCompanion} sx={bubbleSx("linear-gradient(135deg,#3f97ff,#1668e0)")}>
+            <Box onClick={toggleCompanion} sx={bubbleSx("var(--bl-accent-gradient)")}>
               <AutoAwesomeRoundedIcon sx={{ color: "#fff" }} />
             </Box>
           </Tooltip>

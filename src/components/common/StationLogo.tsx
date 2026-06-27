@@ -15,7 +15,7 @@ export default function StationLogo({
     <Box sx={{
       width: size, height: size, flex: "0 0 auto", borderRadius: radius, overflow: "hidden",
       display: "grid", placeItems: "center", color: "#fff", fontSize: size * 0.42,
-      background: "linear-gradient(135deg,#3f97ff,#1668e0)",
+      background: "var(--bl-accent-gradient)",
     }}>
       {showImg
         ? <Box component="img" src={src} alt="" loading="lazy" onError={() => setBroken(true)}

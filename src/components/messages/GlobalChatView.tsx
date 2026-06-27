@@ -61,7 +61,7 @@ export default function GlobalChatView() {
             return (
               <Stack key={m.id} direction="row" spacing={1} justifyContent={isMine ? "flex-end" : "flex-start"}>
                 {!isMine && <UserAvatar pk={m.author} name={m.authorName} avatar={m.authorAvatar} size={28} />}
-                <Box sx={{ maxWidth: "72%", px: 1.5, py: 0.9, borderRadius: 2, background: isMine ? "linear-gradient(135deg,#3f97ff,#1668e0)" : "#ffffff", color: isMine ? "#fff" : "text.primary" }}>
+                <Box sx={{ maxWidth: "72%", px: 1.5, py: 0.9, borderRadius: 2, background: isMine ? "var(--bl-accent-gradient)" : "var(--bl-face-raised)", color: isMine ? "#fff" : "text.primary" }}>
                   {!isMine && <Typography variant="caption" sx={{ fontWeight: 700 }}>{m.authorName}</Typography>}
                   {(m.text || m.media?.length) ? <MessageBody text={m.text} media={m.media} /> : null}
                   <Typography variant="caption" sx={{ opacity: 0.6, display: "block" }}>{clockTime(m.createdAt)}</Typography>

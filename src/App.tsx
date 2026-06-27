@@ -135,7 +135,7 @@ export default function App() {
       >
         {notify ? (
           <Alert severity="info" variant="filled" icon={<span>✨</span>} onClose={() => setNotify(null)}
-            sx={{ background: "linear-gradient(135deg,#3f97ff,#1668e0)", color: "#ffffff", fontWeight: 600 }}>
+            sx={{ background: "var(--bl-accent-gradient)", color: "#ffffff", fontWeight: 600 }}>
             {notify}
           </Alert>
         ) : undefined}
