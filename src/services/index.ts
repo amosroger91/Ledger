@@ -57,6 +57,10 @@ export async function boot(): Promise<BootResult> {
     } catch { /* keep current model */ }
   }
   await storage.saveSettings(settings);
+  // Point the companion at the resolved model + LLM preference NOW — otherwise it
+  // keeps its built-in default (the tiny model) and the UI ends up promising a
+  // bigger model than the one that actually loads (worse, more error-prone answers).
+  companionService.configure(settings.useWebLLM, settings.llmModel);
 
   // Load the Rust/WASM embeddings core before the feed starts embedding posts,
   // so create/RSS/Nostr embedding + feed ranking take the fast path. Non-fatal:

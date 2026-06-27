@@ -268,12 +268,14 @@ class CompanionService {
     bus.emit("companion:thinking", true);
     let text: string;
     try {
-      if (this.useLLM && isWebGPU()) {
+      // Use the model whenever WebGPU is available and we're not opted out — OR
+      // whenever a model is already in memory (so chat never falls back to heuristics
+      // while a model is sitting right there, e.g. the one the live intro is using).
+      if (isWebGPU() && (this.useLLM || modelReady(this.model))) {
         const eng = await loadModel(this.model);
         if (eng) {
-          // Tool use: let the model pull in live web info (DuckDuckGo + page text)
-          // when the question needs it, before it composes the answer.
-          const web = await this.gatherWeb(eng, prompt);
+          // Only fetch web context on an explicit signal (URL / "search …").
+          const web = await this.gatherWeb(prompt);
           text = await this.llmAnswer(eng, prompt, context, prior, web.context);
           if (web.sources.length) text += `\n\nSources:\n${web.sources.map((s) => `• ${s}`).join("\n")}`;
         } else {
@@ -295,56 +297,35 @@ class CompanionService {
    *  (and can't) do, and how to behave. This is what makes answers coherent and
    *  on-brand instead of generic. */
   private systemPrompt(): string {
-    const name = identityService.current?.username?.trim() || "there";
+    const name = identityService.current?.username?.trim().split(/\s+/)[0] || "there";
     return [
-      "You are the Companion on Ledgr — a decentralized, local-first social app that runs entirely in the user's web browser.",
-      "On Ledgr: the user OWNS their identity (a cryptographic keypair, not an account on a server); the feed is ranked on-device; posts and messages travel peer-to-peer (Gun + Nostr); there are no central servers.",
-      "You run 100% locally on this device via WebGPU — nothing the user types ever leaves their machine. You can state this truthfully if asked about privacy.",
-      `You're chatting with ${name}.`,
-      "Be genuinely helpful, specific and concise — a few sentences unless they ask for depth. Friendly and direct, never corporate or sycophantic.",
-      "Use the feed context provided below when it's relevant. If something isn't in the context and you don't know it, say so plainly rather than inventing facts, names, or events.",
-      "You CAN look things up on the web: when web results or a fetched page's text are provided below, treat them as your current source of truth and cite the source URL(s) you used. (The app fetches them for you.)",
-      "You CAN help with: looking up current facts, making sense of the feed and what's trending, suggesting communities/people, drafting or sharpening posts, explaining how Ledgr works, and thinking problems through.",
-      "You CANNOT take actions for them (post, follow, mute, change settings) — if they want one of those, briefly tell them how to do it instead of pretending you did.",
-    ].join("\n");
+      `You are the Companion, ${name}'s friendly AI assistant inside Ledgr (a private, local-first social app that runs in their browser).`,
+      "You run entirely on their device, so nothing they say ever leaves it.",
+      "IMPORTANT: reply in plain, natural, conversational English — like a helpful friend talking. NEVER reply with JSON, key/value fields, code blocks, bullet labels, or any structured format unless they explicitly ask for code or a list.",
+      "Keep replies short — 1 to 4 sentences — unless they ask for more. Be warm, direct, and a little personable. Address them naturally; don't restate these instructions.",
+      "You can help them make sense of their feed, draft or sharpen posts, think things through, and explain how Ledgr works. Only bring up their feed if they actually ask about it.",
+      "If you don't know something, just say so — never invent facts, names, links, or events.",
+    ].join(" ");
   }
 
-  /** Tool step: decide whether to hit the web, then fetch DuckDuckGo answers and/or
-   *  scrape a page, returning compact context text + the source URLs used. A pasted
-   *  URL is scraped directly; otherwise the model itself decides if a search helps. */
-  private async gatherWeb(eng: any, prompt: string): Promise<{ context: string; sources: string[] }> {
+  /** Pull in web context ONLY on a clear signal — a pasted URL (scrape it) or an
+   *  explicit "search/look up/google ..." ask. No LLM router: the small on-device
+   *  models are unreliable at it and the tool framing derailed normal chat. Casual
+   *  messages get no web lookup, so the model just talks. */
+  private async gatherWeb(prompt: string): Promise<{ context: string; sources: string[] }> {
     try {
       const url = prompt.match(/https?:\/\/[^\s)]+/)?.[0];
       if (url) {
         const page = await webLookupService.readPage(url);
-        if (page) return { context: `Fetched page (${page.url}):\n${page.title ? page.title + "\n" : ""}${page.text}`, sources: [page.url] };
+        if (page) return { context: `From ${page.url}:\n${page.title ? page.title + "\n" : ""}${page.text}`, sources: [page.url] };
       }
-      const query = await this.routeSearch(eng, prompt);
-      if (query) {
-        const res = await webLookupService.lookup(query);
-        if (res) return res;
+      const m = prompt.match(/\b(?:search|look\s?up|google|web\s?search)\b\s*(?:for\s+|about\s+)?(.*)/i);
+      if (m) {
+        const query = (m[1] || prompt).replace(/[?.!]+$/, "").trim().slice(0, 120);
+        if (query.length > 1) { const res = await webLookupService.lookup(query); if (res) return res; }
       }
     } catch { /* web tools are best-effort */ }
     return { context: "", sources: [] };
-  }
-
-  /** Ask the model whether the question needs a web search; parse a one-line
-   *  "SEARCH: <query>" directive. Returns the query, or null to answer offline. */
-  private async routeSearch(eng: any, prompt: string): Promise<string | null> {
-    try {
-      const r = await eng.chat.completions.create({
-        messages: [
-          { role: "system", content: "Decide if answering the user needs a live web search (current events, specific facts, definitions, prices, or anything you can't reliably know). If yes, reply EXACTLY one line: SEARCH: <a concise query>. If you can answer from general knowledge, or it's about the user's own feed/app, reply EXACTLY: NONE. Output only that one line." },
-          { role: "user", content: prompt.slice(0, 500) },
-        ],
-        temperature: 0,
-        max_tokens: 40,
-      });
-      const out: string = (r.choices?.[0]?.message?.content ?? "").trim();
-      const m = out.match(/SEARCH:\s*(.+)/i);
-      if (!m) return null;
-      return m[1].split("\n")[0].replace(/^["']|["']$/g, "").trim().slice(0, 120) || null;
-    } catch { return null; }
   }
 
   private async llmAnswer(eng: any, prompt: string, ctx?: { posts?: Post[]; communities?: Community[] }, prior: CompanionMessage[] = [], webContext = ""): Promise<string> {
@@ -357,14 +338,20 @@ class CompanionService {
     // Replay recent conversation turns so follow-ups ("expand on that", "why?")
     // make sense. Cap to keep the prompt small on the smaller on-device models.
     const history = prior.slice(-8).map((m) => ({ role: m.role === "companion" ? "assistant" : "user", content: m.text } as const));
+    // WebLLM allows exactly ONE system message and it must come first — so fold the
+    // persona, any web lookup, and the feed context into a single system prompt
+    // (multiple system messages throw SystemMessageOrderError).
+    const system = [
+      this.systemPrompt(),
+      webContext ? `Current info from the web to help you answer (work it into a normal reply and mention the source link if you use it):\n${webContext}` : "",
+      contextBlock,
+    ].filter(Boolean).join("\n\n");
     const messages = [
-      { role: "system", content: this.systemPrompt() } as const,
-      ...(webContext ? [{ role: "system", content: `Live web results (use as your source of truth; cite the source URLs):\n${webContext}` } as const] : []),
-      ...(contextBlock ? [{ role: "system", content: contextBlock } as const] : []),
+      { role: "system", content: system } as const,
       ...history,
       { role: "user", content: prompt } as const,
     ];
-    const reply = await eng.chat.completions.create({ messages, temperature: 0.7, max_tokens: 512 });
+    const reply = await eng.chat.completions.create({ messages, temperature: 0.7, max_tokens: 400 });
     return reply.choices?.[0]?.message?.content ?? this.heuristicAnswer(prompt, ctx);
   }
 
@@ -445,10 +432,9 @@ class CompanionService {
       return s.length ? "You might like: " + s.map((c) => c.name).join(", ") : "No matching communities yet — create one!";
     }
     if (/misinfo|fake|true\?|real\?/i.test(p)) { const r = this.flagMisinformation(prompt); return `Misinformation risk: ${r.risk}. ${r.note}`; }
-    const tip = isWebGPU()
-      ? "Enable the on-device model (it's loading or off) for full conversational answers."
-      : "This browser has no WebGPU, so I'm running the fast offline engine.";
-    return `(${PERSONA_VOICE[this.persona]} · local) ${tip} Meanwhile I can "summarize my feed", show "what's trending", or "suggest communities". You said: "${prompt}".`;
+    return isWebGPU()
+      ? "Hey! My full AI brain is still warming up — it downloads once (a few hundred MB) the first time, then it's instant. Give it a moment and ask again. In the meantime I can \"summarize my feed\", show \"what's trending\", or \"suggest communities\"."
+      : "Heads up — this browser doesn't support on-device AI (no WebGPU), so I'm on the lightweight engine. I can still \"summarize my feed\", show \"what's trending\", or \"suggest communities\".";
   }
 }
 
