@@ -149,6 +149,34 @@ class CompanionService {
   /** Explicitly start downloading/loading the selected model. */
   preload() { return loadModel(this.model); }
 
+  /** Stream a fresh, first-person Companion intro to the current user, token by
+   *  token (calls onDelta with the growing text for a live typewriter). Resolves
+   *  with the final text, or null if no model is loaded — never triggers a download,
+   *  so the caller shows a typed fallback and can retry once the model is ready. */
+  async streamIntro(onDelta: (text: string) => void): Promise<string | null> {
+    if (!engine || loadedId !== this.model) return null;
+    const name = identityService.current?.username?.trim().split(/\s+/)[0] || "there";
+    const sys = [
+      `You are the Companion on Ledgr — ${name}'s private AI, running 100% locally in their browser (nothing they say leaves their device).`,
+      "Write a SHORT first-person introduction: 2–4 sentences, plain text only (no markdown, no lists, no quotation marks).",
+      `Greet ${name} by name. Briefly say what you can do: make sense of their feed, help draft or sharpen posts, look things up on the web, and explain how Ledgr works.`,
+      "Tell them how to reach you: tap the ✨ sparkle button in the bottom-right (or \"Ask AI\") to chat with you, and tap the insights icon on any post to see why it surfaced.",
+      "Warm and concise, with a little personality — don't over-explain or pad it.",
+    ].join(" ");
+    try {
+      const stream = await engine.chat.completions.create({
+        messages: [{ role: "system", content: sys }, { role: "user", content: `Introduce yourself to ${name}.` }],
+        temperature: 0.85, max_tokens: 200, stream: true,
+      });
+      let full = "";
+      for await (const chunk of stream) {
+        const d = chunk?.choices?.[0]?.delta?.content ?? "";
+        if (d) { full += d; onDelta(full); }
+      }
+      return full.trim() || null;
+    } catch { return null; }
+  }
+
   /** Run the LLM only if a model is already loaded (never triggers a download).
    *  Returns null if no model is in memory — callers fall back to heuristics. */
   async quickLLM(prompt: string): Promise<string | null> {

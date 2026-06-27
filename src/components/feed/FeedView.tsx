@@ -11,6 +11,7 @@ import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import Composer from "./Composer";
 import PostCard from "./PostCard";
+import CompanionIntro from "./CompanionIntro";
 import GlassCard from "@/components/common/GlassCard";
 import { feedService } from "@/services/feedService";
 import { companionService } from "@/services/companionService";
@@ -673,12 +674,7 @@ export default function FeedView() {
               )}
             </Box>
           </GlassCard>
-          <GlassCard sx={{ mt: "20px" }}>
-            <Typography variant="overline" color="text.secondary">How this feed works</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              Ranking runs <b>on this device</b> with a lightweight text-embedding (hashed word vectors) — instant and needs no download. It's <b>not</b> the chat LLM: your <b>Companion</b> is a separate full language model that auto-downloads and also runs locally. Tap the <b>insights</b> icon on any post to see exactly why it surfaced. Nothing is sent to a server.
-            </Typography>
-          </GlassCard>
+          <CompanionIntro />
 
         </Box>
       )}
