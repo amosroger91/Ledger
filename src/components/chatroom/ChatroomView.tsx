@@ -115,7 +115,7 @@ export default function ChatroomView({ fullWidth }: { fullWidth?: boolean } = {}
         </GlassCard>
         <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 1 }}>
           {ROOMS.map((r) => (
-            <Chip key={r} label={"#" + r} onClick={() => enter(r)} sx={{ bgcolor: "rgba(58,123,240,0.14)", color: "#0a55cf", fontWeight: 600 }} />
+            <Chip key={r} label={"#" + r} onClick={() => enter(r)} sx={{ bgcolor: "var(--bl-accent-soft)", color: "var(--bl-accent)", fontWeight: 600 }} />
           ))}
         </Stack>
       </Box>
@@ -173,7 +173,7 @@ export default function ChatroomView({ fullWidth }: { fullWidth?: boolean } = {}
               <Stack key={m.id} direction="row" spacing={1} justifyContent={mine ? "flex-end" : "flex-start"} sx={{ "&:hover .react-add": { opacity: 0.8 } }}>
                 {!mine && <UserAvatar pk={m.author} name={m.authorName} avatar={m.authorAvatar} size={28} />}
                 <Box sx={{ maxWidth: { xs: "85%", sm: "72%" } }}>
-                  <Box sx={{ px: 1.5, py: 0.9, borderRadius: 2, background: mine ? "linear-gradient(135deg,#3f97ff,#1668e0)" : "#ffffff", color: mine ? "#ffffff" : "text.primary" }}>
+                  <Box sx={{ px: 1.5, py: 0.9, borderRadius: 2, background: mine ? "var(--bl-accent-gradient)" : "var(--bl-face)", color: mine ? "#ffffff" : "text.primary" }}>
                     {!mine && <Typography variant="caption" sx={{ fontWeight: 700 }}>{m.authorName}</Typography>}
                     {m.text && <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.text}</Typography>}
                     {m.media?.map((md, i) => md.type === "image" ? <Box key={i} component="img" src={md.url} sx={{ mt: 0.5, maxWidth: "100%", maxHeight: 240, borderRadius: 1.5 }} /> : null)}
@@ -181,7 +181,7 @@ export default function ChatroomView({ fullWidth }: { fullWidth?: boolean } = {}
                   </Box>
                   <Stack direction="row" spacing={0.5} sx={{ mt: 0.3, flexWrap: "wrap" }} justifyContent={mine ? "flex-end" : "flex-start"}>
                     {Object.entries(m.reactions || {}).filter(([, v]) => v.length).map(([e, v]) => (
-                      <Chip key={e} size="small" label={`${e} ${v.length}`} onClick={() => ctrl.current?.sendReact(m.id, e)} sx={{ height: 20, bgcolor: v.includes(me?.publicKey ?? "") ? "rgba(58,155,240,0.3)" : "#ffffff", cursor: "pointer" }} />
+                      <Chip key={e} size="small" label={`${e} ${v.length}`} onClick={() => ctrl.current?.sendReact(m.id, e)} sx={{ height: 20, bgcolor: v.includes(me?.publicKey ?? "") ? "var(--bl-accent-soft)" : "var(--bl-face)", cursor: "pointer" }} />
                     ))}
                     <IconButton className="react-add" size="small" sx={{ opacity: 0, transition: "opacity .15s" }} onClick={(e) => setReactAnchor({ el: e.currentTarget, id: m.id })}><AddReactionRoundedIcon sx={{ fontSize: 16 }} /></IconButton>
                   </Stack>
