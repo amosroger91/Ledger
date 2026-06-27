@@ -1,4 +1,4 @@
-# ledger — AI Context Map
+# ledgr — AI Context Map
 
 > **Stack:** express | none | react | typescript
 

@@ -146,9 +146,9 @@ class FeedService {
     const post: Post = {
       id: "aic_" + parentId,
       author: "ai-bot",
-      authorName: "Ledger AI 🤖",
+      authorName: "Ledgr AI 🤖",
       kind: "text",
-      text: `${text}\n\n— 🤖 Ledger AI · on-device (${modelLabel})`,
+      text: `${text}\n\n— 🤖 Ledgr AI · on-device (${modelLabel})`,
       tags: ["ai"],
       createdAt: Date.now(),
       reactions: {},
@@ -281,7 +281,7 @@ class FeedService {
         import("./nostrService").then((m) => m.nostrService.reactToNote(updated, emoji)).catch(() => {});
       }
     } else {
-      bus.emit("post:publish", updated);   // Ledger posts persist/sync over Gun (Nostr ones don't)
+      bus.emit("post:publish", updated);   // Ledgr posts persist/sync over Gun (Nostr ones don't)
     }
   }
 

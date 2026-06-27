@@ -1,4 +1,4 @@
-# Ledger — Troubleshooting & Debugging Playbook
+# Ledgr — Troubleshooting & Debugging Playbook
 
 > Companion to [ARCHITECTURE.md](./ARCHITECTURE.md) (the design) and
 > [MODERATION.md](./MODERATION.md). This doc is the **debugging deliverable**:
@@ -12,7 +12,7 @@
 1. [The mental model (read this first)](#1-the-mental-model)
 2. [The #1 failure mode: "the feed is frozen / page unresponsive"](#2-the-1-failure-mode-the-feed-is-frozen)
 3. [The single most important rule: TEST WITH REAL DATA](#3-the-single-most-important-rule-test-with-real-data)
-4. [The headless test harness (`ledger-e2e`)](#4-the-headless-test-harness-ledger-e2e)
+4. [The headless test harness (`ledgr-e2e`)](#4-the-headless-test-harness-ledgr-e2e)
 5. [Bisecting with the `?off=` kill switch](#5-bisecting-with-the-off-kill-switch)
 6. [Deep dive: the `richInline` regex freeze (real-data killer)](#6-deep-dive-the-richinline-regex-freeze)
 7. [Built-in diagnostic tools](#7-built-in-diagnostic-tools)
@@ -25,7 +25,7 @@
 
 ## 1. The mental model
 
-Ledger is **local-first and single-threaded in the place that matters**: the feed
+Ledgr is **local-first and single-threaded in the place that matters**: the feed
 is generated, ranked, moderated, parsed, and rendered **on the browser's main
 thread**, over data that streams in from an **unbounded, untrusted, real-world
 firehose** (Nostr relays + the Gun graph + RSS). Almost every serious bug we've
@@ -91,14 +91,14 @@ churn. It will pass every test while production is permanently frozen.
 > images, CJK/RTL, long notes, the relay flood), **it is not a test of the feed.**
 
 This is the lesson that cost the most time. The harness in
-[§4](#4-the-headless-test-harness-ledger-e2e) exists specifically to load the
+[§4](#4-the-headless-test-harness-ledgr-e2e) exists specifically to load the
 **real firehose** and measure the main thread under it.
 
 ---
 
-## 4. The headless test harness (`ledger-e2e`)
+## 4. The headless test harness (`ledgr-e2e`)
 
-Location: **`C:\Users\roger\dev\ledger-e2e\`** (a sibling of this repo, kept out
+Location: **`C:\Users\roger\dev\ledgr-e2e\`** (a sibling of this repo, kept out
 of the app so it never ships). It drives the **installed Chrome in true headless
 mode** via `puppeteer-core` — a **separate browser instance + profile**, so it is
 **invisible and never steals window focus** (critical: the machine owner games on
@@ -128,10 +128,10 @@ the same box; do **not** drive their visible browser).
 # prerequisites: dev server up in the app repo
 cd C:\Users\roger\dev\SocialExperiment && npm run dev      # serves :5173
 
-cd C:\Users\roger\dev\ledger-e2e
+cd C:\Users\roger\dev\ledgr-e2e
 node test.mjs                          # against local dev (default)
 $env:OFF="body";        node test.mjs  # bisect a feature off (PowerShell)
-$env:BASE="https://amosroger91.github.io/Ledger/"; node test.mjs   # against PROD
+$env:BASE="https://amosroger91.github.io/Ledgr/"; node test.mjs   # against PROD
 ```
 
 ### Harness gotchas (already solved, don't rediscover)
@@ -223,7 +223,7 @@ they never run for a normal visitor.
 
 **Inspect prod data WITHOUT booting the (possibly frozen) app:** GitHub Pages
 serves real static files, so navigate to any asset on the prod origin (e.g.
-`https://amosroger91.github.io/Ledger/logo.png`) — no SPA boot, fully responsive —
+`https://amosroger91.github.io/Ledgr/logo.png`) — no SPA boot, fully responsive —
 then read the same-origin IndexedDB from the console. This is how the pathological
 data (2801 posts, 160 notes >20 KB, the 6.4 MB audio post, the 137 KB profile) was
 found. (Localhost SPA-fallbacks everything, so this trick is **prod/Pages-only**.)
@@ -287,7 +287,7 @@ A catalog of the dead ends, so the next person skips them.
   `@tanstack/react-virtual` was added mid-session.)
 - **A fresh browser profile is not onboarded** → the app renders `<Onboarding>`,
   not the feed, so `#app-scroll` never appears. Click "Generate my identity"
-  first. (See the harness, [§4](#4-the-headless-test-harness-ledger-e2e).)
+  first. (See the harness, [§4](#4-the-headless-test-harness-ledgr-e2e).)
 - **Navigating to the *identical* URL (same hash) is a no-op** — it won't reload.
   Add a throwaway query param or call `location.reload()` to force a real
   navigation.
@@ -297,7 +297,7 @@ A catalog of the dead ends, so the next person skips them.
 ## 10. Deploy & verify
 
 - **Prod = GitHub Pages**, built and deployed by **`.github/workflows` (deploy.yml)
-  on every push to `main`.** Base path is `/Ledger/`; the app uses `HashRouter` so
+  on every push to `main`.** Base path is `/Ledgr/`; the app uses `HashRouter` so
   it runs from any path with no server config.
 - **`gh` CLI is NOT installed** on this machine. Verify a deploy via the REST API:
   ```
@@ -312,8 +312,8 @@ A catalog of the dead ends, so the next person skips them.
   the old `index.html` (old bundle). **Hard-refresh once.** A fresh profile (e.g.
   the headless harness) never hits this — which is why testing prod headlessly is
   the cleanest confirmation.
-- **Confirm prod after a fix:** `$env:BASE="https://amosroger91.github.io/Ledger/";
-  node test.mjs` from `ledger-e2e`. This was used to confirm `9b69f9a`: 0/14
+- **Confirm prod after a fix:** `$env:BASE="https://amosroger91.github.io/Ledgr/";
+  node test.mjs` from `ledgr-e2e`. This was used to confirm `9b69f9a`: 0/14
   freezes, whole feed scrolled, on the **deployed** build against the real firehose.
 
 ---
@@ -322,12 +322,12 @@ A catalog of the dead ends, so the next person skips them.
 
 **Repos / paths**
 - App: `C:\Users\roger\dev\SocialExperiment` (GitHub `amosroger91/Ledger`)
-- Test harness: `C:\Users\roger\dev\ledger-e2e` (puppeteer-core, not shipped)
-- Prod: `https://amosroger91.github.io/Ledger/`
+- Test harness: `C:\Users\roger\dev\ledgr-e2e` (puppeteer-core, not shipped)
+- Prod: `https://amosroger91.github.io/Ledgr/`
 - IndexedDB name: **`nebula`**
 
 **The "it's frozen / broken" playbook**
-1. Reproduce with **real data** — `node test.mjs` in `ledger-e2e` (local) or with
+1. Reproduce with **real data** — `node test.mjs` in `ledgr-e2e` (local) or with
    `BASE=` prod. Synthetic posts will lie to you.
 2. If it freezes, **bisect**: `OFF=cards`, `OFF=body`, `OFF=embeds`, `OFF=digest`…
    (keep `gun,nostr` on). Find the flag that makes it load.
@@ -344,18 +344,18 @@ A catalog of the dead ends, so the next person skips them.
 ```sh
 npm run dev                      # app dev server :5173 (in SocialExperiment)
 npx tsc --noEmit                 # typecheck (CI does NOT do this)
-node test.mjs                    # e2e freeze/virtualization test (in ledger-e2e)
+node test.mjs                    # e2e freeze/virtualization test (in ledgr-e2e)
 node profile.mjs                 # CPU profile a scroll
 node nodetest.mjs                # pure-Node regex repro
 ```
 
 **Recovery URLs**
-- `…/Ledger/?reset` — wipe IndexedDB + SW for a bricked install.
-- `…/Ledger/?diag` — arm the stall heartbeat + stage timing.
-- `…/Ledger/?off=all` — boot with all gated features disabled.
+- `…/Ledgr/?reset` — wipe IndexedDB + SW for a bricked install.
+- `…/Ledgr/?diag` — arm the stall heartbeat + stage timing.
+- `…/Ledgr/?off=all` — boot with all gated features disabled.
 
 ---
 
 *Last major update: 2026-06-23 — added cause #1 (`richInline` ReDoS), feed
-virtualization, and the `ledger-e2e` headless harness. Maintained as part of the
+virtualization, and the `ledgr-e2e` headless harness. Maintained as part of the
 freeze-diagnostics knowledge base.*

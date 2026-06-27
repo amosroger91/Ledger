@@ -119,7 +119,7 @@ function StatTile({ label, value }: { label: string; value: React.ReactNode }) {
 function ProfileDisplay({ profile, own, onEdit }: { profile: Profile; own?: boolean; onEdit?: () => void }) {
   const nav = useNavigate();
   const rank = reputationService.rank(profile.reputation);
-  // Network-contribution points, earned by running a Ledger Node (from the relay).
+  // Network-contribution points, earned by running a Ledgr Node (from the relay).
   const [netPoints, setNetPoints] = useState<number | null>(null);
   useEffect(() => {
     let ok = true;
@@ -259,7 +259,7 @@ function NostrProfile({ pk }: { pk: string }) {
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography sx={{ fontWeight: 800 }}>External Nostr user</Typography>
               <Typography variant="body2" color="text.secondary">
-                They still need to sign up for Ledger — this profile is mirrored from the Nostr network. You can still reply &amp; react, and it reaches them on Nostr.
+                They still need to sign up for Ledgr — this profile is mirrored from the Nostr network. You can still reply &amp; react, and it reaches them on Nostr.
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.75, fontFamily: "monospace", wordBreak: "break-all" }}>{npub}</Typography>
             </Box>

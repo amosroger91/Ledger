@@ -1,7 +1,7 @@
 // ============================================================
 //  reputationService — reputation instead of follower counts.
 //  Tracks helpfulness, expertise, participation and trust, and
-//  awards badges/ranks. No vanity metrics; the ledger is local
+//  awards badges/ranks. No vanity metrics; the ledgr is local
 //  and (Phase 2) co-signed by peers who vouch for you.
 // ============================================================
 import type { Badge, ReputationLedgerEntry } from "@/types";

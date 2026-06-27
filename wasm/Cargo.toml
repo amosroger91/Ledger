@@ -1,8 +1,8 @@
 [package]
-name = "ledger-core"
+name = "ledgr-core"
 version = "0.1.0"
 edition = "2021"
-description = "Hot-path numeric core (text embeddings + vector math) for the Ledger feed, compiled to WASM."
+description = "Hot-path numeric core (text embeddings + vector math) for the Ledgr feed, compiled to WASM."
 license = "MIT"
 repository = "https://github.com/amosroger91/SocialExperiment"
 

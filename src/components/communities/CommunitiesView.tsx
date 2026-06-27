@@ -58,10 +58,10 @@ export default function CommunitiesView() {
   async function save() {
     if (!name.trim()) return;
     if (editId) {
-      await communityService.update(editId, { name: name.trim(), description: desc.trim() || "A group on Ledger", icon, visibility });
+      await communityService.update(editId, { name: name.trim(), description: desc.trim() || "A group on Ledgr", icon, visibility });
       toast("Group updated", "success");
     } else {
-      await communityService.create({ name: name.trim(), description: desc.trim() || "A new group on Ledger", icon, visibility });
+      await communityService.create({ name: name.trim(), description: desc.trim() || "A new group on Ledgr", icon, visibility });
       toast("Group created", "success");
     }
     setDlg(false); load();

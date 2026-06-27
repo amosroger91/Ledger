@@ -1,7 +1,7 @@
 // ============================================================
 //  changelogService — turns the repo's own git history into timeline
 //  activity. Pulls recent commits from the GitHub API (CORS-enabled,
-//  no key) and posts them as "Ledger Dev 🛠️" so the app's evolution
+//  no key) and posts them as "Ledgr Dev 🛠️" so the app's evolution
 //  shows up right in the feed. Deduped by commit SHA and persisted via
 //  Gun, exactly like the RSS bot — so it spreads across the network.
 // ============================================================
@@ -37,13 +37,13 @@ class ChangelogService {
         const post: Post = {
           id,
           author: "system",
-          authorName: "Ledger Dev 🛠️",
+          authorName: "Ledgr Dev 🛠️",
           kind: "text",
           text: [`🛠️ ${title}`, body, c.html_url].filter(Boolean).join("\n\n"),
-          tags: ["ledger"],
+          tags: ["ledgr"],
           createdAt: date,
           reactions: {},
-          embedding: embed(`${title} ${body} ledger changelog commit`),
+          embedding: embed(`${title} ${body} ledgr changelog commit`),
           source: "relay",
         };
         await feedService.ingest(post);   // ingest dedupes; ignored if already present

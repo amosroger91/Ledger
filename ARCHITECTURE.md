@@ -1,4 +1,4 @@
-# Ledger — Architecture
+# Ledgr — Architecture
 
 > A decentralized, local-first, browser-native social platform. No accounts, no
 > servers required for core functionality, ~$0 to host. The browser is the
@@ -14,9 +14,9 @@ this repo) and **what the architecture is built to grow into**.
 ## 1. Philosophy
 
 Traditional social media centralizes the database, the recommendation engine,
-moderation, identity, and chat. Ledger inverts every one of those:
+moderation, identity, and chat. Ledgr inverts every one of those:
 
-| Concern | Traditional | Ledger |
+| Concern | Traditional | Ledgr |
 |---|---|---|
 | Identity | account on a server | a keypair you generate & own (a file) |
 | Feed ranking | cloud recommender | on-device embeddings + vector search |
@@ -70,7 +70,7 @@ SocialExperiment/
 │  │  ├─ feedService.ts       #   posts, feed algorithms, "why recommended"
 │  │  ├─ companionService.ts  #   local AI companion (heuristic + WebLLM)
 │  │  ├─ moderationService.ts #   layered local moderation
-│  │  ├─ reputationService.ts #   reputation ledger, ranks, badges
+│  │  ├─ reputationService.ts #   reputation ledgr, ranks, badges
 │  │  ├─ presenceService.ts   #   rich presence state
 │  │  ├─ peerService.ts       #   PeerJS hub-relay (presence/post/DM)
 │  │  ├─ communityService.ts  #   servers/subreddits/groups + channels
@@ -95,7 +95,7 @@ SocialExperiment/
 | `posts` | `id` | `byTime`, `byAuthor`, `byCommunity` | all known posts (self/peer/relay/cache) |
 | `messages` | `id` | `byChannel`, `byTime` | chat messages per channel |
 | `communities` | `id` | — | communities + their channels & membership |
-| `reputation` | `id` | `byTime` | reputation ledger entries |
+| `reputation` | `id` | `byTime` | reputation ledgr entries |
 | `companion` | `id` | `byTime` | companion conversation history |
 | `kv` | string key | — | `settings`, `interest` (embedding centroid), misc |
 
@@ -231,7 +231,7 @@ stick — open `index.html` over any static server.
 - ✅ Inspectable "why recommended"
 - ✅ Local AI companion (heuristic) + WebLLM hook; feed summary, trends, drafts
 - ✅ Layered local moderation with selectable profiles
-- ✅ Reputation ledger, ranks & badges (no follower counts)
+- ✅ Reputation ledgr, ranks & badges (no follower counts)
 - ✅ Communities with channels (text/voice/stage/events)
 - ✅ P2P presence + global post relay + Swarm Lounge chat (PeerJS hub-relay)
 - ✅ Listen Together (synced internet radio, rich presence activity)

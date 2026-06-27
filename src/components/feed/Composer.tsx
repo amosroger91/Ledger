@@ -22,8 +22,8 @@ import { toast } from "@/lib/events";
 import type { MediaRef } from "@/types";
 
 const TARGET_LABELS: Record<string, string> = {
-  ledger: "Ledger only",
-  both: "Ledger + Nostr",
+  ledgr: "Ledgr only",
+  both: "Ledgr + Nostr",
   nostr: "Nostr only",
 };
 
@@ -31,7 +31,7 @@ export default function Composer({ community }: { community?: string }) {
   const me = useStore((s) => s.me);
   const moderation = useStore((s) => s.settings.moderationProfile);
   const nostrEnabled = useStore((s) => s.settings.nostrEnabled !== false);
-  const [target, setTarget] = useState<"ledger" | "both" | "nostr">("ledger");
+  const [target, setTarget] = useState<"ledgr" | "both" | "nostr">("ledgr");
   const [text, setText] = useState("");
   const [media, setMedia] = useState<MediaRef[]>([]);
   const [gifOpen, setGifOpen] = useState(false);
@@ -71,7 +71,7 @@ export default function Composer({ community }: { community?: string }) {
     if (!body && !media.length) return;
     const verdict = moderationService.classify(body, moderation);
     if (verdict.action === "flag" || verdict.action === "hide") { toast(`This would be flagged: ${verdict.reasoning} — edit and retry`, "warn"); return; }
-    const toNostr = nostrEnabled && target !== "ledger";
+    const toNostr = nostrEnabled && target !== "ledgr";
     const toLedger = target !== "nostr";
     if (toLedger) {
       const p = await feedService.createPost({ text: body, media: media.length ? media : undefined, community });
@@ -83,8 +83,8 @@ export default function Composer({ community }: { community?: string }) {
         nostrService.publishNote(body, tags).catch(() => {});
       }).catch(() => {});
     }
-    setText(""); setMedia([]); setTarget("ledger");
-    const where = toLedger && toNostr ? "Ledger + Nostr" : toNostr ? "Nostr" : community ? "the group" : "Ledger";
+    setText(""); setMedia([]); setTarget("ledgr");
+    const where = toLedger && toNostr ? "Ledgr + Nostr" : toNostr ? "Nostr" : community ? "the group" : "Ledgr";
     toast(`Posted to ${where} — it's out there forever ✦`, "success");
   }
 
@@ -145,7 +145,7 @@ export default function Composer({ community }: { community?: string }) {
           }}
           onMouseLeave={() => setTargetOpen(false)}
         >
-          {(["ledger", "both", "nostr"] as const).map((v) => (
+          {(["ledgr", "both", "nostr"] as const).map((v) => (
             <Box
               key={v} onClick={() => { setTarget(v); setTargetOpen(false); }}
               sx={{
@@ -255,7 +255,7 @@ export default function Composer({ community }: { community?: string }) {
         }}>
           {nostrEnabled && (
             <Select
-              value={target} onChange={(e) => setTarget(e.target.value as "ledger" | "both" | "nostr")}
+              value={target} onChange={(e) => setTarget(e.target.value as "ledgr" | "both" | "nostr")}
               variant="standard" disableUnderline
               sx={{
                 height: 52, px: 1.75, fontSize: 13, fontWeight: 600, color: "text.primary",
@@ -264,8 +264,8 @@ export default function Composer({ community }: { community?: string }) {
                 "& .MuiSelect-icon": { right: 8 },
               }}
             >
-              <MenuItem value="ledger">Ledger only</MenuItem>
-              <MenuItem value="both">Ledger + Nostr</MenuItem>
+              <MenuItem value="ledgr">Ledgr only</MenuItem>
+              <MenuItem value="both">Ledgr + Nostr</MenuItem>
               <MenuItem value="nostr">Nostr only</MenuItem>
             </Select>
           )}

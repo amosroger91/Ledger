@@ -313,7 +313,7 @@ export default function FeedView() {
     await refresh();
   }, [refresh]);
 
-  // The Ledger logo (and anything else) can force a feed refresh via the bus.
+  // The Ledgr logo (and anything else) can force a feed refresh via the bus.
   useEffect(() => bus.on("feed:refresh", () => { doRefresh(); }), [doRefresh]);
 
   // Mute/block a person → they vanish from your WHOLE timeline at once: every one

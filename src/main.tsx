@@ -30,7 +30,7 @@ async function start() {
     if ("serviceWorker" in navigator) {
       try { for (const reg of await navigator.serviceWorker.getRegistrations()) await reg.unregister(); } catch { /* ignore */ }
     }
-    document.body.innerHTML = "<div style='font:15px system-ui;padding:40px;color:#bfe'>Local data cleared. <a href='./' style='color:#7bf;font-weight:700'>Open Ledger →</a></div>";
+    document.body.innerHTML = "<div style='font:15px system-ui;padding:40px;color:#bfe'>Local data cleared. <a href='./' style='color:#7bf;font-weight:700'>Open Ledgr →</a></div>";
     return;
   }
   // ?diag — arm the main-thread stall heartbeat before anything else runs, so a

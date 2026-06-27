@@ -81,7 +81,7 @@ export default function RelayFeeds() {
           <Typography variant="body2" color="text.secondary">
             Add <b>basically anything</b> as a feed: any website's RSS/Atom URL, a YouTube channel, a subreddit, a
             Twitch streamer, or <b>any of the hundreds of sources RSSHub supports</b> (Instagram, X, Bluesky, blogs,
-            podcasts…). It's fetched on the always-on Ledger relay and seeded into <b>everyone's</b> global feed — not just yours.
+            podcasts…). It's fetched on the always-on Ledgr relay and seeded into <b>everyone's</b> global feed — not just yours.
           </Typography>
         </Box>
       </Stack>

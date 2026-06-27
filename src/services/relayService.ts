@@ -1,5 +1,5 @@
 // ============================================================
-//  relayService — HTTP client for Ledger's always-on relay
+//  relayService — HTTP client for Ledgr's always-on relay
 //  (the deployed backend at ledger.wellspringstudiollc.com).
 //
 //  The relay does double duty: it's a Gun peer (see gunService PEERS,

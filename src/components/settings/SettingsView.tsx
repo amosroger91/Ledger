@@ -98,8 +98,8 @@ export default function SettingsView() {
         {row("Auto-translate to English", "Automatically translate posts detected as another language into English, clearly labeled with a one-tap toggle back to the original. Off by default — you can still translate any post on demand from its text.",
           <Switch checked={settings.autoTranslate === true} onChange={(e) => { setSettings({ autoTranslate: e.target.checked }); toast(e.target.checked ? "Auto-translate on — non-English posts will translate to English" : "Auto-translate off", "info"); }} />)}
         <Divider />
-        {row("Support with ads", "Ledger is free with no subscriptions — one small ad shows after every 10 posts (A-ADS: privacy-respecting, no tracking, no cookies). Leaving this on is how you keep the project free, at no cost to you.",
-          <Switch checked={settings.showAds !== false} onChange={(e) => { if (e.target.checked) { setSettings({ showAds: true }); toast("Thanks for keeping Ledger free 💛", "success"); } else { setAdsDialog(true); } }} />)}
+        {row("Support with ads", "Ledgr is free with no subscriptions — one small ad shows after every 10 posts (A-ADS: privacy-respecting, no tracking, no cookies). Leaving this on is how you keep the project free, at no cost to you.",
+          <Switch checked={settings.showAds !== false} onChange={(e) => { if (e.target.checked) { setSettings({ showAds: true }); toast("Thanks for keeping Ledgr free 💛", "success"); } else { setAdsDialog(true); } }} />)}
       </GlassCard>
 
       <GlassCard sx={{ mb: 2 }}>
@@ -151,7 +151,7 @@ export default function SettingsView() {
 
       <GlassCard sx={{ mb: 2 }}>
         <Typography variant="overline" color="text.secondary">Account & devices</Typography>
-        {row("Install on your phone", "Add Ledger to your home screen — opens full-screen like a native app and works offline. Scan a QR to jump to it on your phone, with iOS & Android steps.",
+        {row("Install on your phone", "Add Ledgr to your home screen — opens full-screen like a native app and works offline. Scan a QR to jump to it on your phone, with iOS & Android steps.",
           <Button variant="outlined" startIcon={<InstallMobileRoundedIcon />} onClick={() => setInstall(true)}>Download on phone</Button>)}
         <Divider />
         {row("Log in on another device", "Show a QR / link that copies your whole account to another device — peer-to-peer, nothing on a server.",
@@ -168,17 +168,17 @@ export default function SettingsView() {
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           Everything lives in this browser (IndexedDB + localStorage). Clearing site data wipes your local copy — download your profile data first (above).
         </Typography>
-        <Button color="error" variant="outlined" sx={{ mt: 1.5 }} onClick={() => { if (confirm("Reset Ledger on this device? This clears local data. Export your identity first!")) { indexedDB.deleteDatabase("nebula"); localStorage.clear(); location.reload(); } }}>
+        <Button color="error" variant="outlined" sx={{ mt: 1.5 }} onClick={() => { if (confirm("Reset Ledgr on this device? This clears local data. Export your identity first!")) { indexedDB.deleteDatabase("nebula"); localStorage.clear(); location.reload(); } }}>
           Reset this device
         </Button>
       </GlassCard>
 
-      {/* Confirm before turning ads off — the only thing that keeps Ledger free. */}
+      {/* Confirm before turning ads off — the only thing that keeps Ledgr free. */}
       <Dialog open={adsDialog} onClose={() => setAdsDialog(false)} maxWidth="xs" fullWidth>
         <DialogTitle>Turn off ads?</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary">
-            Ledger is <b>free, open-source, and has no subscriptions</b> — the occasional ad in your feed (from A-ADS, which doesn't track you) is the only thing that keeps it running.
+            Ledgr is <b>free, open-source, and has no subscriptions</b> — the occasional ad in your feed (from A-ADS, which doesn't track you) is the only thing that keeps it running.
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
             Turning them off is completely your call, but it does mean you're choosing not to support the project this way. You can turn them back on anytime, or help out in other ways.

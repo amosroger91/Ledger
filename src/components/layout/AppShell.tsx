@@ -119,7 +119,7 @@ function ModelStatusChip() {
   return null;
 }
 
-// Mobile: the three floating chat docks (Global / Ledger / Companion) are now in a
+// Mobile: the three floating chat docks (Global / Ledgr / Companion) are now in a
 // single dropdown menu to save screen space. We emit dock:toggle and mirror the
 // open/active state that FloatingDocks broadcasts back (for the unread dots).
 function ChatDropdown() {
@@ -148,7 +148,7 @@ function ChatDropdown() {
         </MenuItem>
         <MenuItem onClick={() => { bus.emit("dock:toggle", { which: "chat" }); setAnchor(null); }}>
           <ListItemIcon><Badge color="error" variant="dot" invisible={!(st.chatActive && !st.chatOpen)}><ForumRoundedIcon fontSize="small" /></Badge></ListItemIcon>
-          Ledger Chat
+          Ledgr Chat
         </MenuItem>
         {!onCompanionPage && (
           <MenuItem onClick={() => { bus.emit("dock:toggle", { which: "companion" }); setAnchor(null); }}>
@@ -187,8 +187,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
     <>
       <Stack direction="row" alignItems="center" spacing={1} onClick={goHome} role="button" aria-label="Go to home feed and scroll to top"
         sx={{ px: { xs: 0.5, sm: 1 }, py: 1.5, cursor: "pointer", borderRadius: 2, "&:hover": { opacity: 0.85 } }}>
-        <Box component="img" src={`${import.meta.env.BASE_URL}logo.png`} alt="Ledger" sx={{ width: 30, height: 30, borderRadius: "8px", display: "block", boxShadow: "0 0 18px rgba(58,155,240,.35)", flexShrink: 0 }} />
-        {expanded && <Typography variant="h6" sx={{ background: "linear-gradient(90deg,#3f97ff,#1668e0)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>Ledger</Typography>}
+        <Box component="img" src={`${import.meta.env.BASE_URL}logo.png`} alt="Ledgr" sx={{ width: 30, height: 30, borderRadius: "8px", display: "block", boxShadow: "0 0 18px rgba(58,155,240,.35)", flexShrink: 0 }} />
+        {expanded && <Typography variant="h6" sx={{ background: "linear-gradient(90deg,#3f97ff,#1668e0)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>Ledgr</Typography>}
       </Stack>
 
       {NAV.map((item) => {

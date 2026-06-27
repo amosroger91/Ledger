@@ -2,7 +2,7 @@
 //  globalChatService — "Global Chat": a public Nostr (NIP-28)
 //  channel. Messages are kind-42 events that reference a fixed
 //  channel-create (kind 40) event id; ANYONE on Nostr can join,
-//  not just Ledger users. No server and no gateway — it rides the
+//  not just Ledgr users. No server and no gateway — it rides the
 //  same public relays as the feed and is signed by your Nostr key
 //  (reused from nostrService). Truly global, fully serverless.
 //
@@ -17,7 +17,7 @@ import type { ChatMessage } from "@/types";
 // populated from day one (a brand-new room would just be empty). This is "Amethyst
 // Users" — the busiest public NIP-28 channel as of 2026-06 (a popular Nostr client's
 // room that became a general hangout: ~55 people, hundreds of recent messages). To
-// re-point at a different/busier room, run ledger-e2e/find-active-channels.mjs and
+// re-point at a different/busier room, run ledgr-e2e/find-active-channels.mjs and
 // drop in the winner. `?gc=<64-hex>` overrides it (the e2e harness uses a throwaway
 // channel so automated tests never post into the real room).
 const DEFAULT_CHANNEL_ID = "42224859763652914db53052103f0b744df79dfc4efef7e950fc0802fc3df3c5";

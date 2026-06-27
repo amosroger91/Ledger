@@ -12,8 +12,8 @@ import { presenceService } from "./presenceService";
 
 export interface Geo { lat: number; lon: number; source: "gps" | "ip"; at: number }
 
-const KEY = "ledger:geo";
-const ASK_KEY = "ledger:geoAsked";
+const KEY = "ledgr:geo";
+const ASK_KEY = "ledgr:geoAsked";
 // Round to ~11 km so we never store or broadcast a precise position.
 const coarse = (n: number) => Math.round(n * 10) / 10;
 

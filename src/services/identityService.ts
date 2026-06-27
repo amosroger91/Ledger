@@ -74,7 +74,7 @@ class IdentityService {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `ledger-profile-${safe}.json`;
+    a.download = `ledgr-profile-${safe}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }

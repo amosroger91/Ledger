@@ -324,7 +324,7 @@ class RssService {
       for (const feed of feeds) all.push({ topic, feed });
     }
     // …then keep only the feeds nobody has fetched in the last hour. This is the
-    // distributed bit: the shared Gun ledger (rssLastFetch) means each feed is
+    // distributed bit: the shared Gun ledgr (rssLastFetch) means each feed is
     // pulled once per hour by whoever refreshes first; everyone else just
     // receives those posts over the timeline. We only ever do work for feeds WE
     // subscribe to, and only when they're actually stale — so the "you're

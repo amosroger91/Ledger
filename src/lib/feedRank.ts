@@ -223,34 +223,34 @@ export function rankFeed(recent: Post[], ctx: RankContext): RankResult {
   return { posts: ranked, reasons, verdicts, replies };
 }
 
-/** Interleave Ledger and Nostr posts 1:1 (each keeping its ranked order) so neither
+/** Interleave Ledgr and Nostr posts 1:1 (each keeping its ranked order) so neither
  *  source exceeds ~50%; the larger source's surplus is kept (appended), not dropped. */
 function balanceSources(posts: Post[]): Post[] {
   const nostr = posts.filter((p) => p.source === "nostr");
-  const ledger = posts.filter((p) => p.source !== "nostr");
-  if (!nostr.length || !ledger.length) return posts;
-  const n = Math.min(nostr.length, ledger.length);
+  const ledgr = posts.filter((p) => p.source !== "nostr");
+  if (!nostr.length || !ledgr.length) return posts;
+  const n = Math.min(nostr.length, ledgr.length);
   const out: Post[] = [];
-  for (let i = 0; i < n; i++) { out.push(ledger[i], nostr[i]); }
-  out.push(...ledger.slice(n), ...nostr.slice(n));
+  for (let i = 0; i < n; i++) { out.push(ledgr[i], nostr[i]); }
+  out.push(...ledgr.slice(n), ...nostr.slice(n));
   return out;
 }
 
-const SOURCE_WINDOW_MS = 30 * 60 * 1000; // keep mixed Ledger/Nostr posts within ~30 min of each other
+const SOURCE_WINDOW_MS = 30 * 60 * 1000; // keep mixed Ledgr/Nostr posts within ~30 min of each other
 
 /** Time-coherent 50/50 mix: walk both timelines newest-first in ~30-minute windows,
  *  interleave 1:1 within each window, then drop the busier source's surplus in as a
- *  group — so a Ledger post is never placed next to a Nostr post from hours away. */
+ *  group — so a Ledgr post is never placed next to a Nostr post from hours away. */
 function balanceByTime(posts: Post[]): Post[] {
   const nostr = posts.filter((p) => p.source === "nostr").sort((a, b) => b.createdAt - a.createdAt);
-  const ledger = posts.filter((p) => p.source !== "nostr").sort((a, b) => b.createdAt - a.createdAt);
-  if (!nostr.length || !ledger.length) return posts;
+  const ledgr = posts.filter((p) => p.source !== "nostr").sort((a, b) => b.createdAt - a.createdAt);
+  if (!nostr.length || !ledgr.length) return posts;
   const out: Post[] = [];
   let li = 0, ni = 0;
-  while (li < ledger.length || ni < nostr.length) {
-    const head = Math.max(li < ledger.length ? ledger[li].createdAt : -Infinity, ni < nostr.length ? nostr[ni].createdAt : -Infinity);
+  while (li < ledgr.length || ni < nostr.length) {
+    const head = Math.max(li < ledgr.length ? ledgr[li].createdAt : -Infinity, ni < nostr.length ? nostr[ni].createdAt : -Infinity);
     const floor = head - SOURCE_WINDOW_MS;
-    const lWin: Post[] = []; while (li < ledger.length && ledger[li].createdAt >= floor) lWin.push(ledger[li++]);
+    const lWin: Post[] = []; while (li < ledgr.length && ledgr[li].createdAt >= floor) lWin.push(ledgr[li++]);
     const nWin: Post[] = []; while (ni < nostr.length && nostr[ni].createdAt >= floor) nWin.push(nostr[ni++]);
     const k = Math.min(lWin.length, nWin.length);
     for (let i = 0; i < k; i++) out.push(lWin[i], nWin[i]);   // 50/50 within the window

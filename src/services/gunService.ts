@@ -29,13 +29,13 @@ const PEERS = [
   "https://gun-manhattan.herokuapp.com/gun",
   "https://peer.wallie.io/gun",
   "https://relay.peer.ooo/gun",
-  // Ledger's own always-on relay (Apache -> ledger-server container): durable
+  // Ledgr's own always-on relay (Apache -> ledgr-server container): durable
   // 24/7 persistence + it seeds the global feed with server-aggregated RSS.
   "https://ledger.wellspringstudiollc.com/gun",
 ];
 // Frozen graph namespace — NOT brand text. This is the shared Gun root every
 // peer (and the relay backend) reads/writes; renaming it forks the entire
-// decentralized graph and orphans all existing data. Kept through the Ledger
+// decentralized graph and orphans all existing data. Kept through the Ledgr
 // rebrand and must match the backend's GUN_ROOT.
 const ROOT = "zuccbook-v1";
 
@@ -79,7 +79,7 @@ function enqueuePost(json: string) {
 }
 
 class GunService {
-  /** When was this feed last fetched by ANYONE (per the shared ledger)? */
+  /** When was this feed last fetched by ANYONE (per the shared ledgr)? */
   rssLastFetch(key: string): number { return rssLedger.get(key) ?? 0; }
   /** Claim that we just fetched this feed, so others skip it for the next hour. */
   markRssFetched(key: string) {
@@ -161,7 +161,7 @@ class GunService {
         gun.get(ROOT).get("trust").map().on((d: any) => {
           if (d?.json) { try { trustService.ingest(JSON.parse(d.json) as TrustEdge); } catch {} }
         });
-        // Shared RSS fetch ledger (distributes who pulls which feed each hour).
+        // Shared RSS fetch ledgr (distributes who pulls which feed each hour).
         gun.get(ROOT).get("rssfetch").map().on((d: any, key: string) => {
           if (d && typeof d.at === "number" && d.at > (rssLedger.get(key) ?? 0)) rssLedger.set(key, d.at);
         });

@@ -102,7 +102,7 @@ export default function MarketView() {
       <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1, p: 1, mb: 2, borderRadius: 2, bgcolor: "rgba(232,146,12,0.10)", border: "1px solid rgba(232,146,12,0.4)" }}>
         <WarningAmberRoundedIcon sx={{ color: "var(--bl-warn)", fontSize: 18, mt: "1px", flex: "0 0 auto" }} />
         <Typography variant="caption" sx={{ color: "text.secondary", lineHeight: 1.45 }}>
-          <b>Peer-to-peer &amp; final</b> — no escrow, no refunds. Buying pays a stranger's wallet directly and nothing guarantees delivery; only buy from people you trust. Ledger isn't responsible for any loss or fraud.
+          <b>Peer-to-peer &amp; final</b> — no escrow, no refunds. Buying pays a stranger's wallet directly and nothing guarantees delivery; only buy from people you trust. Ledgr isn't responsible for any loss or fraud.
         </Typography>
       </Box>
 

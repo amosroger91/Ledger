@@ -94,7 +94,7 @@ function CompanionPanel({ intro, autoPrompt, onConsumed, onMin, onClose }: { int
   );
 }
 
-// --- Ledger Chat: a compact live room (Gun-backed) that stays connected while docked ---
+// --- Ledgr Chat: a compact live room (Gun-backed) that stays connected while docked ---
 function ChatroomPanel({ visible, onMin, onClose }: { visible: boolean; onMin: () => void; onClose: () => void }) {
   const nav = useNavigate();
   const me = useStore((s) => s.me);
@@ -124,7 +124,7 @@ function ChatroomPanel({ visible, onMin, onClose }: { visible: boolean; onMin: (
 
   return (
     <Box sx={{ ...PANEL_SX, display: visible ? "flex" : "none" }}>
-      <Header icon={<ForumRoundedIcon fontSize="small" />} title="Ledger Chat" subtitle={`#lounge · ${status}`} onExpand={() => { onMin(); nav("/chatroom"); }} onMin={onMin} onClose={onClose} />
+      <Header icon={<ForumRoundedIcon fontSize="small" />} title="Ledgr Chat" subtitle={`#lounge · ${status}`} onExpand={() => { onMin(); nav("/chatroom"); }} onMin={onMin} onClose={onClose} />
       <Box sx={{ flex: 1, overflowY: "auto", p: 1.25, display: "flex", flexDirection: "column", gap: 0.75 }}>
         {messages.length === 0 && <Typography color="text.secondary" variant="body2">No messages yet — say hi 👋</Typography>}
         {messages.map((m) => {
@@ -145,7 +145,7 @@ function ChatroomPanel({ visible, onMin, onClose }: { visible: boolean; onMin: (
         <div ref={endRef} />
       </Box>
       <Stack direction="row" spacing={0.5} sx={{ p: 1, borderTop: "1px solid var(--bl-line)" }}>
-        <TextField fullWidth size="small" value={input} placeholder="Message Ledger Chat…" onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} />
+        <TextField fullWidth size="small" value={input} placeholder="Message Ledgr Chat…" onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} />
         <IconButton color="primary" onClick={send}><SendRoundedIcon /></IconButton>
       </Stack>
     </Box>
@@ -249,7 +249,7 @@ function GlobalChatPanel({ visible, onMin, onClose }: { visible: boolean; onMin:
   );
 }
 
-/** Bottom-right floating docks: Global Chat (Nostr), Ledger Chat, and your
+/** Bottom-right floating docks: Global Chat (Nostr), Ledgr Chat, and your
  *  Companion — without leaving the feed. Each minimizes to a bubble and restores
  *  on tap; the chat rooms stay connected while minimized so you don't miss messages. */
 export default function FloatingDocks() {
@@ -286,7 +286,7 @@ export default function FloatingDocks() {
     return () => { off(); clearTimeout(t); };
   }, []);
 
-  // Only one panel is visible at a time (they dock in the same corner), but Ledger
+  // Only one panel is visible at a time (they dock in the same corner), but Ledgr
   // Chat and Global Chat stay MOUNTED + connected while minimized so messages keep
   // arriving in the background.
   const openCompanion = () => { setCompanionOpen(true); setChatOpen(false); setGlobalOpen(false); };
@@ -320,7 +320,7 @@ export default function FloatingDocks() {
             <Badge color="error" variant="dot" invisible={!globalActive || globalOpen}><PublicRoundedIcon sx={{ color: "#fff" }} /></Badge>
           </Box>
         </Tooltip>
-        <Tooltip title={chatOpen ? "Hide Ledger Chat" : "Ledger Chat"} placement="top">
+        <Tooltip title={chatOpen ? "Hide Ledgr Chat" : "Ledgr Chat"} placement="top">
           <Box onClick={toggleChat} sx={bubbleSx("#7c5cff")}>
             <Badge color="error" variant="dot" invisible={!chatActive || chatOpen}><ForumRoundedIcon sx={{ color: "#fff" }} /></Badge>
           </Box>

@@ -29,8 +29,8 @@ const enc = new TextEncoder();
  *  string and can never collide with these. */
 export function isBotAuthor(pk: string | undefined): boolean {
   return !pk || pk === "rss-bot" || pk === "system" || pk === "ai-bot" || pk.startsWith("demo_")
-    // External Nostr notes carry no Ledger signature; their schnorr signature is
-    // verified by nostrService before ingest, so they're exempt from Ledger sig checks.
+    // External Nostr notes carry no Ledgr signature; their schnorr signature is
+    // verified by nostrService before ingest, so they're exempt from Ledgr sig checks.
     || (pk?.startsWith("nostr:") ?? false);
 }
 

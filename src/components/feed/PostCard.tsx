@@ -89,7 +89,7 @@ function SpotifyCard({ kind, id }: { kind: string; id: string }) {
     const offMedia = bus.on("media:play", ({ id }) => { if (id !== "spotify") setActive(false); });
     return () => { off(); offMedia(); };
   }, []);
-  const start = () => { setActive(true); bus.emit("spotify:play", { embedUrl: `https://open.spotify.com/embed/${kind}/${id}?utm_source=ledger`, dockId: dockId.current }); };
+  const start = () => { setActive(true); bus.emit("spotify:play", { embedUrl: `https://open.spotify.com/embed/${kind}/${id}?utm_source=ledgr`, dockId: dockId.current }); };
   return (
     <Box sx={{ mt: 1, position: "relative", height: tall ? 380 : 80, borderRadius: 1.5, overflow: "hidden", border: "1px solid var(--bl-line)" }}>
       {active ? (
@@ -827,8 +827,8 @@ export const PostCard = memo(function PostCard({ post, reason, replies = [], rep
         : "It currently has no reactions and no comments, so just give your own take on the post itself — don't describe any audience reaction.",
     ].join("\n");
     bus.emit("companion:prompt", { text: prompt });
-    toast("Ledger AI is weighing in 🤖", "info");
-    // …and the shared Ledger AI leaves its OWN independent public comment on the
+    toast("Ledgr AI is weighing in 🤖", "info");
+    // …and the shared Ledgr AI leaves its OWN independent public comment on the
     // post (once per post — it reads as the bot's take, not about who asked).
     postAiComment();
   }
@@ -842,7 +842,7 @@ export const PostCard = memo(function PostCard({ post, reason, replies = [], rep
       // Bridge to Nostr: mirror the original post there (once) and post the AI
       // comment as a reply. No-op unless Nostr is active.
       import("@/services/nostrService").then(({ nostrService }) => {
-        nostrService.bridgeAiComment(post, `${text}\n\n— 🤖 Ledger AI (${modelLabel})`).catch(() => {});
+        nostrService.bridgeAiComment(post, `${text}\n\n— 🤖 Ledgr AI (${modelLabel})`).catch(() => {});
       }).catch(() => {});
     } catch { /* best-effort */ }
   }
@@ -914,7 +914,7 @@ export const PostCard = memo(function PostCard({ post, reason, replies = [], rep
               <Stack direction="row" alignItems="center" spacing={0.5}>
                 <Typography onClick={visit} sx={{ fontWeight: 700, fontSize: 15, lineHeight: 1.2, cursor: canVisit ? "pointer" : "default", "&:hover": canVisit ? { textDecoration: "underline" } : {} }} noWrap>{post.authorName}</Typography>
                 {post.source === "nostr"
-                  ? <Tooltip title="External Nostr user — bridged into Ledger"><Chip size="small" label="NOSTR" sx={{ height: 15, fontSize: 9, fontWeight: 800, "& .MuiChip-label": { px: 0.6 }, bgcolor: "rgba(138,43,226,0.16)", color: "#7a1fb8" }} /></Tooltip>
+                  ? <Tooltip title="External Nostr user — bridged into Ledgr"><Chip size="small" label="NOSTR" sx={{ height: 15, fontSize: 9, fontWeight: 800, "& .MuiChip-label": { px: 0.6 }, bgcolor: "rgba(138,43,226,0.16)", color: "#7a1fb8" }} /></Tooltip>
                   : post.author === "ai-bot"
                   ? <Chip size="small" label="AI" sx={{ height: 15, fontSize: 9, fontWeight: 700, "& .MuiChip-label": { px: 0.6 }, bgcolor: "rgba(124,92,255,0.16)", color: "#5a35d0" }} />
                   : post.author === "rss-bot" || post.author === "system"

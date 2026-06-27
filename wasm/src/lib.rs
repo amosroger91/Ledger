@@ -1,5 +1,5 @@
 // ============================================================
-//  ledger-core — the hot-path numeric core for the Ledger feed,
+//  ledgr-core — the hot-path numeric core for the Ledgr feed,
 //  compiled to WASM. This is a 1:1 port of src/lib/embeddings.ts:
 //  same EMBED_DIM, same FNV-1a bucketing, same tokenizer + stopword
 //  list, all math in f64 — so outputs are bit-identical to the TS

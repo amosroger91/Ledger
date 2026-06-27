@@ -1,5 +1,5 @@
 // ============================================================
-//  nostrService — bridges the Nostr network into Ledger.
+//  nostrService — bridges the Nostr network into Ledgr.
 //
 //  Nostr notes (kind 1) for popular hashtags + the topics you follow
 //  are pulled from public relays and ingested as posts authored by
@@ -7,7 +7,7 @@
 //  feed but are clearly a different TYPE of user (external). Each note's
 //  schnorr signature is verified before ingest, so forgeries are dropped.
 //
-//  Bidirectional: Ledger holds a Nostr keypair for you (generated on
+//  Bidirectional: Ledgr holds a Nostr keypair for you (generated on
 //  first use), so your reactions (kind 7), replies (kind 1, NIP-10) and
 //  brand-new notes are signed and published back to the relays.
 //
@@ -324,13 +324,13 @@ class NostrService {
     return ev;
   }
 
-  /** Mirror a Ledger post onto Nostr exactly once (cached), returning the root ref. */
+  /** Mirror a Ledgr post onto Nostr exactly once (cached), returning the root ref. */
   private async rootFor(post: Post): Promise<{ id: string; pubkey: string } | null> {
     if (post.source === "nostr" && post.nostrId && post.nostrPubkey) return { id: post.nostrId, pubkey: post.nostrPubkey };
     const key = "nostr:mirror:" + post.id;
     const cached = await storage.kvGet<{ id: string; pubkey: string }>(key);
     if (cached) return cached;
-    const ev = await this.publishNote(`${post.text ?? ""}\n\n— via ${post.authorName} on Ledger`, post.tags ?? []);
+    const ev = await this.publishNote(`${post.text ?? ""}\n\n— via ${post.authorName} on Ledgr`, post.tags ?? []);
     const ref = { id: ev.id, pubkey: ev.pubkey };
     await storage.kvSet(key, ref);
     await storage.kvSet("nostr:mirrorback:" + ev.id, { ledgerId: post.id });

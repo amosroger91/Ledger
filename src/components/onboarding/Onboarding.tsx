@@ -31,7 +31,7 @@ export default function Onboarding() {
     try {
       // Optional: link an existing Nostr account (paste its nsec). We set the
       // Nostr key BEFORE onboarding so the network starts with it; an invalid
-      // key aborts before we create the Ledger identity, so the user can fix it.
+      // key aborts before we create the Ledgr identity, so the user can fix it.
       const nsec = nostrKey.trim();
       if (nsec) {
         try {
@@ -58,7 +58,7 @@ export default function Onboarding() {
       refreshMe();
       toast("Identity imported", "success");
       onOnboarded().catch((e) => console.warn("[onboard] background init failed", e));
-    } catch { toast("That doesn't look like a Ledger identity file", "error"); }
+    } catch { toast("That doesn't look like a Ledgr identity file", "error"); }
     finally { setBusy(false); }
   }
 
@@ -66,9 +66,9 @@ export default function Onboarding() {
     <Box sx={{ position: "relative", zIndex: 1, minHeight: "100vh", display: "grid", placeItems: "center", p: 2 }}>
       <GlassCard sx={{ p: 4, maxWidth: 480, width: "100%" }}>
         <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 0.5 }}>
-          <Box component="img" src={`${import.meta.env.BASE_URL}logo.png`} alt="Ledger" sx={{ width: 56, height: 56, borderRadius: "14px", display: "block" }} />
+          <Box component="img" src={`${import.meta.env.BASE_URL}logo.png`} alt="Ledgr" sx={{ width: 56, height: 56, borderRadius: "14px", display: "block" }} />
           <Typography variant="h3" sx={{ background: "linear-gradient(90deg,#3f97ff,#1668e0,#0a55cf)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>
-            Ledger
+            Ledgr
           </Typography>
         </Stack>
         <Typography variant="body1" color="text.secondary" sx={{ mt: 1, mb: 3 }}>

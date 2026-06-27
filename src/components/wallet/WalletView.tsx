@@ -187,7 +187,7 @@ export default function WalletView() {
             </Button>
             <Collapse in={risk}>
               <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
-                Ledger is non-custodial software provided <b>“as is”</b>, with <b>no warranty</b> — it never holds your keys or funds. <b>You alone are responsible for your funds and transactions.</b> Ledger and its authors are <b>not liable for any loss, theft, failed transaction, scam, or damages</b>. Nothing here is financial advice. Crypto is volatile and risky.
+                Ledgr is non-custodial software provided <b>“as is”</b>, with <b>no warranty</b> — it never holds your keys or funds. <b>You alone are responsible for your funds and transactions.</b> Ledgr and its authors are <b>not liable for any loss, theft, failed transaction, scam, or damages</b>. Nothing here is financial advice. Crypto is volatile and risky.
               </Typography>
             </Collapse>
 

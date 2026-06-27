@@ -25,7 +25,7 @@ interface LedgerDB extends DBSchema {
 
 // Frozen IndexedDB name — NOT brand text. Renaming it points the app at an
 // empty database and orphans every existing user's local data. Kept (along with
-// the "nebula:settings" localStorage key below) through the Ledger rebrand.
+// the "nebula:settings" localStorage key below) through the Ledgr rebrand.
 const DB_NAME = "nebula";
 const DB_VERSION = 3;
 let dbp: Promise<IDBPDatabase<LedgerDB>> | null = null;

@@ -1,6 +1,6 @@
-# Ledger — Server (Gun relay + RSS worker + points)
+# Ledgr — Server (Gun relay + RSS worker + points)
 
-> The **lightweight** backend for Ledger. The app still runs with **no server**
+> The **lightweight** backend for Ledgr. The app still runs with **no server**
 > (identity on-device, data in IndexedDB, P2P over Gun/WebRTC). This box does the
 > three things pure-P2P can't do alone:
 >
@@ -11,7 +11,7 @@
 >    (news, YouTube, podcasts, Reddit, GitHub, TikTok, Twitch via RSSHub…) every few
 >    minutes and **publishes every story into the global Gun feed**, so clients
 >    receive them over the graph and **never have to fetch RSS themselves**.
-> 3. **Network points** — a small contribution ledger: contributor nodes send signed
+> 3. **Network points** — a small contribution ledgr: contributor nodes send signed
 >    heartbeats, the relay tallies points (uptime + items), and profiles display them.
 >
 > No database. No blockchain. Just a relay and a poller.
@@ -83,14 +83,14 @@ curl "localhost:8787/api/timeline?limit=5"
 **Live deployment (this box):** a Docker container behind Apache —
 
 ```bash
-# on the server, in /opt/ledger:
+# on the server, in /opt/ledgr:
 git pull --ff-only
-docker build -t ledger-server ./server
-docker rm -f ledger-server
-docker network create ledger-net 2>/dev/null || true
-docker run -d --name ledger-server --restart unless-stopped --network ledger-net \
-  -p 127.0.0.1:8787:8787 -e GUN_DATA_DIR=/data -v ledger-data:/data \
-  -e RSSHUB_BASE=http://rsshub:1200 ledger-server
+docker build -t ledgr-server ./server
+docker rm -f ledgr-server
+docker network create ledgr-net 2>/dev/null || true
+docker run -d --name ledgr-server --restart unless-stopped --network ledgr-net \
+  -p 127.0.0.1:8787:8787 -e GUN_DATA_DIR=/data -v ledgr-data:/data \
+  -e RSSHUB_BASE=http://rsshub:1200 ledgr-server
 ```
 
 Apache vhost (`ledger.wellspringstudiollc.com`) reverse-proxies to `127.0.0.1:8787`
@@ -101,7 +101,7 @@ the app's "add any RSSHub route" option needs a real instance). Runs as a siblin
 container on the same network; the relay reaches it at `http://rsshub:1200`:
 
 ```bash
-docker run -d --name rsshub --restart unless-stopped --network ledger-net \
+docker run -d --name rsshub --restart unless-stopped --network ledgr-net \
   -e NODE_ENV=production -e CACHE_TYPE=memory diygod/rsshub:latest
 ```
 

@@ -1,7 +1,7 @@
 import { createTheme, alpha } from "@mui/material/styles";
 
 // ============================================================
-//  Modern Ledger Theme — reskinned from retro XP Luna to a
+//  Modern Ledgr Theme — reskinned from retro XP Luna to a
 //  sleek, clean, flat, modern UI matching professional platforms.
 //  Uses the CSS variable tokens from bliss.css to naturally support
 //  light/dark schemes dynamically.

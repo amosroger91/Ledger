@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="public/logo.png" alt="Ledger logo" width="140" height="140" />
+  <img src="public/logo.png" alt="Ledgr logo" width="140" height="140" />
 </p>
 
-<h1 align="center">Ledger</h1>
+<h1 align="center">Ledgr</h1>
 
 <p align="center"><b>A social network you own — peer-to-peer at the core, minimally centralized by design.</b></p>
 
@@ -16,7 +16,7 @@ never meet. There's no company-owned database in the middle — nothing for a te
 giant to mine, profile, or flip a switch to take away. The AI that powers your feed
 and your companion runs **on your own computer**, not in someone's cloud.
 
-To be precise (because this is easy to oversell): Ledger is **minimally
+To be precise (because this is easy to oversell): Ledgr is **minimally
 centralized**, not zero-infrastructure. The peer-to-peer core needs no backend, but
 it does lean on **shared, swappable relays** — public WebRTC/Gun peers for sync, and
 an **optional** persistence + RSS-aggregation node ([`server/`](./server), described
@@ -30,26 +30,26 @@ reading right now is also what serves the live app — for free.** GitHub Pages 
 these static files to the whole world at $0/month, with **no required backend** of
 your own. A complete social platform that fits in a folder. (The name fits what it
 is: every post is a **signed entry in an open record** that no company keeps the
-books on — your social life as a public ledger that *you* own, not them.) 😄
+books on — your social life as a public ledgr that *you* own, not them.) 😄
 
 > **In plain terms:** normally a social app = your data sitting on a corporation's
-> computers, under their rules. Ledger flips it: *your* computer is the computer,
+> computers, under their rules. Ledgr flips it: *your* computer is the computer,
 > *you* own your account (it's literally a file), and the "website" is just free,
 > public, static code anyone can read, fork, or re-host. Decentralization where it
 > counts — and honest about the shared relays where it doesn't.
 
 ## This is radical ownership as a tech consumer
 
-Ledger is what it looks like to **own your software instead of renting it from a
+Ledgr is what it looks like to **own your software instead of renting it from a
 platform.** You own your identity (a keypair on your device), your data (in your
 browser, not a data center), the AI (it runs on your own GPU), your money (a
 self-custody wallet whose key never leaves you), and even *what you trust* — no
-company in the middle decides any of it. The relays Ledger syncs through can't mine
+company in the middle decides any of it. The relays Ledgr syncs through can't mine
 you, profile you, sell you, shadow‑ban you, or memory-hole you: they only pass along
 **signed** records anyone can verify, and you can point at different ones or run your
 own. You are not the product. You are the owner.
 
-## 🔗 Live app: https://amosroger91.github.io/Ledger/
+## 🔗 Live app: https://amosroger91.github.io/Ledgr/
 
 > Open it in **two browser windows** to watch presence, chatrooms, and the post
 > relay connect peer-to-peer — through free public relays, with no company-owned
@@ -73,8 +73,8 @@ own. You are not the product. You are the owner.
 - **Chatrooms** — live peer-to-peer rooms: text chat, presence, reactions, image
   sharing, and **voice/video** (WebRTC mesh), all browser-to-browser through a free
   public broker.
-- **Chat — Ledger Chat & Global Chat** — DMs plus two live rooms, each a one-tap
-  bubble that docks bottom-right and stays connected while minimized: **Ledger Chat**
+- **Chat — Ledgr Chat & Global Chat** — DMs plus two live rooms, each a one-tap
+  bubble that docks bottom-right and stays connected while minimized: **Ledgr Chat**
   (the in-app, Gun-backed lounge — formerly "Swarm Lounge"), and **Global Chat**, a
   public **Nostr ([NIP-28](https://github.com/nostr-protocol/nips/blob/master/28.md))**
   channel that anyone on the Nostr network shares with you — no server, no gateway.
@@ -85,10 +85,10 @@ own. You are not the product. You are the owner.
   (curated list across 10 topics + your own custom feeds, individually toggleable)
   and posts the headline, summary, link, and time. Stories you "missed" while away
   backfill into the timeline at their real publish time.
-- **Nostr bridge** — Ledger speaks **[Nostr](https://nostr.com/)**: notes (kind 1)
+- **Nostr bridge** — Ledgr speaks **[Nostr](https://nostr.com/)**: notes (kind 1)
   for popular hashtags and the topics you follow stream in from public relays as
   external **NOSTR** users (each note's schnorr signature verified before it's shown).
-  You can **reply and react**, and because Ledger holds a Nostr keypair for you, those
+  You can **reply and react**, and because Ledgr holds a Nostr keypair for you, those
   actually reach the real authors. **Sign in with your existing Nostr account** (paste
   your `nsec…` at sign-up) or get a fresh key automatically. Markdown-formatted and
   foreign-language notes render cleanly, with one-tap **translate-to-English**. The
@@ -120,7 +120,7 @@ own. You are not the product. You are the owner.
 - **Notifications** — an in-app bell for replies, reactions, DMs and watch-party
   invites; tap one to jump straight to the post.
 - **Live changelog in your feed** — the app's own GitHub commits stream into the
-  timeline as "Ledger Dev 🛠️", so you watch it evolve from inside the app.
+  timeline as "Ledgr Dev 🛠️", so you watch it evolve from inside the app.
 - **Run a node, earn network points** — anyone can run the optional persistence
   node (below) and earn points on a transparent contribution leaderboard
   (uptime + items served). No company decides who counts.
@@ -131,16 +131,16 @@ own. You are not the product. You are the owner.
 
 ## RSS: an old idea that quietly fixes social media
 
-Ledger leans hard on **[RSS](https://en.wikipedia.org/wiki/RSS)** — a 25-year-old
+Ledgr leans hard on **[RSS](https://en.wikipedia.org/wiki/RSS)** — a 25-year-old
 open standard that big social media spent a decade burying, because it does the one
 thing their business model can't survive: it lets *you* read everything from
 *everywhere* without an algorithm deciding what you deserve to see.
 
 Here's the humility most platforms refuse to admit: **we are not the whole
 internet.** Facebook, X, and TikTok all pretend their walled garden *is* the world,
-and trap you inside it. Ledger does the opposite — it assumes the good stuff lives
+and trap you inside it. Ledgr does the opposite — it assumes the good stuff lives
 out *there*, on everyone else's timelines, and simply **tunes in.** Through RSS,
-your Ledger timeline can monitor *other* timelines: news sites, YouTube channels,
+your Ledgr timeline can monitor *other* timelines: news sites, YouTube channels,
 **TikTok creators**, podcasts, subreddits, GitHub releases, a daily Bible verse —
 any feed on the open web. An always-on **relay** pulls the whole catalog server-side
 every few minutes and seeds the stories into the shared feed, so they appear right
@@ -161,7 +161,7 @@ yours, assembled from the whole open web, on your terms — not a corporation's.
 
 Pulling RSS costs *some* compute — somebody has to actually hit each feed. The
 optional relay node does this routinely server-side, so feeds stay fresh even when
-no one's around. But Ledger also has a **client-side** trick for when *you* hit
+no one's around. But Ledgr also has a **client-side** trick for when *you* hit
 "Refresh now," so the news layer doesn't *depend* on the relay: the readers share
 the work, together, exactly once.
 
@@ -191,15 +191,15 @@ of its readers' devices — no cron job required, no per-user cloud bill.
 
 ## Nostr — plug into the wider open network
 
-RSS brings the read-only web in; **[Nostr](https://nostr.com/)** plugs Ledger into a
+RSS brings the read-only web in; **[Nostr](https://nostr.com/)** plugs Ledgr into a
 whole *interactive* decentralized network — millions of notes from a protocol that,
-like Ledger, has no company in the middle. A raw-WebSocket client connects to public
+like Ledgr, has no company in the middle. A raw-WebSocket client connects to public
 relays and streams in **kind-1 notes** for popular hashtags **plus the topics you
 follow**, ingesting them as posts authored by `nostr:<pubkey>`. They sit right in your
 feed but are clearly marked as a different **type** of user (external), and **every
 note's schnorr signature is verified** before it's shown, so forgeries are dropped.
 
-It's genuinely **two-way**. On first use Ledger generates a **Nostr keypair** for you
+It's genuinely **two-way**. On first use Ledgr generates a **Nostr keypair** for you
 (or, at sign-up, you can paste your existing **`nsec…`** to sign in with the account
 you already have). With it, your **replies** (NIP-10) and **reactions** (kind 7) are
 signed and published back to the relays — the real Nostr authors actually receive
@@ -207,21 +207,21 @@ them — and you can post brand-new notes too. A couple of niceties make the for
 firehose readable:
 
 - **Markdown rendering** — Nostr notes commonly use `**bold**`, `*italic*`, `` `code` ``,
-  links, `#hashtags` and `nostr:` references; Ledger renders that formatting safely
+  links, `#hashtags` and `nostr:` references; Ledgr renders that formatting safely
   (as escaped React nodes, never injected HTML).
 - **Translate to English** — non-English notes get a one-tap **"Translate to English"**
   (clearly labeled, with a toggle back to the original), or auto-translate from Settings.
 
 Toggle the whole bridge on/off in **Settings → Nostr posts**. Nothing about it touches
-your Ledger identity — it's a separate key for a separate network, bridged into one feed.
+your Ledgr identity — it's a separate key for a separate network, bridged into one feed.
 
 ---
 
 ## Your timeline is also the app's changelog
 
-Ledger has no separate "release notes" page — it ships its own story **into your feed.**
+Ledgr has no separate "release notes" page — it ships its own story **into your feed.**
 A built-in bot pulls the repository's recent **GitHub commits** (via the public GitHub
-API, no key), de-dupes them by commit **SHA**, and posts each one as **"Ledger Dev 🛠️"**
+API, no key), de-dupes them by commit **SHA**, and posts each one as **"Ledgr Dev 🛠️"**
 right in the timeline — then syncs them over [Gun.js](https://gun.eco/) like any other
 post, so the whole network watches the project evolve in real time, from inside the app.
 
@@ -263,7 +263,7 @@ keeps a copy always reachable.
 ## Posting is permanent — by design
 
 There's a flip side to a company-free core: **there's no single database to delete from.**
-When you post on Ledger, it doesn't sit in one company's database where a "delete"
+When you post on Ledgr, it doesn't sit in one company's database where a "delete"
 button can wipe it. It's **signed by your key and replicated** — across the durable
 [Gun.js](https://gun.eco/) graph, across the peers who received it, and into the
 local storage of everyone who's already seen it. The same architecture that means
@@ -281,7 +281,7 @@ speaking in public, not like a draft you can quietly take back.
 
 Pure peer-to-peer has one honest weakness: if nobody who holds a post is currently
 online, that post is temporarily unreachable until someone who has it reconnects.
-Big platforms "solve" this with a data center that *owns* everything. Ledger takes a
+Big platforms "solve" this with a data center that *owns* everything. Ledgr takes a
 middle path that keeps the ownership story completely intact: **one optional node
 that is just another peer.**
 
@@ -291,13 +291,13 @@ The [`server/`](./server) directory is a tiny Node.js process (Express + Gun.js,
 - **Durable persistence** — it joins the *same* Gun graph every browser uses (its
   `GUN_ROOT` must match the client's `zuccbook-v1`) and writes everything to disk
   (Gun's radisk). Because it's online 24/7, the global feed, profiles, listings,
-  trust edges and the network-points ledger survive even when **zero humans** are
+  trust edges and the network-points ledgr survive even when **zero humans** are
   online. Someone who signs up today syncs the full history in seconds instead of
   waiting for a peer who happens to hold it.
 - **Server-side RSS aggregation** — it polls the whole topic catalog every ~10
   minutes and seeds the stories into the shared feed, so your device never has to
   fetch them (see ["Distributed fetching"](#distributed-fetching--the-readers-are-the-server) above).
-- **A network-points ledger** — it tallies contribution (uptime + items published)
+- **A network-points ledgr** — it tallies contribution (uptime + items published)
   for anyone running a node, exposed at `/api/leaderboard` and `/api/points/:pk`.
 
 **Why this is cake, eaten:** the node has **no special authority.** It's *read-only*
@@ -320,7 +320,7 @@ cd server
 cp .env.example .env        # set GUN_ROOT to match the client (zuccbook-v1)
 npm install && npm start    # :8787 — /gun is the relay, /api/* the read API
 # or with Docker:
-# docker build -t ledger-server . && docker run -p 8787:8787 -v ledger-data:/data ledger-server
+# docker build -t ledgr-server . && docker run -p 8787:8787 -v ledgr-data:/data ledgr-server
 ```
 
 The live app lists one such node (`ledger.wellspringstudiollc.com/gun`) **alongside**
@@ -331,7 +331,7 @@ another peer. Delete that line and the app is unchanged.
 
 ## How it works (genuinely no required backend)
 
-GitHub Pages only serves static files, so the Ledger *app* is pure browser tech and
+GitHub Pages only serves static files, so the Ledgr *app* is pure browser tech and
 needs nothing else to run:
 
 - **[PeerJS](https://peerjs.com/) / WebRTC** — direct browser-to-browser data &
@@ -342,7 +342,7 @@ needs nothing else to run:
 - **WebLLM (WebGPU/WASM)** — the AI companion, cached locally after first download.
 - **IndexedDB + localStorage** — all your data, on your device, offline-first.
 - **[Gun.js](https://gun.eco/)** — a decentralized graph database that syncs over
-  public relay peers, so posts (human **and** RSS-Bot) and the public Ledger Chat
+  public relay peers, so posts (human **and** RSS-Bot) and the public Ledgr Chat
   **persist and reach people who were offline** — still with no database you own or pay for.
 - **[Nostr](https://nostr.com/)** — a raw-WebSocket client to public Nostr relays
   bridges the wider network into your feed: read verified notes, and publish signed
@@ -377,7 +377,7 @@ config. The repo hosts itself.
 
 ## ⚠️ Money & risk (please read)
 
-The Wallet/Market move **real funds on Polygon**. Ledger is **non-custodial,
+The Wallet/Market move **real funds on Polygon**. Ledgr is **non-custodial,
 open-source software provided “as is”, with no warranty** — it never holds your
 keys or your money. The wallet is a **hot burner wallet** whose private key lives
 in your browser; if you lose the device or clear site data without exporting the
@@ -420,5 +420,5 @@ ethers.js (Polygon) · nsfwjs + TensorFlow.js & obscenity (on-device content fil
 
 **Optional node:** Node.js · Express · Gun.js · rss-parser (see [`server/`](./server)).
 
-MIT. *Independent and unaffiliated — there's no company behind Ledger. You own
-the ledger, not us.*
+MIT. *Independent and unaffiliated — there's no company behind Ledgr. You own
+the ledgr, not us.*
