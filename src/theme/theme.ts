@@ -1,25 +1,41 @@
 import { createTheme, alpha } from "@mui/material/styles";
 
 // ============================================================
-//  Bliss / Windows XP "Luna" — fully adopted. Light, warm, glossy
-//  chrome on the #ece9d8 control face, Luna-blue accents, the
-//  raised 3D button, Tahoma/Trebuchet faces. Mirrors bliss.css
-//  tokens (see src/bliss.css).
+//  Modern Ledger Theme — reskinned from retro XP Luna to a
+//  sleek, clean, flat, modern UI matching professional platforms.
+//  Uses the CSS variable tokens from bliss.css to naturally support
+//  light/dark schemes dynamically.
 // ============================================================
+
 export const BL = {
-  blue400: "#3f97ff", blue500: "#1668e0", blue600: "#0a55cf", blue700: "#0a4ec4", blue800: "#003db5",
-  green500: "#4ca325",
-  white: "#ffffff", panel: "#fbfaf4", raised: "#f6f4ec", face: "#ece9d8", faceDark: "#dcd8c4",
-  edge: "#919b9c", line: "#d6d2bf", sunk: "#7f9db9",
-  ink: "#1b2733", inkDim: "#51606e", inkFaint: "#8a96a2",
-  ok: "#3ba33b", info: "#2a72e0", warn: "#e8920c", danger: "#d23b2f", tip: "#ffffe1",
+  blue400: "var(--bl-blue-400)",
+  blue500: "var(--bl-blue-500)",
+  blue600: "var(--bl-blue-600)",
+  blue700: "var(--bl-blue-700)",
+  blue800: "var(--bl-blue-800)",
+  green500: "var(--bl-green-500)",
+  white: "var(--bl-white)",
+  panel: "var(--bl-face)",
+  raised: "var(--bl-face-raised)",
+  face: "var(--bl-face)",
+  faceDark: "var(--bl-grey-300)",
+  edge: "var(--bl-edge-frame)",
+  line: "var(--bl-line)",
+  sunk: "var(--bl-edge-sunk)",
+  ink: "var(--bl-ink)",
+  inkDim: "var(--bl-ink-dim)",
+  inkFaint: "var(--bl-ink-faint)",
+  ok: "var(--bl-ok)",
+  info: "var(--bl-info)",
+  warn: "var(--bl-warn)",
+  danger: "var(--bl-danger)",
+  tip: "var(--bl-tip-bg)",
 };
 
-const UI = '"Tahoma", "Segoe UI", Verdana, Geneva, system-ui, sans-serif';
-const TITLE = '"Trebuchet MS", "Segoe UI", Tahoma, system-ui, sans-serif';
+const UI = '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+const TITLE = '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
-// The signature Luna button gloss.
-const sheen = "linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.04) 46%, rgba(0,0,0,0.06) 54%, rgba(0,0,0,0.18) 100%)";
+const isDark = typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches;
 
 export const theme = createTheme({
   breakpoints: {
@@ -32,92 +48,97 @@ export const theme = createTheme({
     },
   },
   palette: {
-    mode: "light",
-    primary: { main: BL.blue500, light: BL.blue400, dark: BL.blue700, contrastText: "#fff" },
-    secondary: { main: BL.green500 },
-    error: { main: BL.danger }, warning: { main: BL.warn }, success: { main: BL.ok }, info: { main: BL.info },
-    background: { default: "#d8e7fb", paper: BL.panel },  // valid color; the .bl-bliss wallpaper covers it
-    text: { primary: BL.ink, secondary: BL.inkDim },
-    divider: BL.line,
+    mode: isDark ? "dark" : "light",
+    primary: { main: "var(--bl-accent)", light: "var(--bl-blue-400)", dark: "var(--bl-blue-700)", contrastText: "#fff" },
+    secondary: { main: "var(--bl-green-500)" },
+    error: { main: "var(--bl-danger)" },
+    warning: { main: "var(--bl-warn)" },
+    success: { main: "var(--bl-ok)" },
+    info: { main: "var(--bl-info)" },
+    background: { default: "var(--bl-canvas)", paper: "var(--bl-face)" },
+    text: { primary: "var(--bl-ink)", secondary: "var(--bl-ink-dim)" },
+    divider: "var(--bl-line)",
   },
-  shape: { borderRadius: 4 },
+  shape: { borderRadius: 8 },
   typography: {
     fontFamily: UI,
-    fontSize: 13,
-    h1: { fontFamily: TITLE, fontWeight: 700, fontSize: "clamp(1.5rem, 5vw, 2.5rem)" },
-    h2: { fontFamily: TITLE, fontWeight: 700, fontSize: "clamp(1.2rem, 4vw, 2rem)" },
+    fontSize: 14,
+    h1: { fontFamily: TITLE, fontWeight: 800, fontSize: "clamp(1.5rem, 5vw, 2.5rem)" },
+    h2: { fontFamily: TITLE, fontWeight: 800, fontSize: "clamp(1.2rem, 4vw, 2rem)" },
     h3: { fontFamily: TITLE, fontWeight: 700, fontSize: "clamp(1rem, 3vw, 1.5rem)" },
     h4: { fontFamily: TITLE, fontWeight: 700 },
     h5: { fontFamily: TITLE, fontWeight: 700 },
     h6: { fontFamily: TITLE, fontWeight: 700, fontSize: "clamp(0.875rem, 2.5vw, 1.1rem)" },
-    body1: { fontSize: "clamp(0.8rem, 1vw, 1rem)" },
-    body2: { fontSize: "clamp(0.75rem, 0.9vw, 0.9375rem)" },
+    body1: { fontSize: "clamp(0.85rem, 1vw, 1.05rem)" },
+    body2: { fontSize: "clamp(0.8rem, 0.9vw, 0.95rem)" },
     button: { textTransform: "none", fontWeight: 700 },
-    overline: { letterSpacing: "0.08em", fontWeight: 700, color: BL.inkDim },
+    overline: { letterSpacing: "0.08em", fontWeight: 700, color: "var(--bl-ink-dim)" },
   },
   components: {
     MuiPaper: {
       styleOverrides: {
         root: {
           backgroundImage: "none",
-          backgroundColor: BL.panel,
-          border: `1px solid ${BL.line}`,
-          boxShadow: "inset 0 1px 0 #fff, 0 1px 2px rgba(0,0,0,0.12)",
+          backgroundColor: "var(--bl-face)",
+          border: "1px solid var(--bl-line)",
+          boxShadow: "var(--bl-shadow-1)",
           backdropFilter: "none",
+          borderRadius: 12,
         },
       },
     },
     MuiButton: {
       styleOverrides: {
         root: {
-          borderRadius: 3,
-          border: `1px solid ${BL.edge}`,
-          backgroundColor: BL.raised,
-          backgroundImage: sheen,
-          color: BL.ink,
-          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.7)",
-          "&:hover": { backgroundColor: "#fdfdfb", borderColor: BL.blue500 },
+          borderRadius: 8,
+          border: "1px solid var(--bl-edge-frame)",
+          backgroundColor: "var(--bl-btn-bg)",
+          backgroundImage: "none",
+          color: "var(--bl-ink)",
+          boxShadow: "none",
+          transition: "all var(--bl-dur-fast) var(--bl-ease)",
+          "&:hover": { backgroundColor: "var(--bl-accent-soft)", borderColor: "var(--bl-accent)" },
         },
         containedPrimary: {
           color: "#fff",
-          border: `1px solid ${BL.blue800}`,
-          backgroundColor: BL.blue500,
-          backgroundImage: `${sheen}, linear-gradient(180deg, ${BL.blue400}, ${BL.blue600})`,
-          textShadow: "0 1px 1px rgba(0,0,0,0.35)",
-          "&:hover": { backgroundImage: `${sheen}, linear-gradient(180deg, #5aa8ff, ${BL.blue600})`, borderColor: BL.blue800 },
+          border: "1px solid var(--bl-accent)",
+          backgroundColor: "var(--bl-accent)",
+          backgroundImage: "none",
+          boxShadow: "none",
+          textShadow: "none",
+          "&:hover": { backgroundColor: "var(--bl-accent-deep)", borderColor: "var(--bl-accent-deep)", boxShadow: "none" },
         },
-        outlined: { backgroundImage: "none", backgroundColor: BL.raised },
-        text: { backgroundImage: "none", backgroundColor: "transparent", border: "1px solid transparent", boxShadow: "none", "&:hover": { backgroundColor: alpha(BL.blue500, 0.08), borderColor: "transparent" } },
+        outlined: { backgroundImage: "none", backgroundColor: "transparent", border: "1px solid var(--bl-edge-frame)", "&:hover": { backgroundColor: "var(--bl-accent-soft)" } },
+        text: { backgroundImage: "none", backgroundColor: "transparent", border: "1px solid transparent", boxShadow: "none", "&:hover": { backgroundColor: "var(--bl-accent-soft)", borderColor: "transparent" } },
       },
     },
     MuiChip: {
       styleOverrides: {
-        root: { borderRadius: 3, fontWeight: 600, backgroundColor: BL.raised, border: `1px solid ${BL.line}` },
-        outlined: { backgroundColor: BL.white },
+        root: { borderRadius: 999, fontWeight: 600, backgroundColor: "var(--bl-face-raised)", border: "1px solid var(--bl-line)" },
+        outlined: { backgroundColor: "var(--bl-white)" },
       },
     },
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
-          borderRadius: 2, backgroundColor: BL.white,
-          "& fieldset": { borderColor: BL.sunk },
-          "&:hover fieldset": { borderColor: BL.blue500 },
-          "&.Mui-focused fieldset": { borderColor: BL.blue500, borderWidth: 1 },
+          borderRadius: 8, backgroundColor: "var(--bl-white)",
+          "& fieldset": { borderColor: "var(--bl-edge-frame)" },
+          "&:hover fieldset": { borderColor: "var(--bl-accent)" },
+          "&.Mui-focused fieldset": { borderColor: "var(--bl-accent)", borderWidth: 1 },
         },
-        input: { boxShadow: "inset 0 1px 1px rgba(0,0,0,0.12)" },
+        input: { boxShadow: "none" },
       },
     },
     MuiToggleButton: {
-      styleOverrides: { root: { borderRadius: 3, textTransform: "none", color: BL.inkDim } },
+      styleOverrides: { root: { borderRadius: 8, textTransform: "none", color: "var(--bl-ink-dim)" } },
     },
     MuiTooltip: {
-      styleOverrides: { tooltip: { backgroundColor: BL.tip, color: BL.ink, border: `1px solid ${BL.edge}`, fontSize: 12, boxShadow: "0 2px 6px rgba(0,0,0,0.3)" }, arrow: { color: BL.tip } },
+      styleOverrides: { tooltip: { backgroundColor: "var(--bl-tip-bg)", color: "#fff", border: "none", fontSize: 12, boxShadow: "var(--bl-shadow-2)" }, arrow: { color: "var(--bl-tip-bg)" } },
     },
-    MuiAvatar: { styleOverrides: { root: { border: "1px solid rgba(0,0,0,0.18)" } } },
-    MuiDivider: { styleOverrides: { root: { borderColor: BL.line } } },
+    MuiAvatar: { styleOverrides: { root: { border: "1px solid var(--bl-line)" } } },
+    MuiDivider: { styleOverrides: { root: { borderColor: "var(--bl-line)" } } },
   },
 });
 
-// Luna-blue title gloss for window/title bars.
-export const TITLE_GLOSS = `linear-gradient(180deg, ${BL.blue400} 0%, ${BL.blue500} 48%, ${BL.blue600} 100%)`;
-export const NEON = { cyan: BL.blue400, violet: BL.blue500, magenta: BL.blue600 }; // back-compat
+export const TITLE_GLOSS = "none";
+export const NEON = { cyan: "var(--bl-blue-400)", violet: "var(--bl-blue-500)", magenta: "var(--bl-blue-600)" };

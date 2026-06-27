@@ -68,7 +68,7 @@ function AlertsBell() {
   return (
     <>
       <Tooltip title="Alerts">
-        <IconButton onClick={open} sx={{ color: "#fff" }}>
+        <IconButton onClick={open} sx={{ color: "var(--bl-ink)" }}>
           <Badge badgeContent={unread} color="error" max={9}><NotificationsRoundedIcon /></Badge>
         </IconButton>
       </Tooltip>
@@ -135,7 +135,7 @@ function ChatDropdown() {
   return (
     <>
       <Tooltip title="Chats">
-        <IconButton size="small" onClick={(e) => setAnchor(e.currentTarget)} sx={{ color: "#fff" }}>
+        <IconButton size="small" onClick={(e) => setAnchor(e.currentTarget)} sx={{ color: "var(--bl-ink)" }}>
           <Badge color="error" variant="dot" invisible={!hasDot}>
             <ChatRoundedIcon fontSize="small" />
           </Badge>
@@ -199,12 +199,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
               onClick={() => nav(item.to)}
               sx={{
                 display: "flex", alignItems: "center", gap: 1.5, px: { xs: 0.75, sm: 1.5 }, py: 1.1, borderRadius: 2, cursor: "pointer",
-                color: active ? "#ffffff" : "text.secondary",
-                background: active ? "linear-gradient(135deg,#3f97ff,#1668e0)" : "transparent",
-                boxShadow: active ? "0 6px 18px rgba(58,155,240,.3)" : "none",
-                "&:hover": { background: active ? undefined : "rgba(58,155,240,0.08)", color: active ? undefined : "text.primary" },
+                color: active ? "var(--bl-accent)" : "text.secondary",
+                background: active ? "var(--bl-accent-soft)" : "transparent",
+                boxShadow: "none",
+                "&:hover": { background: active ? "var(--bl-accent-soft)" : "var(--bl-grey-100)", color: active ? "var(--bl-accent)" : "text.primary" },
                 justifyContent: expanded ? "flex-start" : "center",
                 minHeight: "48px",
+                transition: "all var(--bl-dur-fast) var(--bl-ease)",
               }}
             >
               {item.icon}
@@ -221,11 +222,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
           component="a" href={`${import.meta.env.BASE_URL}support.html`} target="_blank" rel="noopener noreferrer"
           sx={{
             display: "flex", alignItems: "center", gap: 1.5, px: { xs: 0.75, sm: 1.5 }, py: 1.1, borderRadius: 2, cursor: "pointer",
-            textDecoration: "none", color: "#5a3a12",
-            background: "linear-gradient(135deg,#ffe08a,#ffce5a)", border: "1px solid #f6b73c",
-            boxShadow: "0 4px 12px rgba(246,183,60,.3)", mb: 0.5, minHeight: "48px",
-            "&:hover": { background: "linear-gradient(135deg,#ffe9a8,#ffd877)" },
+            textDecoration: "none", color: "var(--bl-accent)",
+            background: "transparent", border: "1px solid var(--bl-accent)",
+            boxShadow: "none", mb: 0.5, minHeight: "48px",
+            "&:hover": { background: "var(--bl-accent-soft)" },
             justifyContent: expanded ? "flex-start" : "center",
+            transition: "all var(--bl-dur-fast) var(--bl-ease)",
           }}
         >
           <LocalCafeRoundedIcon fontSize={expanded ? "medium" : "small"} />
@@ -256,20 +258,20 @@ export default function AppShell({ children }: { children: ReactNode }) {
       )}
 
       {/* main column — minWidth/minHeight:0 lets the scrollable child shrink-to-fit & scroll. */}
-      <Box sx={{ display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, overflow: "hidden", bgcolor: "var(--bl-face)" }}>
-        {/* Luna title bar */}
-        <Stack direction="row" alignItems="center" spacing={{ xs: 0.75, sm: 1.5 }} sx={{ px: { xs: 1, sm: 2 }, py: 1, position: "sticky", top: 0, zIndex: 5, color: "#fff", borderBottom: "1px solid var(--bl-title-edge)", background: "var(--bl-gloss-title), linear-gradient(180deg, var(--bl-title-hi), var(--bl-title-low))", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)" }}>
-          {compact && <IconButton onClick={() => setDrawerOpen(true)} aria-label="Open menu" sx={{ color: "#fff", ml: -0.75 }}><MenuRoundedIcon /></IconButton>}
+      <Box sx={{ display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, overflow: "hidden", bgcolor: "var(--bl-canvas)" }}>
+        {/* Modern clean header bar */}
+        <Stack direction="row" alignItems="center" spacing={{ xs: 0.75, sm: 1.5 }} sx={{ px: { xs: 1, sm: 2 }, py: 1, position: "sticky", top: 0, zIndex: 5, color: "var(--bl-ink)", borderBottom: "1px solid var(--bl-line)", background: "var(--bl-face)", backdropFilter: "blur(12px)", boxShadow: "none" }}>
+          {compact && <IconButton onClick={() => setDrawerOpen(true)} aria-label="Open menu" sx={{ color: "var(--bl-ink)", ml: -0.75 }}><MenuRoundedIcon /></IconButton>}
 
           <Box sx={{ flex: 1, display: "flex", justifyContent: compact ? "flex-end" : "flex-start" }}><GlobalSearch compact={compact} /></Box>
           <ModelStatusChip />
           {compact && <ChatDropdown />}
           <AlertsBell />
-          <Chip size="small" label={`${onlineCount} online`} sx={{ display: { xs: "none", sm: "inline-flex" }, bgcolor: "rgba(255,255,255,0.92)", color: "var(--bl-green-600)", border: "none", "& .MuiChip-label": { fontWeight: 700 } }} icon={<Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#4ca325", ml: 1 }} />} />
+          <Chip size="small" label={`${onlineCount} online`} sx={{ display: { xs: "none", sm: "inline-flex" }, bgcolor: "var(--bl-face-raised)", color: "var(--bl-accent)", border: "1px solid var(--bl-line)", "& .MuiChip-label": { fontWeight: 700 } }} icon={<Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "var(--bl-accent)", ml: 1 }} />} />
           <Tooltip title={me?.username ?? ""}>
             <Box sx={{ position: "relative", cursor: "pointer", flexShrink: 0 }} onClick={() => nav("/profile")}>
               <UserAvatar pk={me?.publicKey ?? ""} name={me?.username ?? "?"} avatar={me?.avatar} size={32} />
-              <Box sx={{ position: "absolute", right: -1, bottom: -1, width: 11, height: 11, borderRadius: "50%", bgcolor: STATUS_COLOR[status], border: "2px solid #fff" }} />
+              <Box sx={{ position: "absolute", right: -1, bottom: -1, width: 11, height: 11, borderRadius: "50%", bgcolor: STATUS_COLOR[status], border: "2px solid var(--bl-face)" }} />
             </Box>
           </Tooltip>
         </Stack>
